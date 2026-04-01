@@ -7,6 +7,9 @@ export class Image{
     id: number;
 
     @Column()
+    cloudinary_id: string;
+
+    @Column()
     url: string;
 
     @Column()

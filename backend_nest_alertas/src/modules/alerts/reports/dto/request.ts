@@ -3,30 +3,36 @@ import { ReportTypes } from "../enums/report-type.enum";
 import type { ReportType } from "../enums/report-type.enum";
 import { ApiProperty } from "@nestjs/swagger";
 import { Report } from "../entities/report.entity";
+import { Type } from "class-transformer";
+
+//Nota: parece ser q los `@ApiProperty()` ya no tienen ningun efecto o utilidad, revisar
 
 export class CreateReportRequest {
-    @ApiProperty()
     @IsIn(Object.values(ReportTypes))
     type: ReportType ;
 
-    @ApiProperty()
     @IsString()
     @MaxLength(250)
     description: string
 
+    @Type(() => Number)
+    @IsNumber()
+    latitude: number;
 
-    @ApiProperty()
+    @Type(() => Number)
+    @IsNumber()
+    longitude: number;
+
     @IsString()
     user: string
-
+    
     toReport(): Report{
         const report = new Report();
         report.type = this.type
         report.description = this.description
         report.location = {
             type: "Point",
-            coordinates: [-63.1821, -17.7833]
-            //coordinates: this.coordinates
+            coordinates: [this.latitude, this.longitude]
         }
         return report
     }

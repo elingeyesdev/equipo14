@@ -46,7 +46,10 @@ export class ReportsService {
 
     async findAll(){
         const reports = await this.reportsRepository.find({
-            relations: ['user', 'images']
+            relations: ['user', 'images'],
+            order: {
+                id: 'ASC'
+            }
         });
         return ReportResponse.FromReportListToResponse(reports)
     }

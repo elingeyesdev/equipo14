@@ -2,13 +2,15 @@ import { Body, Controller, Delete, Get, Param, Post, UploadedFile, UseIntercepto
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReportsService } from './reports.service';
 import { CreateReportRequest } from './dto/request';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiImageUpload } from './decorators/request.decorator';
 
 @Controller('reports')
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService){}
 
     @Post()
-    @UseInterceptors(FileInterceptor('image'))
+    @ApiImageUpload()
     create(
         @UploadedFile() file: Express.Multer.File,
         @Body() createReportDto: CreateReportRequest
