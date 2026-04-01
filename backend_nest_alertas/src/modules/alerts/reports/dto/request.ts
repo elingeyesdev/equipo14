@@ -14,12 +14,6 @@ export class CreateReportRequest {
     @MaxLength(250)
     description: string
 
-    @ApiProperty()
-    @IsArray()
-    @ArrayMinSize(2)
-    @ArrayMaxSize(2)
-    @IsNumber({}, { each: true })
-    coordinates: number[];
 
     @ApiProperty()
     @IsString()
@@ -28,9 +22,11 @@ export class CreateReportRequest {
     toReport(): Report{
         const report = new Report();
         report.type = this.type
+        report.description = this.description
         report.location = {
             type: "Point",
-            coordinates: this.coordinates
+            coordinates: [-63.1821, -17.7833]
+            //coordinates: this.coordinates
         }
         return report
     }

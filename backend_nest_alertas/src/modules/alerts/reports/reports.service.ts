@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { User } from 'src/modules/users/entities/user.entity';
 import { CreateReportRequest } from './dto/request';
 import { ReportResponse } from './dto/response';
+import { ImagesService } from '../images/images.service';
 
 @Injectable()
 export class ReportsService {
@@ -13,12 +14,14 @@ export class ReportsService {
         @InjectRepository(Report)
         private reportsRepository: Repository<Report>,
         @InjectRepository(User)
-        private userRepository: Repository<User>
+        private usersRepository: Repository<User>,
+        private imagesServices: ImagesService
+
     ){}
     //revisar esto manana
     //me gano el sueno, asi capaz este mal algo
-    async create(createReportRequest: CreateReportRequest){  
-        const user = await this.userRepository.findOne({where: {id: createReportRequest.user}})
+    async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
+        const user = await this.usersRepository.findOne({where: {id: createReportRequest.user}})
         if(!user){
             throw new NotFoundException("Usuario no encontrado");
         }
@@ -35,13 +38,15 @@ export class ReportsService {
 
         const newReport = this.reportsRepository.create(createReport);
         const savedReport = await this.reportsRepository.save(newReport);
-        
+
+        await this.imagesServices.create(savedReport, file)
+
         return ReportResponse.FromReportToResponse(savedReport);
     }
 
     async findAll(){
         const reports = await this.reportsRepository.find({
-            relations: ['user']
+            relations: ['user', 'images']
         });
         return ReportResponse.FromReportListToResponse(reports)
     }
@@ -49,7 +54,7 @@ export class ReportsService {
     async findOne(id: string) {
         const report = await this.reportsRepository.findOne({
             where: {id: Number(id)},
-            relations: ['user']
+            relations: ['user','images']
         });
         if(!report){
             throw new NotFoundException("Reporte no encontrado")

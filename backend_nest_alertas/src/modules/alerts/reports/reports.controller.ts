@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ReportsService } from './reports.service';
 import { CreateReportRequest } from './dto/request';
 
@@ -7,8 +8,12 @@ export class ReportsController {
     constructor(private readonly reportsService: ReportsService){}
 
     @Post()
-    create(@Body() createReportDto: CreateReportRequest){
-        return this.reportsService.create(createReportDto)
+    @UseInterceptors(FileInterceptor('image'))
+    create(
+        @UploadedFile() file: Express.Multer.File,
+        @Body() createReportDto: CreateReportRequest
+    ){
+        return this.reportsService.create(createReportDto, file)
     }
 
     @Get()

@@ -1,7 +1,8 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import type { Point } from 'geojson';
 import { User } from "src/modules/users/entities/user.entity";
 import { ReportTypes } from "../enums/report-type.enum";
+import { Image } from "../../images/entities/image.entity";
 
 @Entity()
 export class Report {
@@ -37,4 +38,7 @@ export class Report {
 
     @ManyToOne(() => User, (user) => user.reports)
     user: User;
+
+    @OneToMany(() => Image, image => image.report)
+    images: Image[];
 }
