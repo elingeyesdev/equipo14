@@ -1,0 +1,164 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
+import '../models/image_model.dart';
+import '../models/report_model.dart';
+import '../models/user_model.dart';
+
+/// Cliente HTTP alineado con los controladores existentes:
+/// - `UsersController` → `/users`
+/// - `ReportsController` → `/reports`
+/// - `ImagesController` → sin rutas REST (las imágenes se crean con el POST de reportes).
+class ApiService {
+  ApiService({String? baseUrl}) : _base = baseUrl ?? ApiConfig.baseUrl;
+
+  final String _base;
+
+  Uri _uri(String path, [String? id]) {
+    final p = id == null ? path : '$path/$id';
+    return Uri.parse('$_base$p');
+  }
+
+  // --- Usuarios (GET/POST /users, GET/PATCH/DELETE /users/:id) ---
+
+  Future<List<UserModel>> obtenerUsuarios() async {
+    final response = await http.get(_uri(ApiConfig.usersPath));
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body
+        .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<UserModel> obtenerUsuario(String id) async {
+    final response = await http.get(_uri(ApiConfig.usersPath, id));
+    _ensureOk(response);
+    return UserModel.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<UserModel> crearUsuario({
+    required String firstName,
+    required String lastName,
+    required String phone,
+    required String password,
+  }) async {
+    final response = await http.post(
+      _uri(ApiConfig.usersPath),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'first_name': firstName,
+        'last_name': lastName,
+        'phone': phone,
+        'password': password,
+      }),
+    );
+    _ensureOk(response);
+    return UserModel.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<UserModel> actualizarUsuario(
+    String id, {
+    String? firstName,
+    String? lastName,
+  }) async {
+    final body = <String, dynamic>{};
+    if (firstName != null) body['first_name'] = firstName;
+    if (lastName != null) body['last_name'] = lastName;
+
+    final response = await http.patch(
+      _uri(ApiConfig.usersPath, id),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    _ensureOk(response);
+    return UserModel.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> eliminarUsuario(String id) async {
+    final response = await http.delete(_uri(ApiConfig.usersPath, id));
+    _ensureOk(response);
+  }
+
+  // --- Reportes (GET/POST /reports, GET/DELETE /reports/:id) ---
+
+  Future<List<ReportModel>> obtenerReportes() async {
+    final response = await http.get(_uri(ApiConfig.reportsPath));
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body
+        .map((e) => ReportModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<ReportModel> obtenerReporte(int id) async {
+    final response = await http.get(_uri(ApiConfig.reportsPath, '$id'));
+    _ensureOk(response);
+    return ReportModel.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  /// Mismo contrato que `ReportsController.create`: multipart con campos + archivo opcional `image`.
+  Future<ReportModel> crearReporte({
+    required String type,
+    required String description,
+    required String userId,
+    required double latitude,
+    required double longitude,
+    File? imageFile,
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(ApiConfig.reportsPath))
+      ..fields['type'] = type
+      ..fields['description'] = description
+      ..fields['user'] = userId
+      ..fields['latitude'] = latitude.toString()
+      ..fields['longitude'] = longitude.toString();
+
+    if (imageFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+    }
+
+    final streamed = await request.send();
+    final responseBody = await streamed.stream.bytesToString();
+    if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
+      throw Exception(
+        'Error al crear reporte: ${streamed.statusCode} — $responseBody',
+      );
+    }
+    return ReportModel.fromJson(
+      jsonDecode(responseBody) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> eliminarReporte(int id) async {
+    final response = await http.delete(_uri(ApiConfig.reportsPath, '$id'));
+    _ensureOk(response);
+  }
+
+  /// No hay GET `/images` en el backend: las imágenes vienen en cada reporte.
+  Future<List<ImageModel>> obtenerImagenesPorReporte(int reportId) async {
+    final report = await obtenerReporte(reportId);
+    return report.images;
+  }
+
+  void _ensureOk(http.Response response) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'HTTP ${response.statusCode}: ${response.body}',
+      );
+    }
+  }
+}

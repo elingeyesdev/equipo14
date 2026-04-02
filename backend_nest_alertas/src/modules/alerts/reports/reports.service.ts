@@ -9,68 +9,72 @@ import { ImagesService } from '../images/images.service';
 
 @Injectable()
 export class ReportsService {
+  constructor(
+    @InjectRepository(Report)
+    private reportsRepository: Repository<Report>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+    private imagesServices: ImagesService,
+  ) {}
 
-    constructor(
-        @InjectRepository(Report)
-        private reportsRepository: Repository<Report>,
-        @InjectRepository(User)
-        private usersRepository: Repository<User>,
-        private imagesServices: ImagesService
+  async create(createReportRequest: CreateReportRequest, file?: Express.Multer.File) {
+    const user = await this.usersRepository.findOne({
+      where: { id: createReportRequest.user },
+    });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    const now = new Date();
+    const expires = new Date();
+    expires.setHours(now.getHours() + 24);
 
-    ){}
-    //revisar esto manana
-    //me gano el sueno, asi capaz este mal algo
-    async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
-        const user = await this.usersRepository.findOne({where: {id: createReportRequest.user}})
-        if(!user){
-            throw new NotFoundException("Usuario no encontrado");
-        }
-        const now = new Date();
-        const expires = new Date();
-        expires.setHours(now.getHours() + 24); // expira en 24h (ejemplo)
+    const createReport = createReportRequest.toReport();
 
-        const createReport = createReportRequest.toReport();
+    createReport.weight = 0;
+    createReport.expires_at = expires;
+    createReport.user = user;
 
-        createReport.weight = 0
-        createReport.created_at = now;
-        createReport.expires_at = expires;
-        createReport.user = user;
+    const newReport = this.reportsRepository.create(createReport);
+    const savedReport = await this.reportsRepository.save(newReport);
 
-        const newReport = this.reportsRepository.create(createReport);
-        const savedReport = await this.reportsRepository.save(newReport);
-
-        await this.imagesServices.create(savedReport, file)
-
-        return ReportResponse.FromReportToResponse(savedReport);
+    if (file?.buffer?.length) {
+      await this.imagesServices.create(savedReport, file);
     }
 
-    async findAll(){
-        const reports = await this.reportsRepository.find({
-            relations: ['user', 'images'],
-            order: {
-                id: 'ASC'
-            }
-        });
-        return ReportResponse.FromReportListToResponse(reports)
+    const full = await this.reportsRepository.findOne({
+      where: { id: savedReport.id },
+      relations: ['user', 'images'],
+    });
+    if (!full) {
+      throw new BadRequestException('No se pudo recargar el reporte');
     }
+    return ReportResponse.FromReportToResponse(full);
+  }
 
-    async findOne(id: string) {
-        const report = await this.reportsRepository.findOne({
-            where: {id: Number(id)},
-            relations: ['user','images']
-        });
-        if(!report){
-            throw new NotFoundException("Reporte no encontrado")
-        }
-        return ReportResponse.FromReportToResponse(report)
+  async findAll() {
+    const reports = await this.reportsRepository.find({
+      relations: ['user', 'images'],
+    });
+    return ReportResponse.FromReportListToResponse(reports);
+  }
+
+  async findOne(id: string) {
+    const report = await this.reportsRepository.findOne({
+      where: { id: Number(id) },
+      relations: ['user', 'images'],
+    });
+    if (!report) {
+      throw new NotFoundException('Reporte no encontrado');
     }
+    return ReportResponse.FromReportToResponse(report);
+  }
 
-    async remove(id: string){
-        const result = await this.reportsRepository.delete(id);
+  async remove(id: string) {
+    const result = await this.reportsRepository.delete(id);
 
-        if(result.affected === 0){
-            throw new NotFoundException(`El reporte con ID ${id} no se encontro`)
-        }
-        return { message: "Reporte eliminado correctamente" };
+    if (result.affected === 0) {
+      throw new NotFoundException(`El reporte con ID ${id} no se encontro`);
     }
+    return { message: 'Reporte eliminado correctamente' };
+  }
 }

@@ -1,20 +1,18 @@
-import { Column, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm"
-import { Report } from "../../reports/entities/report.entity";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Report } from '../../reports/entities/report.entity';
 
-@Entity()
-export class Image{
-    @PrimaryGeneratedColumn()
-    id: number;
+@Entity('images')
+export class Image {
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column()
-    cloudinary_id: string;
+  @Column()
+  url: string;
 
-    @Column()
-    url: string;
+  @Column({ type: 'timestamptz' })
+  uploaded_at: Date;
 
-    @Column()
-    uploaded_at: Date;
-
-    @ManyToOne(() => Report, (report) => report.images)
-    report: Report;
+  @ManyToOne(() => Report, (report) => report.images, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'reportId' })
+  report: Report;
 }

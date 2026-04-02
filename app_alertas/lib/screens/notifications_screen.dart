@@ -43,7 +43,7 @@ class NotificationsScreen extends StatelessWidget {
               Text(title),
               Text(time, style: const TextStyle(color: Colors.grey)),
             ],
-          )
+          ),
         ],
       ),
     );
