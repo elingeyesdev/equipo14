@@ -1,23 +1,23 @@
-import { Report } from '../../alerts/reports/entities/report.entity';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Report } from "src/modules/alerts/reports/entities/report.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity('users')
+@Entity()
 export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
-  @Column()
-  first_name: string;
+    @Column()
+    first_name: string;
+    
+    @Column()
+    last_name: string;
 
-  @Column()
-  last_name: string;
+    @Column()
+    phone: string;
 
-  @Column({ unique: true })
-  phone: string;
+    @Column()
+    password: string;
 
-  @Column()
-  password: string;
-
-  @OneToMany(() => Report, (report) => report.user)
-  reports: Report[];
+    @OneToMany(() => Report, report => report.user)
+    reports: Report[];
 }

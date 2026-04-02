@@ -1,8 +1,12 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Delete, Param } from "@nestjs/common";
+import { ImagesService } from "./images.service";
 
-/**
- * Las imágenes se asocian a reportes desde `POST /reports` (multipart).
- * No hay rutas REST adicionales aquí.
- */
 @Controller('images')
-export class ImagesController {}
+export class ImagesController {
+    constructor(private readonly imagesService: ImagesService) {}
+
+    @Delete(':id')
+    remove(@Param('id') id: number){
+        return this.imagesService.remove(id)
+    }
+}

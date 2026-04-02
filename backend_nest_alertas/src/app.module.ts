@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from "@nestjs/config"
+import {TypeOrmModule} from '@nestjs/typeorm'
 import { UsersModule } from './modules/users/users.module';
 import { ReportsModule } from './modules/alerts/reports/reports.module';
 import { ImagesModule } from './modules/alerts/images/images.module';
@@ -12,27 +12,22 @@ import { AlertsModule } from './modules/alerts/alerts.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
     }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get<string>('DATABASE_HOST', 'localhost'),
-        port: parseInt(config.get<string>('DATABASE_PORT', '5432'), 10),
-        username: config.get<string>('DATABASE_USER', 'postgres'),
-        password: config.get<string>('DATABASE_PASSWORD', ''),
-        database: config.get<string>('DATABASE_NAME', 'alertas_db'),
-        synchronize: true,
-        autoLoadEntities: true,
-        logging: config.get<string>('DATABASE_LOGGING') === 'true',
-      }),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DATABASE_HOST,
+      port: +`${process.env.DATABASE_PORT}`,
+      username: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD,
+      database: process.env.DATABASE_NAME,
+      entities: ['**/entity/*.entity{.ys,.js}'],
+      synchronize: true,
+      autoLoadEntities: true,
     }),
     UsersModule,
     ReportsModule,
     ImagesModule,
-    AlertsModule,
+    AlertsModule
   ],
   controllers: [AppController],
   providers: [AppService],

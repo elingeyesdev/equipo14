@@ -1,24 +1,21 @@
 import { Body, Controller, Delete, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
 import { ReportsService } from './reports.service';
 import { CreateReportRequest } from './dto/request';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiImageUpload } from './decorators/request.decorator';
 
 @Controller('reports')
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService){}
 
     @Post()
-    @UseInterceptors(
-        FileInterceptor('image', {
-            storage: memoryStorage(),
-        }),
-    )
+    @ApiImageUpload()
     create(
-        @UploadedFile() file: Express.Multer.File | undefined,
-        @Body() createReportDto: CreateReportRequest,
-    ) {
-        return this.reportsService.create(createReportDto, file);
+        @UploadedFile() file: Express.Multer.File,
+        @Body() createReportDto: CreateReportRequest
+    ){
+        return this.reportsService.create(createReportDto, file)
     }
 
     @Get()
