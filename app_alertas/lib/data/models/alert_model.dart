@@ -1,4 +1,4 @@
-import 'report_model.dart';
+import 'package:app_alertas/data/models/report_model.dart';
 
 export 'report_model.dart';
 

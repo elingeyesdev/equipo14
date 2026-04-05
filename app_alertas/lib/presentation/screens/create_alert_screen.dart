@@ -3,8 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:io';
-import '../config/api_config.dart';
-import '../services/alerts_api_service.dart';
+import 'package:app_alertas/core/config/api_config.dart';
+import 'package:app_alertas/data/services/alerts_api_service.dart';
 
 class CreateAlertScreen extends StatefulWidget {
   const CreateAlertScreen({super.key, this.onCreated});

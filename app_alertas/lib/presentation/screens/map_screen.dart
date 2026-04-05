@@ -2,8 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import '../models/alert_model.dart';
-import '../services/alerts_api_service.dart';
+import 'package:app_alertas/data/models/alert_model.dart';
+import 'package:app_alertas/data/services/alerts_api_service.dart';
+
+/// Token público Mapbox (mismo que en AndroidManifest MAPBOX_ACCESS_TOKEN).
+/// Si ves mapa gris: revisa cuota, caducidad o restricciones URL en mapbox.com/account.
+const _kMapboxAccessToken =
+    'pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA';
+
+/// Raster tiles: debe incluir `/256/` o `/512/` antes de `{z}/{x}/{y}` (Static Tiles API).
+String _mapboxDarkTileUrl() =>
+    'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
+    '?access_token=$_kMapboxAccessToken';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -138,12 +148,14 @@ class _MapScreenState extends State<MapScreen> {
               options: MapOptions(
                 initialCenter: currentLocation!,
                 initialZoom: 15,
+                maxZoom: 22,
               ),
               children: [
                 TileLayer(
-                  urlTemplate:
-                      "https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA",
-                  userAgentPackageName: 'com.example.app',
+                  urlTemplate: _mapboxDarkTileUrl(),
+                  userAgentPackageName: 'com.tuempresa.appalertas.app_alertas',
+                  maxNativeZoom: 22,
+                  maxZoom: 22,
                 ),
                 MarkerLayer(
                   markers: [

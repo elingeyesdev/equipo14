@@ -1,4 +1,4 @@
-import 'image_model.dart';
+import 'package:app_alertas/data/models/image_model.dart';
 
 /// Coincide con [ReportResponse] del backend NestJS.
 class ReportModel {

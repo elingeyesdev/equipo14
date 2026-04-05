@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../config/api_config.dart';
-import '../models/image_model.dart';
-import '../models/report_model.dart';
-import '../models/user_model.dart';
+import 'package:app_alertas/core/config/api_config.dart';
+import 'package:app_alertas/data/models/image_model.dart';
+import 'package:app_alertas/data/models/report_model.dart';
+import 'package:app_alertas/data/models/user_model.dart';
 
 /// Cliente HTTP alineado con los controladores existentes:
 /// - `UsersController` → `/users`

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/alert_model.dart';
-import '../services/alerts_api_service.dart';
+import 'package:app_alertas/data/models/alert_model.dart';
+import 'package:app_alertas/data/services/alerts_api_service.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});

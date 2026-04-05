@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import '../config/api_config.dart';
-import '../models/alert_model.dart';
-import 'api_service.dart';
+import 'package:app_alertas/core/config/api_config.dart';
+import 'package:app_alertas/data/models/alert_model.dart';
+import 'package:app_alertas/data/services/api_service.dart';
 
 /// Compatibilidad con pantallas existentes; delega en [ApiService].
 class AlertsApiService {
