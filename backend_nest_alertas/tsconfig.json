@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    //opcion q desactiva el error de inicializacion de propiedades
+    "strictPropertyInitialization": false,
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
