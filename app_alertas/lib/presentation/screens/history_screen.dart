@@ -94,6 +94,8 @@ class HistoryScreenState extends State<HistoryScreen> {
         ? '${alert.createdAt!.day}/${alert.createdAt!.month}/${alert.createdAt!.year}'
         : 'Sin fecha';
 
+    final hasImages = alert.images.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
@@ -118,6 +120,54 @@ class HistoryScreenState extends State<HistoryScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(dateLabel, style: const TextStyle(color: Colors.grey)),
+                if (hasImages) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 70,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: alert.images.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final imageUrl = alert.images[index].url;
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrl,
+                            width: 90,
+                            height: 70,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return Container(
+                                width: 90,
+                                height: 70,
+                                color: const Color(0xFF0F172A),
+                                alignment: Alignment.center,
+                                child: const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 90,
+                              height: 70,
+                              color: const Color(0xFF0F172A),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.broken_image_outlined,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

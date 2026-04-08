@@ -4,15 +4,21 @@ import 'api_config_vm.dart'
 /// Configuración de API (puerto alineado con `PORT` del backend, por defecto 3000).
 class ApiConfig {
   static const int defaultPort = 3000;
+  static const String apiPrefix = '/api';
+  static const bool useDevTunnel = true;
+  static const String devTunnelBaseUrl =
+      'https://srbd68d5-3000.brs.devtunnels.ms';
 
   /// Base URL del backend Nest. En el emulador de Android Studio usa `10.0.2.2`.
   static String get baseUrl =>
-      'http://${loopback.apiLoopbackHost()}:$defaultPort';
+      useDevTunnel
+          ? '$devTunnelBaseUrl$apiPrefix'
+          : 'http://${loopback.apiLoopbackHost()}:$defaultPort$apiPrefix';
 
   static const String usersPath = '/users';
   static const String reportsPath = '/reports';
 
   /// UUID de un usuario existente en el backend (creado para pruebas locales).
   static const String defaultUserId =
-      '43a834bf-d2d5-421d-92a0-0ab6225b9a76';
+      '1717ef84-b2c9-4e50-9c0a-686f8eff0dd9';
 }

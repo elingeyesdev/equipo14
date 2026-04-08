@@ -16,6 +16,12 @@ class ApiService {
   ApiService({String? baseUrl}) : _base = baseUrl ?? ApiConfig.baseUrl;
 
   final String _base;
+  static const Map<String, String> _tunnelHeaders = {
+    // Dev Tunnels: evita la página de advertencia en clientes no-browser.
+    'x-tunnel-skip-warning': 'true',
+    // Compatibilidad extra (otros túneles tipo ngrok).
+    'ngrok-skip-browser-warning': 'true',
+  };
 
   Uri _uri(String path, [String? id]) {
     final p = id == null ? path : '$path/$id';
@@ -25,7 +31,7 @@ class ApiService {
   // --- Usuarios (GET/POST /users, GET/PATCH/DELETE /users/:id) ---
 
   Future<List<UserModel>> obtenerUsuarios() async {
-    final response = await http.get(_uri(ApiConfig.usersPath));
+    final response = await http.get(_uri(ApiConfig.usersPath), headers: _tunnelHeaders);
     _ensureOk(response);
     final body = jsonDecode(response.body);
     if (body is! List) return [];
@@ -35,7 +41,7 @@ class ApiService {
   }
 
   Future<UserModel> obtenerUsuario(String id) async {
-    final response = await http.get(_uri(ApiConfig.usersPath, id));
+    final response = await http.get(_uri(ApiConfig.usersPath, id), headers: _tunnelHeaders);
     _ensureOk(response);
     return UserModel.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -50,7 +56,7 @@ class ApiService {
   }) async {
     final response = await http.post(
       _uri(ApiConfig.usersPath),
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', ..._tunnelHeaders},
       body: jsonEncode({
         'first_name': firstName,
         'last_name': lastName,
@@ -75,7 +81,7 @@ class ApiService {
 
     final response = await http.patch(
       _uri(ApiConfig.usersPath, id),
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', ..._tunnelHeaders},
       body: jsonEncode(body),
     );
     _ensureOk(response);
@@ -85,14 +91,14 @@ class ApiService {
   }
 
   Future<void> eliminarUsuario(String id) async {
-    final response = await http.delete(_uri(ApiConfig.usersPath, id));
+    final response = await http.delete(_uri(ApiConfig.usersPath, id), headers: _tunnelHeaders);
     _ensureOk(response);
   }
 
   // --- Reportes (GET/POST /reports, GET/DELETE /reports/:id) ---
 
   Future<List<ReportModel>> obtenerReportes() async {
-    final response = await http.get(_uri(ApiConfig.reportsPath));
+    final response = await http.get(_uri(ApiConfig.reportsPath), headers: _tunnelHeaders);
     _ensureOk(response);
     final body = jsonDecode(response.body);
     if (body is! List) return [];
@@ -102,7 +108,7 @@ class ApiService {
   }
 
   Future<ReportModel> obtenerReporte(int id) async {
-    final response = await http.get(_uri(ApiConfig.reportsPath, '$id'));
+    final response = await http.get(_uri(ApiConfig.reportsPath, '$id'), headers: _tunnelHeaders);
     _ensureOk(response);
     return ReportModel.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -124,6 +130,7 @@ class ApiService {
       ..fields['user'] = userId
       ..fields['latitude'] = latitude.toString()
       ..fields['longitude'] = longitude.toString();
+    request.headers.addAll(_tunnelHeaders);
 
     if (imageFile != null) {
       request.files.add(
@@ -144,7 +151,7 @@ class ApiService {
   }
 
   Future<void> eliminarReporte(int id) async {
-    final response = await http.delete(_uri(ApiConfig.reportsPath, '$id'));
+    final response = await http.delete(_uri(ApiConfig.reportsPath, '$id'), headers: _tunnelHeaders);
     _ensureOk(response);
   }
 

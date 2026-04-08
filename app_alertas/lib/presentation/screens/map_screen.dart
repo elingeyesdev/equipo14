@@ -69,10 +69,12 @@ class _MapScreenState extends State<MapScreen> {
 
   List<Marker> _buildAlertMarkers() {
     return _alerts.where((a) => a.coordinates.length >= 2).map((alert) {
-      final lon = alert.coordinates[0];
-      final lat = alert.coordinates[1];
+      final point = _toLatLng(alert.coordinates);
+      if (point == null) {
+        return null;
+      }
       return Marker(
-        point: LatLng(lat, lon),
+        point: point,
         width: 120,
         height: 56,
         child: Column(
@@ -96,7 +98,21 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       );
-    }).toList();
+    }).whereType<Marker>().toList();
+  }
+
+  LatLng? _toLatLng(List<double> coordinates) {
+    if (coordinates.length < 2) return null;
+    final first = coordinates[0];
+    final second = coordinates[1];
+
+    // Backend puede devolver [lon, lat] (GeoJSON) o [lat, lon].
+    final isFirstLat = first >= -90 && first <= 90;
+    final isSecondLon = second >= -180 && second <= 180;
+    if (isFirstLat && isSecondLon) {
+      return LatLng(first, second); // [lat, lon]
+    }
+    return LatLng(second, first); // [lon, lat] -> [lat, lon]
   }
 
   IconData _iconByType(String type) {
