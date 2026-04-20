@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
-
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { ConfigModule } from '@nestjs/config';
 import { Report } from 'app/models/report.entity';
 import { Image } from 'app/models/image.entity';

@@ -17,7 +17,7 @@ export class ReportResponse{
 
         response.id = report.id
         response.user_uuid = report.user.id
-        response.type = report.type
+        response.type = report.type.name
         response.description = report.description
         response.coordinates = report.location.coordinates
         response.weight = report.weight

@@ -6,6 +6,7 @@ import { User } from 'app/models/user.entity';
 import { CreateReportRequest } from '../http/requests/reports/request';
 import { ImagesService } from './images.service';
 import { ReportResponse } from 'app/http/requests/reports/response';
+import { ReportType } from 'app/models/report-types.entity';
 
 @Injectable()
 export class ReportsService {
@@ -15,6 +16,8 @@ export class ReportsService {
         private reportsRepository: Repository<Report>,
         @InjectRepository(User)
         private usersRepository: Repository<User>,
+        @InjectRepository(ReportType)
+        private reportTypeRepository: Repository<ReportType>,
         private imagesServices: ImagesService
 
     ){}
@@ -24,6 +27,10 @@ export class ReportsService {
         const user = await this.usersRepository.findOne({where: {id: createReportRequest.user}})
         if(!user){
             throw new NotFoundException("Usuario no encontrado");
+        }
+        const type = await this.reportTypeRepository.findOne({where: {id: createReportRequest.type}})
+        if(!type){
+            throw new NotFoundException("Tipo no encontrado");
         }
         const now = new Date();
         const expires = new Date();
@@ -35,6 +42,7 @@ export class ReportsService {
         createReport.created_at = now;
         createReport.expires_at = expires;
         createReport.user = user;
+        createReport.type = type
 
         const newReport = this.reportsRepository.create(createReport);
         const savedReport = await this.reportsRepository.save(newReport);
@@ -46,6 +54,7 @@ export class ReportsService {
 
     async findAll(){
         const reports = await this.reportsRepository.find({
+            //aqui se cargan las relaciones
             relations: ['user', 'images'],
             order: {
                 id: 'ASC'

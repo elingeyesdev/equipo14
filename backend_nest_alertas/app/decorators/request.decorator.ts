@@ -1,7 +1,6 @@
 import { applyDecorators, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { ReportTypes } from '../enums/report-type.enum';
 
 // permite cargar archivos multimedia, en este caso imagenes
 // todo llega como `text` o `file` no admite mas formatos
@@ -21,8 +20,7 @@ export function ApiImageUpload() {
                         format: 'binary',
                     },
                     type: {
-                        type: 'string',
-                        enum: Object.values(ReportTypes),
+                        type: 'number',
                     },
                     description: {
                         type: 'string',

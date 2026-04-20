@@ -6,9 +6,9 @@ import {TypeOrmModule} from '@nestjs/typeorm'
 import { UsersModule } from './providers/users.module';
 import { ReportsModule } from './providers/reports.module';
 import { ImagesModule } from './providers/images.module';
-import { AlertsModule } from './providers/alerts.module';
 import appConfig from 'config/app.config';
 import databaseConfig from 'config/database.config';
+import { ReportTypesModule } from './providers/report-types.module';
 
 
 @Module({
@@ -29,7 +29,7 @@ import databaseConfig from 'config/database.config';
     UsersModule,
     ReportsModule,
     ImagesModule,
-    AlertsModule
+    ReportTypesModule
   ],
   controllers: [AppController],
   providers: [AppService],

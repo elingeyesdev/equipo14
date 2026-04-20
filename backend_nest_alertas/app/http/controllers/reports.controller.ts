@@ -1,8 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Delete, Get, Param, Post, UploadedFile } from '@nestjs/common';
 import { ReportsService } from '../../services/reports.service';
 import { CreateReportRequest } from '../requests/reports/request';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { ApiImageUpload } from '../../decorators/request.decorator';
 
 @Controller('reports')
