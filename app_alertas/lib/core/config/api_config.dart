@@ -17,8 +17,10 @@ class ApiConfig {
 
   static const String usersPath = '/users';
   static const String reportsPath = '/reports';
+  static const String reportTypesPath = '/report-types';
 
   /// UUID de un usuario existente en el backend (creado para pruebas locales).
+  /// cambiar esto por q la base de datos fue borrada alvrga xd
   static const String defaultUserId =
       '1717ef84-b2c9-4e50-9c0a-686f8eff0dd9';
 }

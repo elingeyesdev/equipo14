@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import 'package:app_alertas/core/config/api_config.dart';
+import 'package:app_alertas/data/models/alert_type.model.dart';
 import 'package:app_alertas/data/models/image_model.dart';
 import 'package:app_alertas/data/models/report_model.dart';
 import 'package:app_alertas/data/models/user_model.dart';
@@ -95,6 +96,21 @@ class ApiService {
     _ensureOk(response);
   }
 
+  // --- Tipos de Reporte (GET /report-types) ---
+
+  Future<List<ReportTypeModel>> obtenerTiposDeAlerta() async {
+    final response = await http.get(
+      _uri(ApiConfig.reportTypesPath),
+      headers: _tunnelHeaders,
+    );
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body
+        .map((e) => ReportTypeModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // --- Reportes (GET/POST /reports, GET/DELETE /reports/:id) ---
 
   Future<List<ReportModel>> obtenerReportes() async {
@@ -116,8 +132,9 @@ class ApiService {
   }
 
   /// Mismo contrato que `ReportsController.create`: multipart con campos + archivo opcional `image`.
+  /// [typeId] es el ID del tipo de alerta devuelto por `/report-types`.
   Future<ReportModel> crearReporte({
-    required String type,
+    required int typeId,
     required String description,
     required String userId,
     required double latitude,
@@ -125,7 +142,7 @@ class ApiService {
     File? imageFile,
   }) async {
     final request = http.MultipartRequest('POST', _uri(ApiConfig.reportsPath))
-      ..fields['type'] = type
+      ..fields['type'] = typeId.toString()
       ..fields['description'] = description
       ..fields['user'] = userId
       ..fields['latitude'] = latitude.toString()

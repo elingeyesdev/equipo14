@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:app_alertas/core/config/api_config.dart';
 import 'package:app_alertas/data/models/alert_model.dart';
+import 'package:app_alertas/data/models/alert_type.model.dart';
 import 'package:app_alertas/data/services/api_service.dart';
 
 /// Compatibilidad con pantallas existentes; delega en [ApiService].
@@ -12,8 +13,11 @@ class AlertsApiService {
 
   Future<List<AlertModel>> getAlerts() => _api.obtenerReportes();
 
+  /// Obtiene la lista de tipos de alerta desde el backend.
+  Future<List<ReportTypeModel>> getAlertTypes() => _api.obtenerTiposDeAlerta();
+
   Future<AlertModel> createAlert({
-    required String type,
+    required int typeId,
     required String description,
     required String user,
     required double latitude,
@@ -21,7 +25,7 @@ class AlertsApiService {
     File? imageFile,
   }) {
     return _api.crearReporte(
-      type: type,
+      typeId: typeId,
       description: description,
       userId: user,
       latitude: latitude,
@@ -32,14 +36,14 @@ class AlertsApiService {
 
   /// Variante que usa [ApiConfig.defaultUserId] y la posición actual (útil para pruebas rápidas).
   Future<AlertModel> createAlertWithDefaults({
-    required String type,
+    required int typeId,
     required String description,
     required double latitude,
     required double longitude,
     File? imageFile,
   }) {
     return createAlert(
-      type: type,
+      typeId: typeId,
       description: description,
       user: ApiConfig.defaultUserId,
       latitude: latitude,

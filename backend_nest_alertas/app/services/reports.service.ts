@@ -55,7 +55,7 @@ export class ReportsService {
     async findAll(){
         const reports = await this.reportsRepository.find({
             //aqui se cargan las relaciones
-            relations: ['user', 'images'],
+            relations: ['user', 'images', 'type'],
             order: {
                 id: 'ASC'
             }
@@ -66,7 +66,7 @@ export class ReportsService {
     async findOne(id: string) {
         const report = await this.reportsRepository.findOne({
             where: {id: Number(id)},
-            relations: ['user','images']
+            relations: ['user','images', 'type']
         });
         if(!report){
             throw new NotFoundException("Reporte no encontrado")

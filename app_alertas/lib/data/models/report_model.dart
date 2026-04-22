@@ -35,7 +35,9 @@ class ReportModel {
         .toList();
 
     return ReportModel(
-      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      id: json['id'] is int
+          ? json['id'] as int
+          : int.tryParse('${json['id']}') ?? 0,
       userUuid: (json['user_uuid'] ?? '').toString(),
       type: (json['type'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
@@ -52,14 +54,14 @@ class ReportModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'user_uuid': userUuid,
-        'type': type,
-        'description': description,
-        'coordinates': coordinates,
-        'weight': weight,
-        'created_at': createdAt?.toIso8601String(),
-        'expires_at': expiresAt?.toIso8601String(),
-        'images': images.map((e) => e.toJson()).toList(),
-      };
+    'id': id,
+    'user_uuid': userUuid,
+    'type': type,
+    'description': description,
+    'coordinates': coordinates,
+    'weight': weight,
+    'created_at': createdAt?.toIso8601String(),
+    'expires_at': expiresAt?.toIso8601String(),
+    'images': images.map((e) => e.toJson()).toList(),
+  };
 }

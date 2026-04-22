@@ -68,37 +68,44 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   List<Marker> _buildAlertMarkers() {
-    return _alerts.where((a) => a.coordinates.length >= 2).map((alert) {
-      final point = _toLatLng(alert.coordinates);
-      if (point == null) {
-        return null;
-      }
-      return Marker(
-        point: point,
-        width: 120,
-        height: 56,
-        child: Column(
-          children: [
-            Icon(
-              _iconByType(alert.type),
-              color: _colorByType(alert.type),
-              size: 32,
+    return _alerts
+        .where((a) => a.coordinates.length >= 2)
+        .map((alert) {
+          final point = _toLatLng(alert.coordinates);
+          if (point == null) {
+            return null;
+          }
+          return Marker(
+            point: point,
+            width: 120,
+            height: 56,
+            child: Column(
+              children: [
+                Icon(
+                  _iconByType(alert.type),
+                  color: _colorByType(alert.type),
+                  size: 32,
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _labelByType(alert.type),
+                    style: const TextStyle(fontSize: 11, color: Colors.white),
+                  ),
+                ),
+              ],
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _labelByType(alert.type),
-                style: const TextStyle(fontSize: 11, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-      );
-    }).whereType<Marker>().toList();
+          );
+        })
+        .whereType<Marker>()
+        .toList();
   }
 
   LatLng? _toLatLng(List<double> coordinates) {

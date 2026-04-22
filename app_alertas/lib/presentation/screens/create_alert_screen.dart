@@ -8,6 +8,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:app_alertas/core/config/api_config.dart';
+import 'package:app_alertas/data/models/alert_type.model.dart';
 import 'package:app_alertas/data/services/api_service.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
 
@@ -21,9 +22,14 @@ class CreateAlertScreen extends StatefulWidget {
 }
 
 class _CreateAlertScreenState extends State<CreateAlertScreen> {
-  String selectedType = "Robo";
+  // --- Tipo de alerta (cargado desde el backend) ---
+  List<ReportTypeModel> _alertTypes = [];
+  ReportTypeModel? _selectedType;
+  bool _isLoadingTypes = true;
+  String? _typesError;
 
   File? image;
+
   /// URL devuelta por el backend (Cloudinary) tras crear el reporte con foto.
   String? _lastUploadedImageUrl;
   final picker = ImagePicker();
@@ -33,51 +39,52 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
   final _random = Random();
   bool _isLoadingLocation = true;
   bool _isSubmitting = false;
-  String _locationTitle = "Detectando ubicaci?n...";
-  String _locationSubtitle = "Esperando permisos";
+  String _locationTitle = 'Detectando ubicación...';
+  String _locationSubtitle = 'Esperando permisos';
   Position? _position;
 
-  Future<void> pickImage() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('C?mara'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Galer?a'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null || !mounted) return;
-
-    final pickedFile = await picker.pickImage(
-      source: source,
-      imageQuality: 85,
-    );
-
-    if (pickedFile != null) {
-      setState(() {
-        image = File(pickedFile.path);
-        _lastUploadedImageUrl = null;
-      });
-    }
-  }
+  // ---------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------
 
   @override
   void initState() {
     super.initState();
     _loadCurrentLocation();
+    _loadAlertTypes();
   }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------
+  // Carga de tipos de alerta
+  // ---------------------------------------------------------------
+
+  Future<void> _loadAlertTypes() async {
+    try {
+      final types = await _service.getAlertTypes();
+      if (!mounted) return;
+      setState(() {
+        _alertTypes = types;
+        _selectedType = types.isNotEmpty ? types.first : null;
+        _isLoadingTypes = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingTypes = false;
+        _typesError = 'No se pudieron cargar los tipos: $e';
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Geolocalización
+  // ---------------------------------------------------------------
 
   Future<void> _loadCurrentLocation() async {
     try {
@@ -86,8 +93,8 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
         if (!mounted) return;
         setState(() {
           _isLoadingLocation = false;
-          _locationTitle = "No se pudo detectar ubicaci?n";
-          _locationSubtitle = "Permiso de ubicaci?n denegado";
+          _locationTitle = 'No se pudo detectar ubicación';
+          _locationSubtitle = 'Permiso de ubicación denegado';
         });
         return;
       }
@@ -117,9 +124,9 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       if (placemarks.isEmpty) {
         setState(() {
           _isLoadingLocation = false;
-          _locationTitle = "Ubicaci?n actual detectada";
+          _locationTitle = 'Ubicación actual detectada';
           _locationSubtitle =
-              "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
+              '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
         });
         return;
       }
@@ -129,33 +136,34 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
           .where((v) => v != null && v.trim().isNotEmpty)
           .map((v) => v!.trim())
           .toSet()
-          .join(", ");
-      final cityPart = [
-        place.locality,
-        place.subAdministrativeArea,
-        place.administrativeArea,
-        place.country,
-      ]
-          .where((v) => v != null && v.trim().isNotEmpty)
-          .map((v) => v!.trim())
-          .toSet()
-          .join(", ");
+          .join(', ');
+      final cityPart =
+          [
+                place.locality,
+                place.subAdministrativeArea,
+                place.administrativeArea,
+                place.country,
+              ]
+              .where((v) => v != null && v.trim().isNotEmpty)
+              .map((v) => v!.trim())
+              .toSet()
+              .join(', ');
 
       setState(() {
         _isLoadingLocation = false;
         _locationTitle = streetPart.isNotEmpty
             ? streetPart
-            : "Ubicaci?n actual detectada";
+            : 'Ubicación actual detectada';
         _locationSubtitle = cityPart.isNotEmpty
             ? cityPart
-            : "${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}";
+            : '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isLoadingLocation = false;
-        _locationTitle = "No se pudo detectar ubicaci?n";
-        _locationSubtitle = "Activa GPS e int?ntalo de nuevo";
+        _locationTitle = 'No se pudo detectar ubicación';
+        _locationSubtitle = 'Activa GPS e inténtalo de nuevo';
       });
     }
   }
@@ -198,14 +206,14 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     // Recoger más muestras para escoger la de menor error (metros)
     StreamSubscription<Position>? sub;
     try {
-      sub = Geolocator.getPositionStream(locationSettings: settings).listen(
-        (p) {
-          samples.add(p);
-          if (samples.length >= 4) {
-            sub?.cancel();
-          }
-        },
-      );
+      sub = Geolocator.getPositionStream(locationSettings: settings).listen((
+        p,
+      ) {
+        samples.add(p);
+        if (samples.length >= 4) {
+          sub?.cancel();
+        }
+      });
       await Future<void>.delayed(const Duration(seconds: 3));
     } finally {
       await sub?.cancel();
@@ -274,8 +282,9 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
         return null;
       }
 
-      // Priorizar vía/zona para evitar POIs "famosos" lejanos (ej. Plaza 24 de Septiembre).
-      final title = pick([
+      // Priorizar vía/zona para evitar POIs "famosos" lejanos.
+      final title =
+          pick([
             'road',
             'pedestrian',
             'residential',
@@ -302,14 +311,48 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       ].whereType<String>().where((e) => e.isNotEmpty).toSet().join(', ');
 
       if (subtitle.isEmpty) {
-        return (
-          title,
-          '${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}',
-        );
+        return (title, '${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}');
       }
       return (title, subtitle);
     } catch (_) {
       return null;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Imagen
+  // ---------------------------------------------------------------
+
+  Future<void> pickImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Cámara'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galería'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 85);
+
+    if (pickedFile != null) {
+      setState(() {
+        image = File(pickedFile.path);
+        _lastUploadedImageUrl = null;
+      });
     }
   }
 
@@ -349,10 +392,40 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _descriptionController.dispose();
-    super.dispose();
+  // ---------------------------------------------------------------
+  // Envío del reporte
+  // ---------------------------------------------------------------
+
+  Future<String> _resolveReportUserId() async {
+    // 1) Intentar el UUID fijo de configuración.
+    try {
+      final user = await _apiService.obtenerUsuario(ApiConfig.defaultUserId);
+      if (user.id.isNotEmpty) return user.id;
+    } catch (_) {}
+
+    // 2) Si ya hay usuarios en backend, reutilizar el primero.
+    try {
+      final users = await _apiService.obtenerUsuarios();
+      if (users.isNotEmpty && users.first.id.isNotEmpty) {
+        return users.first.id;
+      }
+    } catch (_) {}
+
+    // 3) Crear uno nuevo para poder reportar.
+    for (var i = 0; i < 10; i++) {
+      try {
+        final phone = (10000000 + _random.nextInt(90000000)).toString();
+        final created = await _apiService.crearUsuario(
+          firstName: 'app',
+          lastName: 'alertas',
+          phone: phone,
+          password: 'App2024!',
+        );
+        if (created.id.isNotEmpty) return created.id;
+      } catch (_) {}
+    }
+
+    throw Exception('No se pudo resolver/crear un usuario para el reporte.');
   }
 
   Future<void> _submitAlert() async {
@@ -360,13 +433,20 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     if (description.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Ingresa una descripci?n')));
+      ).showSnackBar(const SnackBar(content: Text('Ingresa una descripción')));
       return;
     }
 
     if (_position == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo obtener tu ubicaci?n')),
+        const SnackBar(content: Text('No se pudo obtener tu ubicación')),
+      );
+      return;
+    }
+
+    if (_selectedType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona un tipo de alerta')),
       );
       return;
     }
@@ -375,7 +455,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     try {
       final userId = await _resolveReportUserId();
       final report = await _service.createAlert(
-        type: _mapTypeToBackend(selectedType),
+        typeId: _selectedType!.id,
         description: description,
         user: userId,
         latitude: _position!.latitude,
@@ -413,50 +493,9 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     }
   }
 
-  Future<String> _resolveReportUserId() async {
-    // 1) Intentar el UUID fijo de configuración.
-    try {
-      final user = await _apiService.obtenerUsuario(ApiConfig.defaultUserId);
-      if (user.id.isNotEmpty) return user.id;
-    } catch (_) {}
-
-    // 2) Si ya hay usuarios en backend, reutilizar el primero.
-    try {
-      final users = await _apiService.obtenerUsuarios();
-      if (users.isNotEmpty && users.first.id.isNotEmpty) {
-        return users.first.id;
-      }
-    } catch (_) {}
-
-    // 3) Crear uno nuevo para poder reportar.
-    for (var i = 0; i < 10; i++) {
-      try {
-        final phone = (10000000 + _random.nextInt(90000000)).toString();
-        final created = await _apiService.crearUsuario(
-          firstName: 'app',
-          lastName: 'alertas',
-          phone: phone,
-          password: 'App2024!',
-        );
-        if (created.id.isNotEmpty) return created.id;
-      } catch (_) {}
-    }
-
-    throw Exception('No se pudo resolver/crear un usuario para el reporte.');
-  }
-
-  String _mapTypeToBackend(String type) {
-    switch (type) {
-      case "Robo":
-        return "robo";
-      case "Incendio":
-        return "incendio";
-      case "Accidente":
-        return "accidente";
-      default:
-        return "robo";
-    }
-  }
+  // ---------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -469,36 +508,106 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Crear alerta",
+                  'Crear alerta',
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                 ),
 
                 const SizedBox(height: 5),
 
                 const Text(
-                  "Reporta una emergencia en tu zona",
+                  'Reporta una emergencia en tu zona',
                   style: TextStyle(color: Colors.grey),
                 ),
 
                 const SizedBox(height: 20),
 
-                const Text("Tipo de alerta"),
+                const Text(
+                  'Tipo de alerta',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
 
                 const SizedBox(height: 10),
 
-                Row(
-                  children: [
-                    buildTypeButton("Robo", Colors.red),
-                    const SizedBox(width: 10),
-                    buildTypeButton("Incendio", Colors.orange),
-                    const SizedBox(width: 10),
-                    buildTypeButton("Accidente", Colors.blue),
-                  ],
-                ),
+                // ------ Dropdown de tipos desde el backend ------
+                if (_isLoadingTypes)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (_typesError != null)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _typesError!,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _isLoadingTypes = true;
+                            _typesError = null;
+                          });
+                          _loadAlertTypes();
+                        },
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<ReportTypeModel>(
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1E293B),
+                        value: _selectedType,
+                        hint: const Text(
+                          'Selecciona un tipo',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.grey,
+                        ),
+                        items: _alertTypes.map((type) {
+                          return DropdownMenuItem<ReportTypeModel>(
+                            value: type,
+                            child: Text(
+                              type.name,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (ReportTypeModel? value) {
+                          setState(() => _selectedType = value);
+                        },
+                      ),
+                    ),
+                  ),
 
                 const SizedBox(height: 20),
 
-                const Text("Descripci?n"),
+                const Text('Descripción'),
 
                 const SizedBox(height: 10),
 
@@ -512,7 +621,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                     controller: _descriptionController,
                     maxLines: 4,
                     decoration: const InputDecoration(
-                      hintText: "Describe lo que est? pasando...",
+                      hintText: 'Describe lo que está pasando...',
                       border: InputBorder.none,
                     ),
                   ),
@@ -520,7 +629,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
                 const SizedBox(height: 20),
 
-                const Text("Ubicaci?n"),
+                const Text('Ubicación'),
 
                 const SizedBox(height: 10),
 
@@ -571,7 +680,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                       children: [
                         Icon(Icons.add_a_photo),
                         SizedBox(width: 10),
-                        Text("Foto o galer?a"),
+                        Text('Foto o galería'),
                       ],
                     ),
                   ),
@@ -633,7 +742,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                 if (_lastUploadedImageUrl != null) ...[
                   const SizedBox(height: 16),
                   const Text(
-                    '?ltima imagen en el servidor (Cloudinary)',
+                    'Última imagen en el servidor (Cloudinary)',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
@@ -651,10 +760,13 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                           child: Center(child: CircularProgressIndicator()),
                         );
                       },
-                      errorBuilder: (context, error, stackTrace) => const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('No se pudo cargar la imagen desde la URL'),
-                      ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'No se pudo cargar la imagen desde la URL',
+                            ),
+                          ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -678,8 +790,8 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                     ),
                     onPressed: _isSubmitting ? null : _submitAlert,
                     child: Text(
-                      _isSubmitting ? "ENVIANDO..." : "ENVIAR ALERTA",
-                      style: TextStyle(fontSize: 16),
+                      _isSubmitting ? 'ENVIANDO...' : 'ENVIAR ALERTA',
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ),
                 ),
@@ -688,41 +800,11 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
                 const Center(
                   child: Text(
-                    "Tu alerta ser? enviada a las autoridades locales",
+                    'Tu alerta será enviada a las autoridades locales',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildTypeButton(String text, Color color) {
-    bool isSelected = selectedType == text;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedType = text;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? color : const Color(0xFF1E293B),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey,
-                fontWeight: FontWeight.bold,
-              ),
             ),
           ),
         ),

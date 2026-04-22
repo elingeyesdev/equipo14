@@ -148,20 +148,23 @@ class HistoryScreenState extends State<HistoryScreen> {
                                 child: const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                               );
                             },
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              width: 90,
-                              height: 70,
-                              color: const Color(0xFF0F172A),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.broken_image_outlined,
-                                color: Colors.grey,
-                              ),
-                            ),
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  width: 90,
+                                  height: 70,
+                                  color: const Color(0xFF0F172A),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.broken_image_outlined,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                           ),
                         );
                       },
