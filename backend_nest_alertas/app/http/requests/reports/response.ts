@@ -1,10 +1,11 @@
 import { Image } from "app/models/image.entity";
+import { ReportType } from "app/models/report-types.entity";
 import { Report } from "app/models/report.entity";
 
 export class ReportResponse{
     id: number;
     user_uuid: string;
-    type: string;
+    type: ReportType;
     description: string;
     coordinates: number[];
     weight: number;
@@ -17,7 +18,7 @@ export class ReportResponse{
 
         response.id = report.id
         response.user_uuid = report.user.id
-        response.type = report.type.name
+        response.type = report.type
         response.description = report.description
         response.coordinates = report.location.coordinates
         response.weight = report.weight

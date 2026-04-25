@@ -6,15 +6,22 @@ import * as bcrypt from 'bcrypt'
 
 import { UserResponse } from '../http/requests/users/response';
 import { CreateUserRequest, UpdateUserRequest } from 'app/http/requests/users/request';
+import { Role } from 'app/models/role.entity';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User) 
-        private usersRepository: Repository<User>
+        private usersRepository: Repository<User>,
+        @InjectRepository(Role)
+        private rolesRepository: Repository<Role>,
     ) {}
 
     async create(CreateUserRequest: CreateUserRequest){
+        const role = await this.rolesRepository.findOne({where: {id: CreateUserRequest.roleId}})
+        if(!role){
+            throw new NotFoundException("Rol no encontrado")
+        }
         const createUser = CreateUserRequest.toUser();
 
         const existPhone = await this.usersRepository.findOne({
@@ -29,11 +36,12 @@ export class UsersService {
         const newUser = this.usersRepository.create({
             ...createUser,
             password: hashPassword,
+            role: role
         })
 
         const savedUser = await this.usersRepository.save(newUser);
 
-        return UserResponse.FromUserToResponse(savedUser);
+        return savedUser;
     }
 
     async findAll(){
@@ -47,6 +55,10 @@ export class UsersService {
             throw new NotFoundException(`El user con ID ${id} no se encontro`)
         }
         return UserResponse.FromUserToResponse(user)
+    }
+
+    async findByPhone(phone: string){
+        return this.usersRepository.findOne({where: {phone}})
     }
 
     async update(id: string, updateUserDto: UpdateUserRequest){

@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsNumberString, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from "class-validator";
+import { IsNumber, IsNumberString, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from "class-validator";
 import { User } from "app/models/user.entity";
 
 export class CreateUserRequest{
@@ -26,6 +26,10 @@ export class CreateUserRequest{
     @MaxLength(20, {message: 'La contraseña no debe exceder los 20 caracteres'})
     @Matches(/^\S+$/, {message: 'La contraseña no debe contener espacios',})
     password: string
+
+    @ApiProperty()
+    @IsNumber()
+    roleId: number
 
     toUser(): User{
         const user = new User();

@@ -22,6 +22,11 @@ export async function bootstrap() {
     .setTitle('API REST BACKEND NEST ')
     .setDescription('Esta es la api backend')
     .setVersion('1.0')
+    .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+    })
     .addTag('code')
     .build();
     const documentFactory = () => SwaggerModule.createDocument(app, config);

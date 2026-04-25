@@ -1,5 +1,6 @@
 import { Report } from "app/models/report.entity";
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Role } from "./role.entity";
 
 @Entity()
 export class User {
@@ -12,7 +13,7 @@ export class User {
     @Column()
     last_name: string;
 
-    @Column()
+    @Column({unique: true})
     phone: string;
 
     @Column()
@@ -20,4 +21,7 @@ export class User {
 
     @OneToMany(() => Report, report => report.user)
     reports: Report[];
+
+    @ManyToOne(() => Role, role => role.users)
+    role: Role;
 }

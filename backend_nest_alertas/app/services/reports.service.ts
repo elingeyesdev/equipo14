@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Report } from '../models/report.entity';
 import { Repository } from 'typeorm';
@@ -24,7 +24,7 @@ export class ReportsService {
     //revisar esto manana
     //me gano el sueno, asi capaz este mal algo
     async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
-        const user = await this.usersRepository.findOne({where: {id: createReportRequest.user}})
+        const user = await this.usersRepository.findOne({where: {id: createReportRequest.userId}})
         if(!user){
             throw new NotFoundException("Usuario no encontrado");
         }

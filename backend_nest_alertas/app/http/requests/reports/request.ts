@@ -22,7 +22,7 @@ export class CreateReportRequest {
     longitude: number;
 
     @IsString()
-    user: string
+    userId: string
     
     toReport(): Report{
         const report = new Report();

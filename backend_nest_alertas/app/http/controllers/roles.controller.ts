@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Param, Post, Get, Request } from "@nestjs/common";
 import { ApiBody } from "@nestjs/swagger";
-import { ReportTypesService } from "app/services/report-types.service";
+import { RolesService } from "app/services/roles.service";
 
-@Controller('report-types')
-export class ReportTypeController{
-    constructor(private readonly reportTypesService: ReportTypesService){}
+@Controller('roles')
+export class RolesController{
+    constructor(private readonly rolesService: RolesService){}
 
     @Post()
     @ApiBody({
@@ -18,16 +18,16 @@ export class ReportTypeController{
         }
     })
     create(@Body('name') name: string, @Request() req){
-        return this.reportTypesService.create(name)
+        return this.rolesService.create(name)
     }
 
     @Get()
     findAll(){
-        return this.reportTypesService.findAll()
+        return this.rolesService.findAll()
     }
 
     @Delete(':id')
     remove(@Param('id') id: number){
-        return this.reportTypesService.remove(id)
+        return this.rolesService.remove(id)
     }
 }

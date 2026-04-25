@@ -21,7 +21,7 @@ export class ReportTypesService{
         return saveRportType;
     }
 
-    async finAll(){
+    async findAll(){
         const reportTypes = await this.reportTypeRepository.find();
         return reportTypes
     }

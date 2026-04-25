@@ -1,7 +1,9 @@
+import { Role } from "app/models/role.entity";
 import { User } from "app/models/user.entity";
 
 export class UserResponse {
     id: string;
+    role: Role;
     first_name: string;
     last_name: string;
     phone: string;
@@ -10,6 +12,7 @@ export class UserResponse {
         const response = new UserResponse();
 
         response.id = user.id
+        response.role = user.role
         response.first_name = user.first_name
         response.last_name = user.last_name
         response.phone = user.phone
