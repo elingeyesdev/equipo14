@@ -38,7 +38,22 @@ export class AuthController {
     // el Request a diferencia del Body devuelve todo el objeto http del request
     // el Body solo devuelve los datos enviados por el cliente anadidos el body de la consulta
     async login(@Request() req){
-        console.log(req)
+        console.log(req.user.role)
         return this.authService.login(req.user)
+    }
+
+    @Post('/refresh')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                refresh_token: {
+                    type: 'string',
+                },
+            },
+        }
+    })
+    async refresh(@Body('refresh_token') token: string){
+        return this.authService.refreshToken(token)
     }
 }

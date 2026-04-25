@@ -45,12 +45,18 @@ export class UsersService {
     }
 
     async findAll(){
-        const users = await this.usersRepository.find();
+        const users = await this.usersRepository.find({
+            relations: ['role'],
+        });
         return UserResponse.FromUserListToResponse(users)
     }
 
     async findOne(id: string){
-        const user = await this.usersRepository.findOneBy({id});
+        const user = await this.usersRepository.findOne({
+            where: { id },
+            relations: ['role'],
+        });
+
         if(!user){
             throw new NotFoundException(`El user con ID ${id} no se encontro`)
         }
@@ -58,7 +64,10 @@ export class UsersService {
     }
 
     async findByPhone(phone: string){
-        return this.usersRepository.findOne({where: {phone}})
+        return this.usersRepository.findOne({
+            where: {phone},
+            relations: ['role'],
+        })
     }
 
     async update(id: string, updateUserDto: UpdateUserRequest){

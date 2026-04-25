@@ -18,9 +18,6 @@ import { LocalStrategy } from "app/guards/strategies/local.strategy";
                 const jwt = configService.get('jwt')
                 return {
                     secret: jwt.secret,
-                    signOptions: {
-                        expiresIn: jwt.expiresIn,
-                    },
                 };
             },
         }),

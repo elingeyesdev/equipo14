@@ -19,6 +19,9 @@ export class User {
     @Column()
     password: string;
 
+    @Column({ nullable: true })
+    refresh_token: string;
+
     @OneToMany(() => Report, report => report.user)
     reports: Report[];
 
