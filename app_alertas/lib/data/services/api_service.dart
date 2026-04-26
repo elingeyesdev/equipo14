@@ -29,10 +29,63 @@ class ApiService {
     return Uri.parse('$_base$p');
   }
 
+  Map<String, String> get tunnelHeaders => _tunnelHeaders;
+
+  // --- Auth ---
+
+  Future<Map<String, dynamic>> login({
+    required String phone,
+    required String password,
+  }) async {
+    final response = await http.post(
+      _uri('${ApiConfig.authPath}/login'),
+      headers: {'Content-Type': 'application/json', ..._tunnelHeaders},
+      body: jsonEncode({'phone': phone, 'password': password}),
+    );
+    _ensureOk(response);
+    return _decodeJsonMap(response.body);
+  }
+
+  Future<Map<String, dynamic>> register({
+    required String firstName,
+    required String lastName,
+    required String phone,
+    required String password,
+    required int roleId,
+  }) async {
+    final response = await http.post(
+      _uri('${ApiConfig.authPath}/register'),
+      headers: {'Content-Type': 'application/json', ..._tunnelHeaders},
+      body: jsonEncode({
+        'first_name': firstName,
+        'last_name': lastName,
+        'phone': phone,
+        'password': password,
+        'roleId': roleId,
+      }),
+    );
+    _ensureOk(response);
+    return _decodeJsonMap(response.body);
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerRoles() async {
+    final response = await http.get(
+      _uri(ApiConfig.rolesPath),
+      headers: _tunnelHeaders,
+    );
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+  }
+
   // --- Usuarios (GET/POST /users, GET/PATCH/DELETE /users/:id) ---
 
   Future<List<UserModel>> obtenerUsuarios() async {
-    final response = await http.get(_uri(ApiConfig.usersPath), headers: _tunnelHeaders);
+    final response = await http.get(
+      _uri(ApiConfig.usersPath),
+      headers: _tunnelHeaders,
+    );
     _ensureOk(response);
     final body = jsonDecode(response.body);
     if (body is! List) return [];
@@ -42,7 +95,10 @@ class ApiService {
   }
 
   Future<UserModel> obtenerUsuario(String id) async {
-    final response = await http.get(_uri(ApiConfig.usersPath, id), headers: _tunnelHeaders);
+    final response = await http.get(
+      _uri(ApiConfig.usersPath, id),
+      headers: _tunnelHeaders,
+    );
     _ensureOk(response);
     return UserModel.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -92,7 +148,10 @@ class ApiService {
   }
 
   Future<void> eliminarUsuario(String id) async {
-    final response = await http.delete(_uri(ApiConfig.usersPath, id), headers: _tunnelHeaders);
+    final response = await http.delete(
+      _uri(ApiConfig.usersPath, id),
+      headers: _tunnelHeaders,
+    );
     _ensureOk(response);
   }
 
@@ -114,7 +173,10 @@ class ApiService {
   // --- Reportes (GET/POST /reports, GET/DELETE /reports/:id) ---
 
   Future<List<ReportModel>> obtenerReportes() async {
-    final response = await http.get(_uri(ApiConfig.reportsPath), headers: _tunnelHeaders);
+    final response = await http.get(
+      _uri(ApiConfig.reportsPath),
+      headers: _tunnelHeaders,
+    );
     _ensureOk(response);
     final body = jsonDecode(response.body);
     if (body is! List) return [];
@@ -124,7 +186,10 @@ class ApiService {
   }
 
   Future<ReportModel> obtenerReporte(int id) async {
-    final response = await http.get(_uri(ApiConfig.reportsPath, '$id'), headers: _tunnelHeaders);
+    final response = await http.get(
+      _uri(ApiConfig.reportsPath, '$id'),
+      headers: _tunnelHeaders,
+    );
     _ensureOk(response);
     return ReportModel.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -168,7 +233,10 @@ class ApiService {
   }
 
   Future<void> eliminarReporte(int id) async {
-    final response = await http.delete(_uri(ApiConfig.reportsPath, '$id'), headers: _tunnelHeaders);
+    final response = await http.delete(
+      _uri(ApiConfig.reportsPath, '$id'),
+      headers: _tunnelHeaders,
+    );
     _ensureOk(response);
   }
 
@@ -180,9 +248,15 @@ class ApiService {
 
   void _ensureOk(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'HTTP ${response.statusCode}: ${response.body}',
-      );
+      throw Exception('HTTP ${response.statusCode}: ${response.body}');
     }
+  }
+
+  Map<String, dynamic> _decodeJsonMap(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Respuesta inesperada del servidor.');
+    }
+    return decoded;
   }
 }

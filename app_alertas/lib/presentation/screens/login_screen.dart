@@ -7,10 +7,14 @@ class LoginScreen extends StatefulWidget {
     super.key,
     required this.onLoginSuccess,
     required this.onGoToRegister,
+    required this.onGoToAuthorityLogin,
+    required this.onGoToAuthorityRegister,
   });
 
   final ValueChanged<UserModel> onLoginSuccess;
   final VoidCallback onGoToRegister;
+  final VoidCallback onGoToAuthorityLogin;
+  final VoidCallback onGoToAuthorityRegister;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -43,9 +47,9 @@ class _LoginScreenState extends State<LoginScreen> {
       widget.onLoginSuccess(user);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -75,15 +79,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _phoneController,
-                      keyboardType: TextInputType.phone,
+                      keyboardType: TextInputType.text,
                       decoration: const InputDecoration(
-                        labelText: 'Numero de telefono',
+                        labelText: 'Correo o telefono',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         final v = value?.trim() ?? '';
-                        if (v.isEmpty) return 'Ingresa tu numero.';
-                        if (v.length != 8) return 'El numero debe tener 8 digitos.';
+                        if (v.isEmpty) return 'Ingresa tu correo o telefono.';
                         return null;
                       },
                     ),
@@ -105,19 +108,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _isLoading ? null : _submit,
-                      child:
-                          _isLoading
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                              : const Text('Entrar'),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Entrar'),
                     ),
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: _isLoading ? null : widget.onGoToRegister,
                       child: const Text('No tienes cuenta? Registrate'),
+                    ),
+                    const Divider(height: 24),
+                    OutlinedButton.icon(
+                      onPressed: _isLoading
+                          ? null
+                          : widget.onGoToAuthorityLogin,
+                      icon: const Icon(Icons.admin_panel_settings_outlined),
+                      label: const Text('Login de autoridades'),
+                    ),
+                    TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : widget.onGoToAuthorityRegister,
+                      child: const Text('Registrar autoridad'),
                     ),
                   ],
                 ),
