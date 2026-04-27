@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'dart:convert';
+
 import 'package:app_alertas/data/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
 
 const _kMapboxAccessToken =
     'pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA';
@@ -37,8 +40,42 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
   String? _locationError;
   StreamSubscription<LatLng>? _locationSubscription;
   bool _isFollowingRoute = false;
+  List<LatLng> _routePoints = [];
+  bool _isLoadingRoute = false;
 
   LatLng get _incidentLocation => LatLng(widget.latitude, widget.longitude);
+
+  Future<void> _fetchRoute() async {
+    if (_currentLocation == null) return;
+    setState(() => _isLoadingRoute = true);
+
+    try {
+      final start = _currentLocation!;
+      final end = _incidentLocation;
+      // Usamos OSRM público para obtener la ruta de conducción
+      final url = Uri.parse(
+          'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?geometries=geojson');
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final geometry = data['routes'][0]['geometry']['coordinates'] as List;
+          
+          setState(() {
+            _routePoints = geometry
+                .map((coord) => LatLng(coord[1] as double, coord[0] as double))
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching route: $e');
+    } finally {
+      setState(() => _isLoadingRoute = false);
+    }
+  }
 
   @override
   void initState() {
@@ -61,6 +98,7 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
         _locationError = null;
       });
       _fitRouteInView();
+      await _fetchRoute();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -71,12 +109,20 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
 
   void _fitRouteInView() {
     if (_currentLocation == null) return;
-    _mapController.fitCamera(
-      CameraFit.coordinates(
-        coordinates: [_currentLocation!, _incidentLocation],
-        padding: const EdgeInsets.all(40),
-      ),
-    );
+    
+    // Evitar el error de "FlutterMap not rendered" esperando al siguiente frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        _mapController.fitCamera(
+          CameraFit.coordinates(
+            coordinates: [_currentLocation!, _incidentLocation],
+            padding: const EdgeInsets.all(60),
+          ),
+        );
+      } catch (e) {
+        debugPrint('MapController no está listo aún: $e');
+      }
+    });
   }
 
   Future<void> _toggleRouteTracking() async {
@@ -87,10 +133,21 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
       setState(() {
         _isFollowingRoute = false;
       });
+      _fitRouteInView(); // Volver a mostrar toda la ruta cuando se detiene
       return;
     }
 
     try {
+      if (!mounted) return;
+      setState(() {
+        _isFollowingRoute = true;
+      });
+      
+      // Zoom inicial estilo Google Maps (acercar a la posición actual)
+      if (_currentLocation != null) {
+        _mapController.move(_currentLocation!, 17.5);
+      }
+
       final stream = await _locationService.getLocationStream();
       _locationSubscription = stream.listen(
         (position) {
@@ -99,7 +156,12 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
             _currentLocation = position;
             _locationError = null;
           });
-          _fitRouteInView();
+          
+          if (_isFollowingRoute) {
+             // Seguir al usuario constantemente estilo Google Maps
+            _mapController.move(position, 17.5);
+            // Idealmente aquí podríamos comprobar si se salió de la ruta y llamar a _fetchRoute()
+          }
         },
         onError: (error) {
           if (!mounted) return;
@@ -110,10 +172,6 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
         },
       );
 
-      if (!mounted) return;
-      setState(() {
-        _isFollowingRoute = true;
-      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -128,9 +186,14 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
     final initialCenter = hasCurrentLocation
         ? _currentLocation!
         : _incidentLocation;
-    final points = hasCurrentLocation
-        ? <LatLng>[_currentLocation!, _incidentLocation]
-        : <LatLng>[_incidentLocation];
+    
+    // Si tenemos puntos de la ruta generados por OSRM, los usamos. 
+    // Si no (ej. mientras carga), usamos una línea recta como fallback.
+    final points = _routePoints.isNotEmpty
+        ? _routePoints
+        : (hasCurrentLocation
+            ? <LatLng>[_currentLocation!, _incidentLocation]
+            : <LatLng>[_incidentLocation]);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ruta al incidente')),
@@ -138,6 +201,7 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
         children: [
           Expanded(
             child: FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: initialCenter,
                 initialZoom: 14,
@@ -154,8 +218,8 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
                     polylines: [
                       Polyline(
                         points: points,
-                        strokeWidth: 5,
-                        color: Colors.blueAccent,
+                        strokeWidth: 6,
+                        color: _isLoadingRoute ? Colors.grey : Colors.blueAccent,
                       ),
                     ],
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_alertas/data/models/alert_model.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
 import 'package:app_alertas/presentation/screens/map_route_screen.dart';
+import 'package:latlong2/latlong.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -97,7 +98,7 @@ class HistoryScreenState extends State<HistoryScreen> {
         : 'Sin fecha';
 
     final hasImages = alert.images.isNotEmpty;
-    final incidentLocation = _extractIncidentLocation(alert.coordinates);
+    final incidentLocation = _toLatLng(alert.coordinates);
     final canNavigate = incidentLocation != null;
 
     return Container(
@@ -222,18 +223,13 @@ class HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  _IncidentLocation? _extractIncidentLocation(List<double> coordinates) {
+  LatLng? _toLatLng(List<double> coordinates) {
     if (coordinates.length < 2) return null;
-    final first = coordinates[0];
-    final second = coordinates[1];
-
-    final isFirstLatitude = first >= -90 && first <= 90;
-    final isSecondLongitude = second >= -180 && second <= 180;
-
-    if (isFirstLatitude && isSecondLongitude) {
-      return _IncidentLocation(latitude: first, longitude: second);
-    }
-    return _IncidentLocation(latitude: second, longitude: first);
+    final lon = coordinates[0];
+    final lat = coordinates[1];
+    
+    // PostGIS y GeoJSON siempre devuelven [longitud, latitud]
+    return LatLng(lat, lon);
   }
 
   Color _alertColor(String type) {

@@ -110,16 +110,11 @@ class _MapScreenState extends State<MapScreen> {
 
   LatLng? _toLatLng(List<double> coordinates) {
     if (coordinates.length < 2) return null;
-    final first = coordinates[0];
-    final second = coordinates[1];
-
-    // Backend puede devolver [lon, lat] (GeoJSON) o [lat, lon].
-    final isFirstLat = first >= -90 && first <= 90;
-    final isSecondLon = second >= -180 && second <= 180;
-    if (isFirstLat && isSecondLon) {
-      return LatLng(first, second); // [lat, lon]
-    }
-    return LatLng(second, first); // [lon, lat] -> [lat, lon]
+    final lon = coordinates[0];
+    final lat = coordinates[1];
+    
+    // PostGIS y GeoJSON siempre devuelven [longitud, latitud]
+    return LatLng(lat, lon);
   }
 
   IconData _iconByType(String type) {

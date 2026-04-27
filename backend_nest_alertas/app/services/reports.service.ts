@@ -8,6 +8,8 @@ import { ImagesService } from './images.service';
 import { ReportCoinicdenceResponse, ReportResponse } from 'app/http/requests/reports/response';
 import { ReportType } from 'app/models/report-types.entity';
 
+import { NotificationsService } from './notifications.service';
+
 @Injectable()
 export class ReportsService {
 
@@ -18,7 +20,8 @@ export class ReportsService {
         private usersRepository: Repository<User>,
         @InjectRepository(ReportType)
         private reportTypeRepository: Repository<ReportType>,
-        private imagesServices: ImagesService
+        private imagesServices: ImagesService,
+        private notificationsService: NotificationsService
 
     ){}
     //revisar esto manana
@@ -48,6 +51,19 @@ export class ReportsService {
         const savedReport = await this.reportsRepository.save(newReport);
 
         await this.imagesServices.createFromReport(savedReport, file)
+
+        // Integración de Firebase: Enviar notificación a un tema general (ej. "alertas")
+        // En una app real, esto podría filtrarse por cercanía, pero un tema general es el primer paso.
+        try {
+            await this.notificationsService.sendPushNotificationToTopic(
+                'alertas_generales',
+                `Nueva Alerta: ${type.name}`,
+                createReport.description || 'Se ha reportado un nuevo incidente en tu ciudad.'
+            );
+        } catch (error) {
+            console.error('No se pudo enviar la notificación Push:', error);
+            // No detenemos el flujo si la notificación falla
+        }
 
         return ReportResponse.FromReportToResponse(savedReport);
     }

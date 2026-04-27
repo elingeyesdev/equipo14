@@ -12,7 +12,7 @@ import databaseConfig from 'config/database.config';
 import { ReportTypesModule } from './providers/report-types.module';
 import { AuthModule } from './providers/auth.module';
 import { RolesModule } from './providers/roles.module';
-
+import { NotificationsModule } from './providers/notifications.module';
 
 @Module({
   imports: [
@@ -34,7 +34,8 @@ import { RolesModule } from './providers/roles.module';
     RolesModule,
     ReportsModule,
     ImagesModule,
-    ReportTypesModule
+    ReportTypesModule,
+    NotificationsModule
   ],
   controllers: [AppController],
   providers: [AppService],

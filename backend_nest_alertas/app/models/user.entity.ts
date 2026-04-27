@@ -22,6 +22,9 @@ export class User {
     @Column({ nullable: true })
     refresh_token: string;
 
+    @Column({ nullable: true })
+    fcm_token: string;
+
     @OneToMany(() => Report, report => report.user)
     reports: Report[];
 

@@ -23,6 +23,11 @@ export class UsersController {
         return this.usersService.update(id, updateUserDto)
     }
 
+    @Patch(':id/fcm-token')
+    updateFcmToken(@Param('id') id: string, @Body('fcm_token') fcm_token: string) {
+        return this.usersService.updateFcmToken(id, fcm_token);
+    }
+
     @Delete(':id')
     remove(@Param('id') id: string){
         return this.usersService.remove(id)

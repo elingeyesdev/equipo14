@@ -71,7 +71,7 @@ export class UsersService {
     }
 
     async update(id: string, updateUserDto: UpdateUserRequest){
-        const user = await this.findOne(id)
+        const user = await this.usersRepository.findOneBy({ id });
         
         if(!user){
             throw new NotFoundException(`El user con ID ${id} no se encontro`)
@@ -81,6 +81,16 @@ export class UsersService {
         const updateUser = await this.usersRepository.save(user)
 
         return UserResponse.FromUserToResponse(updateUser)
+    }
+
+    async updateFcmToken(id: string, fcm_token: string) {
+        const user = await this.usersRepository.findOneBy({ id });
+        if (!user) {
+            throw new NotFoundException(`El user con ID ${id} no se encontró`);
+        }
+        user.fcm_token = fcm_token;
+        await this.usersRepository.save(user);
+        return { message: "Token FCM actualizado correctamente" };
     }
 
     async remove(id: string){
