@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:app_alertas/data/models/user_model.dart';
-import 'package:app_alertas/data/services/auth_service.dart';
+import 'package:provider/provider.dart';
+import 'package:app_alertas/presentation/providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key, required this.onRegisterSuccess});
-
-  final ValueChanged<UserModel> onRegisterSuccess;
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -18,8 +16,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService = AuthService();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -34,29 +30,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
     try {
-      final user = await _authService.register(
+      final auth = context.read<AuthProvider>();
+      await auth.registerUser(
         firstName: _nameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         phone: _phoneController.text.trim(),
         password: _passwordController.text.trim(),
       );
       if (!mounted) return;
-      widget.onRegisterSuccess(user);
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return Scaffold(
       appBar: AppBar(title: const Text('Registro de usuario')),
       body: SafeArea(
@@ -77,7 +71,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
-                        if ((value ?? '').trim().isEmpty) return 'Ingresa tu nombre.';
+                        if ((value ?? '').trim().isEmpty) {
+                          return 'Ingresa tu nombre.';
+                        }
                         return null;
                       },
                     ),
@@ -89,7 +85,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
-                        if ((value ?? '').trim().isEmpty) return 'Ingresa tu apellido.';
+                        if ((value ?? '').trim().isEmpty) {
+                          return 'Ingresa tu apellido.';
+                        }
                         return null;
                       },
                     ),
@@ -104,7 +102,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       validator: (value) {
                         final v = (value ?? '').trim();
                         if (v.isEmpty) return 'Ingresa tu numero.';
-                        if (v.length != 8) return 'El numero debe tener 8 digitos.';
+                        if (v.length != 8) {
+                          return 'El numero debe tener 8 digitos.';
+                        }
                         return null;
                       },
                     ),
@@ -132,7 +132,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
-                        if ((value ?? '').trim() != _passwordController.text.trim()) {
+                        if ((value ?? '').trim() !=
+                            _passwordController.text.trim()) {
                           return 'Las contrasenas no coinciden.';
                         }
                         return null;
@@ -140,15 +141,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child:
-                          _isLoading
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                              : const Text('Crear cuenta'),
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Crear cuenta'),
                     ),
                   ],
                 ),

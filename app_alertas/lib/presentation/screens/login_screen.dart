@@ -1,20 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:app_alertas/data/models/user_model.dart';
-import 'package:app_alertas/data/services/auth_service.dart';
+import 'package:provider/provider.dart';
+import 'package:app_alertas/presentation/providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({
-    super.key,
-    required this.onLoginSuccess,
-    required this.onGoToRegister,
-    required this.onGoToAuthorityLogin,
-    required this.onGoToAuthorityRegister,
-  });
-
-  final ValueChanged<UserModel> onLoginSuccess;
+  const LoginScreen({super.key, required this.onGoToRegister});
   final VoidCallback onGoToRegister;
-  final VoidCallback onGoToAuthorityLogin;
-  final VoidCallback onGoToAuthorityRegister;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -24,8 +14,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -37,26 +25,24 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
     try {
-      final user = await _authService.login(
+      final auth = context.read<AuthProvider>();
+      await auth.loginUser(
         phone: _phoneController.text,
         password: _passwordController.text,
       );
       if (!mounted) return;
-      widget.onLoginSuccess(user);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = context.watch<AuthProvider>().isLoading;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -107,8 +93,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
                           ? const SizedBox(
                               height: 20,
                               width: 20,
@@ -118,22 +104,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: _isLoading ? null : widget.onGoToRegister,
+                      onPressed: isLoading ? null : widget.onGoToRegister,
                       child: const Text('No tienes cuenta? Registrate'),
-                    ),
-                    const Divider(height: 24),
-                    OutlinedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : widget.onGoToAuthorityLogin,
-                      icon: const Icon(Icons.admin_panel_settings_outlined),
-                      label: const Text('Login de autoridades'),
-                    ),
-                    TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : widget.onGoToAuthorityRegister,
-                      child: const Text('Registrar autoridad'),
                     ),
                   ],
                 ),

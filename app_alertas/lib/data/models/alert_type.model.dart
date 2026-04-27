@@ -7,15 +7,14 @@ class ReportTypeModel {
 
   factory ReportTypeModel.fromJson(Map<String, dynamic> json) {
     return ReportTypeModel(
-      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      id: json['id'] is int
+          ? json['id'] as int
+          : int.tryParse('${json['id']}') ?? 0,
       name: (json['name'] ?? '').toString(),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-  };
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
 
   @override
   String toString() => name;

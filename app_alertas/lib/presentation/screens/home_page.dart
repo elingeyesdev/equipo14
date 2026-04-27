@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:app_alertas/data/models/user_model.dart';
+import 'package:provider/provider.dart';
 import 'package:app_alertas/presentation/screens/map_screen.dart';
 import 'package:app_alertas/presentation/screens/history_screen.dart';
 import 'package:app_alertas/presentation/screens/create_alert_screen.dart';
 import 'package:app_alertas/presentation/screens/notifications_screen.dart';
+import 'package:app_alertas/presentation/providers/auth_provider.dart';
+import 'package:app_alertas/presentation/screens/emergency_services_screen.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.user, required this.onLogout});
-
-  final UserModel user;
-  final VoidCallback onLogout;
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -21,40 +20,92 @@ class _HomePageState extends State<HomePage> {
       GlobalKey<HistoryScreenState>();
 
   void _showProfileDialog() {
+    final auth = context.read<AuthProvider>();
+    final user = auth.user;
+    if (user == null) return;
+    final roleName = (user.roleName ?? '').toLowerCase();
+    final isService = roleName == 'service';
+
     showDialog<void>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Perfil'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Nombre: ${widget.user.firstName} ${widget.user.lastName}'),
-                const SizedBox(height: 6),
-                Text('Telefono: ${widget.user.phone}'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cerrar'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  widget.onLogout();
-                },
-                child: const Text('Cerrar sesion'),
+      builder: (context) => AlertDialog(
+        title: const Text('Perfil'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Nombre: ${user.firstName} ${user.lastName}'),
+            const SizedBox(height: 6),
+            Text('Telefono: ${user.phone}'),
+            if (isService) ...[
+              const SizedBox(height: 10),
+              const Chip(
+                label: Text('Proveedor de Servicios'),
+                backgroundColor: Color(0xFF0F766E),
               ),
             ],
+          ],
+        ),
+        actions: [
+          if (isService)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const EmergencyServicesScreen(),
+                  ),
+                );
+              },
+              child: const Text('Servicios de emergencia'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
           ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await auth.logout();
+            },
+            child: const Text('Cerrar sesion'),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final roleName = (user?.roleName ?? '').toLowerCase();
+    final isService = roleName == 'service';
+
     return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim()),
+            Text(
+              user?.phone ?? '',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          if (isService)
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: Center(
+                child: Chip(
+                  label: Text('Proveedor de Servicios'),
+                  backgroundColor: Color(0xFF0F766E),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: [
         const MapScreen(),
         HistoryScreen(key: _historyKey),

@@ -56,33 +56,10 @@ class AuthService {
     }
   }
 
-  Future<UserModel> loginAuthority({
-    required String credential,
-    required String password,
-  }) async {
-    // El backend actual autentica por phone en /auth/login.
-    return loginUser(phone: credential, password: password);
-  }
-
-  Future<UserModel> registerAuthority({
-    required String firstName,
-    required String lastName,
-    required String phone,
-    required String password,
-  }) async {
-    final roleId = await _resolveRoleId(const [
-      'autoridad',
-      'authority',
-      'admin',
-    ], fallback: 1);
-    final data = await _apiService.register(
-      firstName: firstName,
-      lastName: lastName,
-      phone: phone,
-      password: password,
-      roleId: roleId,
-    );
-    return _parseAuthResponse(data);
+  /// Punto de extension para refresh token en proximas iteraciones.
+  Future<String?> refreshAccessToken() async {
+    // TODO: Consumir /auth/refresh usando _refreshToken cuando se active ese flujo.
+    return null;
   }
 
   UserModel _parseAuthResponse(Map<String, dynamic> data) {
