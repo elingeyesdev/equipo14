@@ -26,7 +26,6 @@ export class AuthService{
         const isMatch: boolean = bcrypt.compareSync(password, user.password);
         if(!isMatch) throw new BadRequestException('Contrasena Incorrecta')
 
-        console.log("usurio extraido de la validacion: " + user.role)
         return user;
     }
 

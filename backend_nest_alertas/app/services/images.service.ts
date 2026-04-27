@@ -60,7 +60,7 @@ export class ImagesService {
             uploaded_at: new Date(),
             url: result.url
         })
-
+        
         return await this.imagesRepository.save(newImage);
     }
 

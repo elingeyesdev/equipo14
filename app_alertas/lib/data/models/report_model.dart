@@ -3,7 +3,7 @@ import 'package:app_alertas/data/models/image_model.dart';
 /// Coincide con [ReportResponse] del backend NestJS.
 class ReportModel {
   final int id;
-  final String userUuid;
+  final String userId;
   final String type;
   final String description;
   final List<double> coordinates;
@@ -14,7 +14,7 @@ class ReportModel {
 
   const ReportModel({
     required this.id,
-    required this.userUuid,
+    required this.userId,
     required this.type,
     required this.description,
     required this.coordinates,
@@ -34,12 +34,21 @@ class ReportModel {
         .map((e) => ImageModel.fromJson(e as Map<String, dynamic>))
         .toList();
 
+    // Manejar si 'type' viene como un objeto {id, name} o como un string
+    String typeName = '';
+    final rawType = json['type'];
+    if (rawType is Map) {
+      typeName = (rawType['name'] ?? '').toString();
+    } else {
+      typeName = (rawType ?? '').toString();
+    }
+
     return ReportModel(
       id: json['id'] is int
           ? json['id'] as int
           : int.tryParse('${json['id']}') ?? 0,
-      userUuid: (json['user_uuid'] ?? '').toString(),
-      type: (json['type'] ?? '').toString(),
+      userId: (json['userId'] ?? json['user_uuid'] ?? '').toString(),
+      type: typeName,
       description: (json['description'] ?? '').toString(),
       coordinates: rawCoords,
       weight: (json['weight'] as num?)?.toDouble() ?? 0,
@@ -55,7 +64,7 @@ class ReportModel {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'user_uuid': userUuid,
+    'userId': userId,
     'type': type,
     'description': description,
     'coordinates': coordinates,

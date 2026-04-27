@@ -56,6 +56,7 @@ class HistoryScreenState extends State<HistoryScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 "Historial",

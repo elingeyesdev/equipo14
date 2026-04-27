@@ -1,3 +1,4 @@
+import 'package:app_alertas/presentation/screens/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/presentation/providers/auth_provider.dart';
@@ -104,7 +105,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: isLoading ? null : widget.onGoToRegister,
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen(),
+                                ),
+                              );
+                            },
                       child: const Text('No tienes cuenta? Registrate'),
                     ),
                   ],

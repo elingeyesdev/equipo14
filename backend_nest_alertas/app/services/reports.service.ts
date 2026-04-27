@@ -52,10 +52,11 @@ export class ReportsService {
         return ReportResponse.FromReportToResponse(savedReport);
     }
 
+    // ### Mejorar el return de esta funcion ###
     async addImage(id: number, file: Express.Multer.File){
         const report = await this.reportsRepository.findOne({
             where: {id: Number(id)},
-            relations: ['user','images', 'type']
+            //relations: ['user','images', 'type']
         });
         if(!report){
             throw new NotFoundException("Reporte no encontrado")
@@ -71,7 +72,7 @@ export class ReportsService {
 
         const savedReport = await this.reportsRepository.save(report)
 
-        return ReportResponse.FromReportToResponse(savedReport)
+        return savedReport
     }
 
     async findAll(){

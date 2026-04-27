@@ -53,4 +53,20 @@ class AlertsApiService {
   }
 
   Future<void> deleteAlert(int id) => _api.eliminarReporte(id);
+
+  Future<List<AlertModel>> findSimilarAlerts({
+    required int typeId,
+    required double latitude,
+    required double longitude,
+  }) {
+    return _api.buscarReportesSimilares(
+      typeId: typeId,
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
+
+  Future<void> attachImageToReport(int reportId, File imageFile) {
+    return _api.adjuntarImagenAReporte(reportId, imageFile);
+  }
 }

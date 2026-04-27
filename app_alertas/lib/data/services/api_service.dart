@@ -209,7 +209,7 @@ class ApiService {
     final request = http.MultipartRequest('POST', _uri(ApiConfig.reportsPath))
       ..fields['type'] = typeId.toString()
       ..fields['description'] = description
-      ..fields['user'] = userId
+      ..fields['userId'] = userId
       ..fields['latitude'] = latitude.toString()
       ..fields['longitude'] = longitude.toString();
     request.headers.addAll(_tunnelHeaders);
@@ -238,6 +238,51 @@ class ApiService {
       headers: _tunnelHeaders,
     );
     _ensureOk(response);
+  }
+
+  Future<List<ReportModel>> buscarReportesSimilares({
+    required int typeId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final url = _uri(ApiConfig.reportSimilarsPath).replace(
+      queryParameters: {
+        'type': typeId.toString(),
+        'latitude': longitude.toString(), // Enviando longitud como latitud según el hallazgo
+        'longitude': latitude.toString(), // Enviando latitud como longitud según el hallazgo
+      },
+    );
+
+    final response = await http.get(
+      url,
+      headers: _tunnelHeaders,
+    );
+
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body
+        .map((e) => ReportModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> adjuntarImagenAReporte(int reportId, File imageFile) async {
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('${ApiConfig.reportsPath}/$reportId/images'),
+    );
+    request.headers.addAll(_tunnelHeaders);
+    request.files.add(
+      await http.MultipartFile.fromPath('image', imageFile.path),
+    );
+
+    final streamed = await request.send();
+    final responseBody = await streamed.stream.bytesToString();
+    if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
+      throw Exception(
+        'Error al adjuntar imagen: ${streamed.statusCode} — $responseBody',
+      );
+    }
   }
 
   /// No hay GET `/images` en el backend: las imágenes vienen en cada reporte.

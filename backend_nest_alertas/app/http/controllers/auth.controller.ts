@@ -38,7 +38,6 @@ export class AuthController {
     // el Request a diferencia del Body devuelve todo el objeto http del request
     // el Body solo devuelve los datos enviados por el cliente anadidos el body de la consulta
     async login(@Request() req){
-        console.log(req.user.role)
         return this.authService.login(req.user)
     }
 
