@@ -14,15 +14,16 @@ export class ImagesService {
         private configService: ConfigService
     ){
         cloudinary.config({
-        cloud_name: this.configService.get<string>('CLOUDINARY_CLOUD_NAME'),
-        api_key: this.configService.get<string>('CLOUDINARY_API_KEY'),
-        api_secret: this.configService.get<string>('CLOUDINARY_API_SECRET'),
-    });
+            cloud_name: this.configService.get<string>('CLOUDINARY_CLOUD_NAME'),
+            api_key: this.configService.get<string>('CLOUDINARY_API_KEY'),
+            api_secret: this.configService.get<string>('CLOUDINARY_API_SECRET'),
+        });
     }
 
-    async uploadToCloudinary(file: Express.Multer.File): Promise<{
+    async uploadToCloudinary(file: Express.Multer.File): 
+    Promise<{
         url?: string
-        public_id?: string
+        public_id?: string 
     }>{
         return new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
@@ -50,7 +51,7 @@ export class ImagesService {
         });
     }
 
-    async create(report: Report, file: Express.Multer.File) {
+    async createFromReport(report: Report, file: Express.Multer.File) {
         const result = await this.uploadToCloudinary(file)
 
         const newImage = this.imagesRepository.create({

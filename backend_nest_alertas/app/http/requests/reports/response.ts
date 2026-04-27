@@ -33,3 +33,29 @@ export class ReportResponse{
         return reports.map(report => this.FromReportToResponse(report));
     }
 }
+
+export class ReportCoinicdenceResponse{
+    id: number;
+    description: string;
+    coordinates: number[];
+    weight: number;
+    created_at: Date;
+    images: Image[]
+
+    static FromReportToResponse(report: Report): ReportCoinicdenceResponse {
+        const response = new ReportCoinicdenceResponse();
+
+        response.id = report.id
+        response.description = report.description
+        response.coordinates = report.location.coordinates
+        response.weight = report.weight
+        response.created_at = report.created_at
+        response.images = report.images
+
+        return response
+    }
+
+    static FromReportListToResponse(reports: Report[]): ReportCoinicdenceResponse[]{
+        return reports.map(report => this.FromReportToResponse(report));
+    }
+}

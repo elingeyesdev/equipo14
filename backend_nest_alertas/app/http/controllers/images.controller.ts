@@ -1,4 +1,4 @@
-import { Controller, Delete, Param } from "@nestjs/common";
+import { Controller, Delete, Param, Post, UploadedFile } from "@nestjs/common";
 import { ImagesService } from "../../services/images.service";
 
 @Controller('images')

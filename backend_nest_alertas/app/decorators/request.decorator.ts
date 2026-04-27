@@ -1,6 +1,6 @@
 import { applyDecorators, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
 
 // permite cargar archivos multimedia, en este caso imagenes
 // todo llega como `text` o `file` no admite mas formatos
@@ -31,11 +31,35 @@ export function ApiImageUpload() {
                     longitude: {
                         type: 'number'
                     },
-                    user: {
+                    userId: {
                         type: 'string',
                     },
                 },
-                required: ['image', 'type', 'description', 'user'],
+                required: ['image', 'type', 'description', 'userId'],
+            },
+        }),
+    );
+}
+
+export function ApiAddImageUpload() {
+    return applyDecorators(
+        ApiParam({
+            name: 'id',
+            type: Number,
+            description: 'ID del reporte',
+        }),
+        UseInterceptors(FileInterceptor('image')),
+        ApiConsumes('multipart/form-data'),
+        ApiBody({
+            schema: {
+                type: 'object',
+                properties: {
+                    image: {
+                        type: 'string',
+                        format: 'binary',
+                    },
+                },
+                required: ['image'],
             },
         }),
     );

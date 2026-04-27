@@ -1,6 +1,7 @@
 import {IsString, IsNumber, MaxLength } from "class-validator";
 import { Report } from "../../../models/report.entity";
 import { Type } from "class-transformer";
+import { ApiProperty } from "@nestjs/swagger";
 
 //Nota: parece ser q los `@ApiProperty()` ya no tienen ningun efecto o utilidad, revisar
 
@@ -33,4 +34,22 @@ export class CreateReportRequest {
         }
         return report
     }
+}
+
+
+export class VerifyReportRequest{
+    @ApiProperty()
+    @Type(() => Number)
+    @IsNumber()
+    type: number
+
+    @ApiProperty()
+    @Type(() => Number)
+    @IsNumber()
+    latitude: number;
+
+    @ApiProperty()
+    @Type(() => Number)
+    @IsNumber()
+    longitude: number;
 }
