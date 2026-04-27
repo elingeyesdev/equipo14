@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app_alertas/data/models/alert_model.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
+import 'package:app_alertas/presentation/screens/map_route_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -96,6 +97,8 @@ class HistoryScreenState extends State<HistoryScreen> {
         : 'Sin fecha';
 
     final hasImages = alert.images.isNotEmpty;
+    final incidentLocation = _extractIncidentLocation(alert.coordinates);
+    final canNavigate = incidentLocation != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -172,6 +175,28 @@ class HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: canNavigate
+                        ? () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => MapRouteScreen(
+                                  latitude: incidentLocation.latitude,
+                                  longitude: incidentLocation.longitude,
+                                  description: alert.description,
+                                  type: _displayType(alert.type),
+                                ),
+                              ),
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.alt_route),
+                    label: const Text('Ver ruta'),
+                  ),
+                ),
               ],
             ),
           ),
@@ -197,6 +222,20 @@ class HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  _IncidentLocation? _extractIncidentLocation(List<double> coordinates) {
+    if (coordinates.length < 2) return null;
+    final first = coordinates[0];
+    final second = coordinates[1];
+
+    final isFirstLatitude = first >= -90 && first <= 90;
+    final isSecondLongitude = second >= -180 && second <= 180;
+
+    if (isFirstLatitude && isSecondLongitude) {
+      return _IncidentLocation(latitude: first, longitude: second);
+    }
+    return _IncidentLocation(latitude: second, longitude: first);
+  }
+
   Color _alertColor(String type) {
     switch (type.toUpperCase()) {
       case 'ROBO':
@@ -209,4 +248,11 @@ class HistoryScreenState extends State<HistoryScreen> {
         return Colors.grey;
     }
   }
+}
+
+class _IncidentLocation {
+  final double latitude;
+  final double longitude;
+
+  const _IncidentLocation({required this.latitude, required this.longitude});
 }
