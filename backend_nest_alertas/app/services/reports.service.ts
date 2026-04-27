@@ -52,14 +52,34 @@ export class ReportsService {
 
         await this.imagesServices.createFromReport(savedReport, file)
 
-        // Integración de Firebase: Enviar notificación a un tema general (ej. "alertas")
-        // En una app real, esto podría filtrarse por cercanía, pero un tema general es el primer paso.
+        // Integración de Firebase: Enviar notificación a autoridades y usuarios cercanos (100 metros)
         try {
-            await this.notificationsService.sendPushNotificationToTopic(
-                'alertas_generales',
-                `Nueva Alerta: ${type.name}`,
-                createReport.description || 'Se ha reportado un nuevo incidente en tu ciudad.'
-            );
+            const targetUsers = await this.usersRepository
+                .createQueryBuilder('user')
+                .leftJoinAndSelect('user.role', 'role')
+                .where('user.fcm_token IS NOT NULL')
+                .andWhere(
+                    `(role.id = 2 OR (role.id = 1 AND user.last_location IS NOT NULL AND ST_DWithin(
+                        user.last_location,
+                        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                        100
+                    )))`,
+                    {
+                        longitude: createReportRequest.longitude,
+                        latitude: createReportRequest.latitude,
+                    }
+                )
+                .getMany();
+
+            const tokens = targetUsers.map(u => u.fcm_token).filter(t => t);
+
+            if (tokens.length > 0) {
+                await this.notificationsService.sendPushNotificationToMultipleTokens(
+                    tokens,
+                    `Nueva Alerta: ${type.name}`,
+                    createReport.description || 'Se ha reportado un nuevo incidente en tu zona.'
+                );
+            }
         } catch (error) {
             console.error('No se pudo enviar la notificación Push:', error);
             // No detenemos el flujo si la notificación falla

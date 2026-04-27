@@ -147,6 +147,28 @@ class ApiService {
     );
   }
 
+  Future<void> actualizarUbicacionUsuario(
+    String id, {
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await http.patch(
+      _uri('${ApiConfig.usersPath}/$id/location'),
+      headers: {'Content-Type': 'application/json', ..._tunnelHeaders},
+      body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
+    );
+    _ensureOk(response);
+  }
+
+  Future<void> actualizarFcmToken(String id, String fcmToken) async {
+    final response = await http.patch(
+      _uri('${ApiConfig.usersPath}/$id/fcm-token'),
+      headers: {'Content-Type': 'application/json', ..._tunnelHeaders},
+      body: jsonEncode({'fcm_token': fcmToken}),
+    );
+    _ensureOk(response);
+  }
+
   Future<void> eliminarUsuario(String id) async {
     final response = await http.delete(
       _uri(ApiConfig.usersPath, id),

@@ -54,3 +54,13 @@ export class UpdateUserRequest{
     @Transform(({ value }) => value?.trim().toLowerCase())
     last_name?: string;
 }
+
+export class UpdateLocationRequest {
+    @ApiProperty()
+    @IsNumber()
+    latitude: number;
+
+    @ApiProperty()
+    @IsNumber()
+    longitude: number;
+}

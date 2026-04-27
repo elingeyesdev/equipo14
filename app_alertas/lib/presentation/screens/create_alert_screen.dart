@@ -12,6 +12,8 @@ import 'package:app_alertas/data/models/alert_type.model.dart';
 import 'package:app_alertas/data/services/api_service.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
 import 'package:app_alertas/data/models/alert_model.dart';
+import 'package:provider/provider.dart';
+import 'package:app_alertas/presentation/providers/auth_provider.dart';
 
 class CreateAlertScreen extends StatefulWidget {
   const CreateAlertScreen({super.key, this.onCreated});
@@ -398,35 +400,11 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
   // ---------------------------------------------------------------
 
   Future<String> _resolveReportUserId() async {
-    // 1) Intentar el UUID fijo de configuración.
-    try {
-      final user = await _apiService.obtenerUsuario(ApiConfig.defaultUserId);
-      if (user.id.isNotEmpty) return user.id;
-    } catch (_) {}
-
-    // 2) Si ya hay usuarios en backend, reutilizar el primero.
-    try {
-      final users = await _apiService.obtenerUsuarios();
-      if (users.isNotEmpty && users.first.id.isNotEmpty) {
-        return users.first.id;
-      }
-    } catch (_) {}
-
-    // 3) Crear uno nuevo para poder reportar.
-    for (var i = 0; i < 10; i++) {
-      try {
-        final phone = (10000000 + _random.nextInt(90000000)).toString();
-        final created = await _apiService.crearUsuario(
-          firstName: 'app',
-          lastName: 'alertas',
-          phone: phone,
-          password: 'App2024!',
-        );
-        if (created.id.isNotEmpty) return created.id;
-      } catch (_) {}
+    final user = context.read<AuthProvider>().user;
+    if (user != null && user.id.isNotEmpty) {
+      return user.id;
     }
-
-    throw Exception('No se pudo resolver/crear un usuario para el reporte.');
+    throw Exception('Debes iniciar sesión para crear un reporte.');
   }
 
   Future<void> _submitAlert() async {

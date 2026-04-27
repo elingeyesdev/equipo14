@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from 'app/app.module';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import { seedReportTypes, seedRoles } from './seed';
 
 export async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -44,6 +45,10 @@ export async function bootstrap() {
     app.setGlobalPrefix(configService.get('app.apiPrefix')!);
     
     const port = configService.get('app.port');
+    
+    await seedReportTypes(app);
+    await seedRoles(app);
+    
     await app.listen(port)
 
     return app

@@ -9,11 +9,12 @@ export class NotificationsService {
         // Inicializar Firebase Admin SDK si no está inicializado
         if (!admin.apps.length) {
             try {
+                const fs = require('fs');
+                const path = require('path');
+                const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
+                const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
                 admin.initializeApp({
-                    // Para producción, se recomienda usar una variable de entorno con la ruta al serviceAccountKey.json
-                    // credential: admin.credential.cert(require('../../firebase-service-account.json')),
-                    // Si estás en GCP/Firebase Cloud Functions, se puede auto-descubrir.
-                    // credential: admin.credential.applicationDefault()
+                    credential: admin.credential.cert(serviceAccount),
                 });
                 this.logger.log('Firebase Admin inicializado correctamente');
             } catch (error) {
@@ -66,6 +67,31 @@ export class NotificationsService {
             return response;
         } catch (error) {
             this.logger.error(`Error enviando notificación al tema ${topic}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Enviar notificación push a multiples dispositivos (Multicast)
+     */
+    async sendPushNotificationToMultipleTokens(tokens: string[], title: string, body: string, data?: any) {
+        if (!tokens || tokens.length === 0) return;
+
+        const message = {
+            notification: {
+                title,
+                body,
+            },
+            data: data || {},
+            tokens: tokens,
+        };
+
+        try {
+            const response = await admin.messaging().sendEachForMulticast(message);
+            this.logger.log(`Notificaciones enviadas. Exitos: ${response.successCount}, Fallos: ${response.failureCount}`);
+            return response;
+        } catch (error) {
+            this.logger.error('Error enviando notificaciones multicast:', error);
             throw error;
         }
     }

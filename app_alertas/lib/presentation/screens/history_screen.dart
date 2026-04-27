@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:app_alertas/data/models/alert_model.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
 import 'package:app_alertas/presentation/screens/map_route_screen.dart';
+import 'package:app_alertas/presentation/screens/map_route_screen.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:app_alertas/presentation/providers/auth_provider.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -27,29 +30,30 @@ class HistoryScreenState extends State<HistoryScreen> {
     try {
       final data = await _service.getAlerts();
       if (!mounted) return;
-      setState(() => _alerts = data);
+      
+      final user = context.read<AuthProvider>().user;
+      final isAuthority = user?.roleId == 2;
+      
+      debugPrint('Usuario actual ID: ${user?.id}, Rol: ${user?.roleId}');
+      for (var a in data) {
+        debugPrint('Reporte ${a.id} creado por: ${a.userId}');
+      }
+
+      setState(() {
+        if (isAuthority) {
+          _alerts = data;
+        } else {
+          _alerts = data.where((a) => a.userId == user?.id).toList();
+        }
+      });
+    } catch (e) {
+      debugPrint('Error cargando historial: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> reload() => loadAlerts();
-
-  Future<void> _deleteAlert(AlertModel alert) async {
-    try {
-      await _service.deleteAlert(alert.id);
-      await loadAlerts();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Alerta eliminada')));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('No se pudo eliminar: $e')));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +104,8 @@ class HistoryScreenState extends State<HistoryScreen> {
     final hasImages = alert.images.isNotEmpty;
     final incidentLocation = _toLatLng(alert.coordinates);
     final canNavigate = incidentLocation != null;
+    final userRole = context.read<AuthProvider>().user?.roleId;
+    final isAuthority = userRole == 2;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -176,34 +182,32 @@ class HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: canNavigate
-                        ? () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => MapRouteScreen(
-                                  latitude: incidentLocation.latitude,
-                                  longitude: incidentLocation.longitude,
-                                  description: alert.description,
-                                  type: _displayType(alert.type),
+                if (isAuthority) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: canNavigate
+                          ? () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => MapRouteScreen(
+                                    latitude: incidentLocation.latitude,
+                                    longitude: incidentLocation.longitude,
+                                    description: alert.description,
+                                    type: _displayType(alert.type),
+                                  ),
                                 ),
-                              ),
-                            );
-                          }
-                        : null,
-                    icon: const Icon(Icons.alt_route),
-                    label: const Text('Ver ruta'),
+                              );
+                            }
+                          : null,
+                      icon: const Icon(Icons.alt_route),
+                      label: const Text('Ver ruta'),
+                    ),
                   ),
-                ),
+                ]
               ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.redAccent),
-            onPressed: () => _deleteAlert(alert),
           ),
         ],
       ),

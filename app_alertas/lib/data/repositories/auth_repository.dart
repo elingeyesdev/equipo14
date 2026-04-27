@@ -36,12 +36,14 @@ class AuthRepository {
     required String lastName,
     required String phone,
     required String password,
+    required int roleId,
   }) async {
     final user = await _authService.register(
       firstName: firstName,
       lastName: lastName,
       phone: phone,
       password: password,
+      roleId: roleId,
     );
     await _saveSession(
       user: user,

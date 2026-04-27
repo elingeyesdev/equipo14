@@ -66,6 +66,7 @@ class AuthProvider extends ChangeNotifier {
     required String lastName,
     required String phone,
     required String password,
+    required int roleId,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -75,6 +76,7 @@ class AuthProvider extends ChangeNotifier {
         lastName: lastName,
         phone: phone,
         password: password,
+        roleId: roleId,
       );
       _user = user;
       final session = await _repository.loadSession();

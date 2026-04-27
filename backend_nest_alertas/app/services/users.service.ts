@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt'
 
 import { UserResponse } from '../http/requests/users/response';
-import { CreateUserRequest, UpdateUserRequest } from 'app/http/requests/users/request';
+import { CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from 'app/http/requests/users/request';
 import { Role } from 'app/models/role.entity';
 
 @Injectable()
@@ -91,6 +91,21 @@ export class UsersService {
         user.fcm_token = fcm_token;
         await this.usersRepository.save(user);
         return { message: "Token FCM actualizado correctamente" };
+    }
+
+    async updateLocation(id: string, location: UpdateLocationRequest) {
+        const user = await this.usersRepository.findOneBy({ id });
+        if (!user) {
+            throw new NotFoundException(`El user con ID ${id} no se encontró`);
+        }
+        
+        user.last_location = {
+            type: 'Point',
+            coordinates: [location.longitude, location.latitude],
+        };
+        
+        await this.usersRepository.save(user);
+        return { message: "Ubicación actualizada correctamente" };
     }
 
     async remove(id: string){

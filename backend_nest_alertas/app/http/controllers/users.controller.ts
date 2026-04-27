@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { UsersService } from '../../services/users.service';
-import { UpdateUserRequest } from '../requests/users/request';
+import { UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
 
 
 
@@ -26,6 +26,11 @@ export class UsersController {
     @Patch(':id/fcm-token')
     updateFcmToken(@Param('id') id: string, @Body('fcm_token') fcm_token: string) {
         return this.usersService.updateFcmToken(id, fcm_token);
+    }
+
+    @Patch(':id/location')
+    updateLocation(@Param('id') id: string, @Body() body: UpdateLocationRequest) {
+        return this.usersService.updateLocation(id, body);
     }
 
     @Delete(':id')
