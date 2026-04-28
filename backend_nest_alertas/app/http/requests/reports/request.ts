@@ -30,7 +30,7 @@ export class CreateReportRequest {
         report.description = this.description
         report.location = {
             type: "Point",
-            coordinates: [this.latitude, this.longitude]
+            coordinates: [this.longitude, this.latitude]
         }
         return report
     }

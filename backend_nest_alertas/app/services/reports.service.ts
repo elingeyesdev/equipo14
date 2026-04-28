@@ -111,6 +111,64 @@ export class ReportsService {
         return savedReport
     }
 
+    async verifyReport(id: number, latitude: number, longitude: number, file: Express.Multer.File) {
+        const report = await this.reportsRepository.findOne({
+            where: { id: Number(id) },
+            relations: ['user', 'images', 'type'],
+        });
+        if (!report) {
+            throw new NotFoundException('Reporte no encontrado');
+        }
+
+        // Check distance: user must be within 50 meters of the report location
+        const distance = await this.reportsRepository
+            .createQueryBuilder('report')
+            .select(`ST_Distance(
+                ST_SetSRID(ST_MakePoint(:userLon, :userLat), 4326)::geography,
+                report.location::geography
+            )`, 'distance')
+            .where('report.id = :reportId', { reportId: id })
+            .setParameters({ userLat: latitude, userLon: longitude })
+            .getRawOne();
+
+        const distanceInMeters = parseFloat(distance?.distance ?? '99999');
+        if (distanceInMeters > 50) {
+            throw new BadRequestException(
+                `Debes estar a menos de 50 metros del incidente para verificar. Distancia actual: ${Math.round(distanceInMeters)}m`
+            );
+        }
+
+        // Attach the verification photo
+        await this.imagesServices.createFromReport(report, file);
+
+        // Mark as verified
+        report.verified = true;
+        report.weight = report.weight + 1;
+        const saved = await this.reportsRepository.save(report);
+
+        return ReportResponse.FromReportToResponse(saved);
+    }
+
+    async findNearby(latitude: number, longitude: number, radius: number) {
+        const reports = await this.reportsRepository
+            .createQueryBuilder('report')
+            .leftJoinAndSelect('report.user', 'user')
+            .leftJoinAndSelect('report.images', 'images')
+            .leftJoinAndSelect('report.type', 'type')
+            .where(
+                `ST_DWithin(
+                    report.location,
+                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                    :radius
+                )`,
+                { latitude, longitude, radius }
+            )
+            .orderBy('report.created_at', 'DESC')
+            .getMany();
+
+        return ReportResponse.FromReportListToResponse(reports);
+    }
+
     async findAll(){
         const reports = await this.reportsRepository.find({
             //aqui se cargan las relaciones

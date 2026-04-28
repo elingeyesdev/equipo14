@@ -20,6 +20,7 @@ class ApiConfig {
   static const String rolesPath = '/roles';
   static const String reportsPath = '/reports';
   static const String reportSimilarsPath = '/reports/similars';
+  static const String reportNearbyPath = '/reports/nearby';
   static const String reportTypesPath = '/report-types';
 
   /// UUID de un usuario existente en el backend (creado para pruebas locales).

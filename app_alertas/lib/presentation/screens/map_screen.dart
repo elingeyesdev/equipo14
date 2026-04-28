@@ -6,16 +6,15 @@ import 'package:app_alertas/data/models/alert_model.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
 import 'package:app_alertas/data/services/api_service.dart';
 import 'package:app_alertas/data/services/fcm_service.dart';
-import 'package:app_alertas/presentation/screens/map_route_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/presentation/providers/auth_provider.dart';
+import 'package:app_alertas/presentation/screens/alert_card.dart';
 
-/// Token público Mapbox (mismo que en AndroidManifest MAPBOX_ACCESS_TOKEN).
-/// Si ves mapa gris: revisa cuota, caducidad o restricciones URL en mapbox.com/account.
+/// Token público Mapbox
 const _kMapboxAccessToken =
     'pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA';
 
-/// Raster tiles: debe incluir `/256/` o `/512/` antes de `{z}/{x}/{y}` (Static Tiles API).
+/// Raster tiles
 String _mapboxDarkTileUrl() =>
     'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
     '?access_token=$_kMapboxAccessToken';
@@ -39,7 +38,6 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     getLocation();
-    _loadAlerts();
     _initPushNotifications();
   }
 
@@ -48,9 +46,7 @@ class _MapScreenState extends State<MapScreen> {
     if (user != null) {
       await _fcmService.init(user.id);
       _fcmService.listenToForegroundMessages(() {
-        // Recargar alertas pero NO mostrar el snackbar, ya que la notificación 
-        // real del sistema aparecerá arriba en la pantalla.
-        _loadAlerts();
+        _loadNearbyAlerts();
       });
     }
   }
@@ -64,6 +60,7 @@ class _MapScreenState extends State<MapScreen> {
 
     Position position = await Geolocator.getCurrentPosition();
 
+    if (!mounted) return;
     setState(() {
       currentLocation = LatLng(position.latitude, position.longitude);
     });
@@ -77,24 +74,31 @@ class _MapScreenState extends State<MapScreen> {
           longitude: position.longitude,
         );
       }
-    } catch (_) {
-      // Ignorar error de ubicación en fondo
-    }
+    } catch (_) {}
+
+    await _loadNearbyAlerts();
   }
 
-  Future<void> _loadAlerts() async {
+  Future<void> _loadNearbyAlerts() async {
+    if (!mounted || currentLocation == null) return;
     setState(() => _loadingAlerts = true);
     try {
-      final data = await _alertsService.getAlerts();
+      final data = await _alertsService.getNearbyAlerts(
+        latitude: currentLocation!.latitude,
+        longitude: currentLocation!.longitude,
+        radius: 150,
+      );
       if (!mounted) return;
       setState(() => _alerts = data);
     } catch (e) {
-      if (!mounted) return;
-      debugPrint('Error al cargar alertas: $e');
+      debugPrint('Error al cargar alertas cercanas: $e');
+      try {
+        final data = await _alertsService.getAlerts();
+        if (!mounted) return;
+        setState(() => _alerts = data);
+      } catch (_) {}
     } finally {
-      if (mounted) {
-        setState(() => _loadingAlerts = false);
-      }
+      if (mounted) setState(() => _loadingAlerts = false);
     }
   }
 
@@ -103,9 +107,10 @@ class _MapScreenState extends State<MapScreen> {
         .where((a) => a.coordinates.length >= 2)
         .map((alert) {
           final point = _toLatLng(alert.coordinates);
-          if (point == null) {
-            return null;
-          }
+          if (point == null) return null;
+
+          Color color = alert.verified ? Colors.green : _colorByType(alert.type);
+
           return Marker(
             point: point,
             width: 120,
@@ -116,20 +121,17 @@ class _MapScreenState extends State<MapScreen> {
                 children: [
                   Icon(
                     _iconByType(alert.type),
-                    color: _colorByType(alert.type),
+                    color: color,
                     size: 32,
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.black87,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      _labelByType(alert.type),
+                      alert.type.toUpperCase(),
                       style: const TextStyle(fontSize: 11, color: Colors.white),
                     ),
                   ),
@@ -143,69 +145,16 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _showAlertBottomSheet(AlertModel alert) {
-    final userRole = context.read<AuthProvider>().user?.roleId;
-    final isAuthority = userRole == 2;
-    final incidentLocation = _toLatLng(alert.coordinates);
-    final canNavigate = incidentLocation != null;
-    final dateLabel = alert.createdAt != null
-        ? '${alert.createdAt!.day}/${alert.createdAt!.month}/${alert.createdAt!.year}'
-        : 'Sin fecha';
-
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(8.0),
+          child: Wrap(
             children: [
-              Row(
-                children: [
-                  Icon(_iconByType(alert.type), color: _colorByType(alert.type), size: 30),
-                  const SizedBox(width: 10),
-                  Text(
-                    _labelByType(alert.type),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                alert.description,
-                style: const TextStyle(color: Colors.white70, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Text('Reportado: $dateLabel', style: const TextStyle(color: Colors.grey)),
-              const SizedBox(height: 20),
-              if (isAuthority && canNavigate)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => MapRouteScreen(
-                            latitude: incidentLocation.latitude,
-                            longitude: incidentLocation.longitude,
-                            description: alert.description,
-                            type: _labelByType(alert.type),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.alt_route),
-                    label: const Text('Ver ruta'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
+              AlertCard(alert: alert),
             ],
           ),
         );
@@ -215,96 +164,62 @@ class _MapScreenState extends State<MapScreen> {
 
   LatLng? _toLatLng(List<double> coordinates) {
     if (coordinates.length < 2) return null;
-    final lon = coordinates[0];
-    final lat = coordinates[1];
-    
-    // PostGIS y GeoJSON siempre devuelven [longitud, latitud]
-    return LatLng(lat, lon);
+    return LatLng(coordinates[1], coordinates[0]);
   }
 
   IconData _iconByType(String type) {
     switch (type.toLowerCase()) {
-      case 'robo':
-        return Icons.gpp_maybe;
-      case 'incendio':
-        return Icons.local_fire_department;
-      case 'accidente':
-        return Icons.car_crash;
-      default:
-        return Icons.warning;
+      case 'robo': return Icons.warning;
+      case 'incendio': return Icons.local_fire_department;
+      case 'accidente': return Icons.car_crash;
+      default: return Icons.warning;
     }
   }
 
   Color _colorByType(String type) {
     switch (type.toLowerCase()) {
-      case 'robo':
-        return Colors.redAccent;
-      case 'incendio':
-        return Colors.orangeAccent;
-      case 'accidente':
-        return Colors.lightBlueAccent;
-      default:
-        return Colors.yellowAccent;
-    }
-  }
-
-  String _labelByType(String type) {
-    switch (type.toLowerCase()) {
-      case 'robo':
-        return 'Robo';
-      case 'incendio':
-        return 'Incendio';
-      case 'accidente':
-        return 'Accidente';
-      default:
-        return type;
+      case 'robo': return Colors.red;
+      case 'incendio': return Colors.orange;
+      case 'accidente': return Colors.blue;
+      default: return Colors.yellow;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final alertMarkers = _buildAlertMarkers();
     return Scaffold(
       body: currentLocation == null
           ? const Center(child: CircularProgressIndicator())
           : FlutterMap(
               options: MapOptions(
                 initialCenter: currentLocation!,
-                initialZoom: 15,
+                initialZoom: 17,
                 maxZoom: 22,
               ),
               children: [
                 TileLayer(
                   urlTemplate: _mapboxDarkTileUrl(),
-                  userAgentPackageName: 'com.tuempresa.appalertas.app_alertas',
+                  userAgentPackageName: 'com.tuempresa.appalertas',
                   maxNativeZoom: 22,
                   maxZoom: 22,
                 ),
                 MarkerLayer(
                   markers: [
-                    ...alertMarkers,
+                    ..._buildAlertMarkers(),
                     Marker(
                       point: currentLocation!,
-                      width: 50,
-                      height: 50,
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.blue,
-                        size: 40,
-                      ),
+                      width: 40,
+                      height: 40,
+                      child: const Icon(Icons.my_location, color: Colors.blue, size: 30),
                     ),
                   ],
                 ),
               ],
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _loadingAlerts ? null : _loadAlerts,
+        onPressed: _loadNearbyAlerts,
         child: _loadingAlerts
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+            ? const CircularProgressIndicator(color: Colors.white)
             : const Icon(Icons.refresh),
       ),
     );

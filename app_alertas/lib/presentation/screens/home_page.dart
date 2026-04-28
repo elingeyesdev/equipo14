@@ -21,82 +21,45 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final isAuthority = user?.roleId == 2;
+    
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       body: SafeArea(
-        child: [
-          const MapScreen(),
-          HistoryScreen(key: _historyKey),
-          CreateAlertScreen(
-            onCreated: () {
-              _historyKey.currentState?.reload();
-              setState(() => currentIndex = 1);
-            },
-          ),
-          const NotificationsScreen(),
-          const _ProfileScreen(),
-        ][currentIndex],
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.red,
-        onPressed: () {
-          setState(() {
-            currentIndex = 2;
-          });
-        },
-        child: const Icon(Icons.add, size: 30),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      bottomNavigationBar: BottomAppBar(
-        color: const Color(0xFF020617),
-        shape: const CircularNotchedRectangle(),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+        child: IndexedStack(
+          index: currentIndex,
           children: [
-            IconButton(
-              icon: Icon(
-                Icons.map,
-                color: currentIndex == 0
-                    ? const Color(0xFF0F766E)
-                    : Colors.white70,
-              ),
-              onPressed: () => setState(() => currentIndex = 0),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.history,
-                color: currentIndex == 1
-                    ? const Color(0xFF0F766E)
-                    : Colors.white70,
-              ),
-              onPressed: () {
+            const MapScreen(),
+            HistoryScreen(key: _historyKey),
+            CreateAlertScreen(
+              onCreated: () {
                 _historyKey.currentState?.reload();
                 setState(() => currentIndex = 1);
               },
             ),
-            const SizedBox(width: 40),
-            IconButton(
-              icon: Icon(
-                Icons.notifications,
-                color: currentIndex == 3
-                    ? const Color(0xFF0F766E)
-                    : Colors.white70,
-              ),
-              onPressed: () => setState(() => currentIndex = 3),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.person,
-                color: currentIndex == 4
-                    ? const Color(0xFF0F766E)
-                    : Colors.white70,
-              ),
-              onPressed: () => setState(() => currentIndex = 4),
-            ),
+            const NotificationsScreen(),
+            const _ProfileScreen(),
           ],
         ),
+      ),
+
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: currentIndex,
+        onTap: (index) {
+          if (index == 1) _historyKey.currentState?.reload();
+          setState(() => currentIndex = index);
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Mapa'),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Historial'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle, size: 36, color: Colors.red),
+            label: 'Crear',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alertas'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+        ],
       ),
     );
   }
@@ -126,20 +89,9 @@ class _ProfileScreen extends StatelessWidget {
             child: Container(
               width: 100,
               height: 100,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F766E), Color(0xFF134E4A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0F766E).withOpacity(0.4),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                ],
+                color: Colors.blueGrey,
               ),
               child: Center(
                 child: Text(
@@ -171,14 +123,13 @@ class _ProfileScreen extends StatelessWidget {
               margin: const EdgeInsets.only(top: 4, bottom: 4),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F766E).withOpacity(0.2),
-                border: Border.all(color: const Color(0xFF0F766E), width: 1.2),
+                color: Colors.blueGrey.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
                 'Proveedor de Servicios',
                 style: TextStyle(
-                  color: Color(0xFF5EEAD4),
+                  color: Colors.blueGrey,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -198,7 +149,7 @@ class _ProfileScreen extends StatelessWidget {
               _InfoRow(
                 icon: Icons.phone_outlined,
                 label: 'Teléfono',
-                value: user.phone ?? '—',
+                value: user.phone,
               ),
               if (user.roleName != null) ...[
                 const _RowDivider(),
@@ -216,7 +167,7 @@ class _ProfileScreen extends StatelessWidget {
           _ActionButton(
             icon: Icons.local_hospital_outlined,
             label: 'Servicios de Emergencia',
-            color: const Color(0xFF0F766E),
+            color: Colors.blueGrey,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -259,16 +210,8 @@ class _InfoCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E293B), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -294,7 +237,7 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF0F766E), size: 22),
+          Icon(icon, color: Colors.blueGrey, size: 22),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -357,7 +300,7 @@ class _ActionButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.white,
           side: BorderSide(color: color, width: 1.4),
-          backgroundColor: color.withOpacity(0.1),
+          backgroundColor: color.withValues(alpha: 0.1),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

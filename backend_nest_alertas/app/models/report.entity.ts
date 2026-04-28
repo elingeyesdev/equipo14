@@ -27,6 +27,9 @@ export class Report {
     @Column()
     weight: number;
 
+    @Column({ default: false })
+    verified: boolean;
+
     @Column()
     expires_at: Date;
 

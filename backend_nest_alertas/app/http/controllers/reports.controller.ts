@@ -22,9 +22,37 @@ export class ReportsController {
         return this.reportsService.addImage(id, file)
     }
 
+    @Post(':id/verify')
+    @ApiImageUpload()
+    verifyReport(
+        @Param('id') id: number,
+        @UploadedFile() file: Express.Multer.File,
+        @Body() body: { latitude: number; longitude: number },
+    ) {
+        return this.reportsService.verifyReport(
+            id,
+            Number(body.latitude),
+            Number(body.longitude),
+            file,
+        );
+    }
+
     @Get()
     findAll(){
         return this.reportsService.findAll()
+    }
+
+    @Get('/nearby')
+    findNearby(
+        @Query('latitude') latitude: string,
+        @Query('longitude') longitude: string,
+        @Query('radius') radius: string,
+    ) {
+        return this.reportsService.findNearby(
+            Number(latitude),
+            Number(longitude),
+            Number(radius) || 150,
+        );
     }
 
     @Get('/similars')

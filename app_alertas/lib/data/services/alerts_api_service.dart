@@ -69,4 +69,30 @@ class AlertsApiService {
   Future<void> attachImageToReport(int reportId, File imageFile) {
     return _api.adjuntarImagenAReporte(reportId, imageFile);
   }
+
+  Future<AlertModel> verifyReport({
+    required int reportId,
+    required double latitude,
+    required double longitude,
+    required File imageFile,
+  }) {
+    return _api.verificarReporte(
+      reportId: reportId,
+      latitude: latitude,
+      longitude: longitude,
+      imageFile: imageFile,
+    );
+  }
+
+  Future<List<AlertModel>> getNearbyAlerts({
+    required double latitude,
+    required double longitude,
+    int radius = 150,
+  }) {
+    return _api.obtenerReportesCercanos(
+      latitude: latitude,
+      longitude: longitude,
+      radius: radius,
+    );
+  }
 }

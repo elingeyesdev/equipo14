@@ -313,6 +313,59 @@ class ApiService {
     return report.images;
   }
 
+  /// Verifica un reporte enviando una foto de confirmación.
+  /// El backend comprueba que el usuario esté a ≤50m del incidente.
+  Future<ReportModel> verificarReporte({
+    required int reportId,
+    required double latitude,
+    required double longitude,
+    required File imageFile,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('${ApiConfig.reportsPath}/$reportId/verify'),
+    );
+    request.headers.addAll(_tunnelHeaders);
+    request.fields['latitude'] = latitude.toString();
+    request.fields['longitude'] = longitude.toString();
+    request.files.add(
+      await http.MultipartFile.fromPath('image', imageFile.path),
+    );
+
+    final streamed = await request.send();
+    final responseBody = await streamed.stream.bytesToString();
+    if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
+      throw Exception(
+        'Error al verificar reporte: ${streamed.statusCode} — $responseBody',
+      );
+    }
+    return ReportModel.fromJson(
+      jsonDecode(responseBody) as Map<String, dynamic>,
+    );
+  }
+
+  /// Obtiene reportes cercanos dentro de un radio en metros.
+  Future<List<ReportModel>> obtenerReportesCercanos({
+    required double latitude,
+    required double longitude,
+    int radius = 150,
+  }) async {
+    final url = _uri(ApiConfig.reportNearbyPath).replace(
+      queryParameters: {
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'radius': radius.toString(),
+      },
+    );
+    final response = await http.get(url, headers: _tunnelHeaders);
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body
+        .map((e) => ReportModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   void _ensureOk(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('HTTP ${response.statusCode}: ${response.body}');
