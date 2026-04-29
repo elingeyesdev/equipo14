@@ -81,6 +81,20 @@ class AlertCard extends StatelessWidget {
                   child: Text(dateLabel, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                 ),
               ),
+            if (alert.weight > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.people_outline, size: 14, color: Colors.blueGrey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${alert.weight.toInt()} ${alert.weight == 1 ? 'persona confirmó' : 'personas confirmaron'} esto',
+                      style: const TextStyle(color: Colors.blueGrey, fontSize: 12, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 8),
             Text(alert.description),
             const SizedBox(height: 8),

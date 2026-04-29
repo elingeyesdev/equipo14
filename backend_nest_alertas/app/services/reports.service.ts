@@ -104,7 +104,7 @@ export class ReportsService {
             throw new BadRequestException("Error al subir la imagen")
         }
 
-        report.weight =+ report.weight + 1
+        report.weight += 1
 
         const savedReport = await this.reportsRepository.save(report)
 
@@ -132,9 +132,9 @@ export class ReportsService {
             .getRawOne();
 
         const distanceInMeters = parseFloat(distance?.distance ?? '99999');
-        if (distanceInMeters > 50) {
+        if (distanceInMeters > 100) {
             throw new BadRequestException(
-                `Debes estar a menos de 50 metros del incidente para verificar. Distancia actual: ${Math.round(distanceInMeters)}m`
+                `Debes estar a menos de 100 metros del incidente para verificar. Distancia actual: ${Math.round(distanceInMeters)}m`
             );
         }
 
@@ -198,7 +198,7 @@ export class ReportsService {
                 {
                     latitude,
                     longitude,
-                    radius: 20, // metros
+                    radius: 100, // metros (aumentado para mejor UX)
                 }
             )
             .andWhere('type.id = :typeId', { typeId: type })

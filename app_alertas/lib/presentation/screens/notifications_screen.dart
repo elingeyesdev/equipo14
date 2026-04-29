@@ -316,6 +316,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    if (alert.weight > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.people_outline, size: 14, color: Colors.blueAccent),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${alert.weight.toInt()} confirmaciones',
+                            style: const TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
