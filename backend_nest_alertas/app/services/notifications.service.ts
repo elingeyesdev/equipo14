@@ -74,7 +74,7 @@ export class NotificationsService {
     /**
      * Enviar notificación push a multiples dispositivos (Multicast)
      */
-    async sendPushNotificationToMultipleTokens(tokens: string[], title: string, body: string, data?: any) {
+    async sendPushNotificationToMultipleTokens(tokens: string[], title: string, body: string, data?: any): Promise<any> {
         if (!tokens || tokens.length === 0) return;
 
         const message = {

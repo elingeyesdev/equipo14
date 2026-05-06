@@ -12,7 +12,8 @@ export class ReportResponse{
     verified: boolean;
     created_at: Date;
     expires_at: Date;
-    images: Image[]
+    images: Image[];
+    zone: string;
 
     static FromReportToResponse(report: Report): ReportResponse {
         const response = new ReportResponse();
@@ -27,6 +28,7 @@ export class ReportResponse{
         response.created_at = report.created_at
         response.expires_at = report.expires_at
         response.images = report.images
+        response.zone = report.zone ?? ''
 
         return response
     }
@@ -43,7 +45,8 @@ export class ReportCoinicdenceResponse{
     weight: number;
     verified: boolean;
     created_at: Date;
-    images: Image[]
+    images: Image[];
+    zone: string;
 
     static FromReportToResponse(report: Report): ReportCoinicdenceResponse {
         const response = new ReportCoinicdenceResponse();
@@ -55,6 +58,7 @@ export class ReportCoinicdenceResponse{
         response.verified = report.verified ?? false
         response.created_at = report.created_at
         response.images = report.images
+        response.zone = report.zone ?? ''
 
         return response
     }

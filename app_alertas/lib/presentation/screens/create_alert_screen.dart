@@ -7,18 +7,18 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:http/http.dart' as http;
-import 'package:app_alertas/core/config/api_config.dart';
+
 import 'package:app_alertas/data/models/alert_type.model.dart';
-import 'package:app_alertas/data/services/api_service.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
 import 'package:app_alertas/data/models/alert_model.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/presentation/providers/auth_provider.dart';
 
 class CreateAlertScreen extends StatefulWidget {
-  const CreateAlertScreen({super.key, this.onCreated});
+  const CreateAlertScreen({super.key, this.onCreated, this.onShowMap});
 
   final VoidCallback? onCreated;
+  final Function(AlertModel)? onShowMap;
 
   @override
   State<CreateAlertScreen> createState() => _CreateAlertScreenState();
@@ -38,8 +38,8 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
   final picker = ImagePicker();
   final _descriptionController = TextEditingController();
   final _service = AlertsApiService();
-  final _apiService = ApiService();
-  final _random = Random();
+
+
   bool _isLoadingLocation = true;
   bool _isSubmitting = false;
   String _locationTitle = 'Detectando ubicación...';
@@ -359,41 +359,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     }
   }
 
-  void _openImageFullscreen(File file) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        fullscreenDialog: true,
-        builder: (ctx) => Scaffold(
-          backgroundColor: Colors.black,
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              Center(
-                child: InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 4,
-                  child: Image.file(file, fit: BoxFit.contain),
-                ),
-              ),
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   // ---------------------------------------------------------------
   // Envío del reporte
@@ -466,6 +432,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
         user: userId,
         latitude: _position!.latitude,
         longitude: _position!.longitude,
+        zone: _locationTitle,
         imageFile: image,
       );
 
@@ -503,88 +470,113 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          maxChildSize: 0.9,
-          minChildSize: 0.4,
-          expand: false,
-          builder: (_, scrollController) {
-            return Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    'Se encontraron reportes similares',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F172A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: similars.length,
-                    itemBuilder: (context, index) {
-                      final alert = similars[index];
-                      final coords = alert.coordinates;
-                      final lat = coords.length > 1 ? coords[0] : 0;
-                      final lon = coords.length > 1 ? coords[1] : 0;
-                      final timeStr = alert.createdAt != null 
-                          ? '${alert.createdAt!.day}/${alert.createdAt!.month} ${alert.createdAt!.hour}:${alert.createdAt!.minute.toString().padLeft(2, '0')}'
-                          : 'Desconocida';
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                '¿Es el mismo incidente?',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Se encontraron reportes recientes muy cerca de tu ubicación. Puedes sumarte a uno existente o crear uno nuevo.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: similars.length,
+                  itemBuilder: (context, index) {
+                    final alert = similars[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
                         color: const Color(0xFF1E293B),
-                        child: ListTile(
-                          title: Text(
-                            alert.description, 
-                            maxLines: 2, 
-                            overflow: TextOverflow.ellipsis, 
-                            style: const TextStyle(color: Colors.white)
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
                           ),
-                          subtitle: Text(
-                            'Hace poco ($timeStr)\nUbicación: ${lat.toStringAsFixed(4)}, ${lon.toStringAsFixed(4)}', 
-                            style: const TextStyle(color: Colors.grey)
-                          ),
-                          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
-                          onTap: () {
+                          child: const Icon(Icons.emergency_share_rounded, color: Colors.orange, size: 20),
+                        ),
+                        title: Text(
+                          alert.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: Text(
+                          alert.zone ?? 'Zona cercana',
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.map_outlined, color: Colors.blueAccent),
+                          onPressed: () {
                             Navigator.pop(ctx);
-                            _attachToExistingAlert(alert.id);
+                            widget.onShowMap?.call(alert);
                           },
                         ),
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _attachToExistingAlert(alert.id);
+                        },
                       ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _createActualAlert();
-                      },
-                      child: const Text('Crear mi propio reporte'),
-                    ),
-                  ),
+                    );
+                  },
                 ),
-              ],
-            );
-          },
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _createActualAlert();
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('No es ninguno de estos, crear nuevo'),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       },
     );
@@ -602,7 +594,12 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await _service.attachImageToReport(reportId, image!);
+      await _service.verifyReport(
+        reportId: reportId,
+        latitude: _position!.latitude,
+        longitude: _position!.longitude,
+        imageFile: image!,
+      );
       _descriptionController.clear();
       setState(() {
         image = null;
@@ -611,12 +608,12 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       widget.onCreated?.call();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Imagen adjuntada al reporte existente exitosamente.')),
+        const SnackBar(content: Text('Has verificado el reporte existente exitosamente.')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al adjuntar imagen: $e')),
+        SnackBar(content: Text('Error al verificar: $e')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

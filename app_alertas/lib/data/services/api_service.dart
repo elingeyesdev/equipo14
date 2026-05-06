@@ -226,6 +226,7 @@ class ApiService {
     required String userId,
     required double latitude,
     required double longitude,
+    String? zone,
     File? imageFile,
   }) async {
     final request = http.MultipartRequest('POST', _uri(ApiConfig.reportsPath))
@@ -234,6 +235,10 @@ class ApiService {
       ..fields['userId'] = userId
       ..fields['latitude'] = latitude.toString()
       ..fields['longitude'] = longitude.toString();
+    
+    if (zone != null) {
+      request.fields['zone'] = zone;
+    }
     request.headers.addAll(_tunnelHeaders);
 
     if (imageFile != null) {
@@ -270,8 +275,8 @@ class ApiService {
     final url = _uri(ApiConfig.reportSimilarsPath).replace(
       queryParameters: {
         'type': typeId.toString(),
-        'latitude': longitude.toString(), // Enviando longitud como latitud según el hallazgo
-        'longitude': latitude.toString(), // Enviando latitud como longitud según el hallazgo
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
       },
     );
 
@@ -358,6 +363,30 @@ class ApiService {
       },
     );
     final response = await http.get(url, headers: _tunnelHeaders);
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body
+        .map((e) => ReportModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerResumenZonas() async {
+    final response = await http.get(
+      _uri('${ApiConfig.reportsPath}/zones'),
+      headers: _tunnelHeaders,
+    );
+    _ensureOk(response);
+    final body = jsonDecode(response.body);
+    if (body is! List) return [];
+    return body.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  Future<List<ReportModel>> obtenerReportesPorZona(String zoneName) async {
+    final response = await http.get(
+      _uri('${ApiConfig.reportsPath}/zone/$zoneName'),
+      headers: _tunnelHeaders,
+    );
     _ensureOk(response);
     final body = jsonDecode(response.body);
     if (body is! List) return [];

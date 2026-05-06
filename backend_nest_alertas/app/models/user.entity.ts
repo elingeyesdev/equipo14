@@ -1,4 +1,4 @@
-import { Report } from "app/models/report.entity";
+import { Report } from "./report.entity";
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import type { Point } from 'geojson';
 import { Role } from "./role.entity";
@@ -34,7 +34,7 @@ export class User {
     })
     last_location: Point;
 
-    @OneToMany(() => Report, report => report.user)
+    @OneToMany(() => Report, (report: Report) => report.user)
     reports: Report[];
 
     @ManyToOne(() => Role, role => role.users)

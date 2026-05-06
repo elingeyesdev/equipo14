@@ -27,6 +27,9 @@ export class Report {
     @Column()
     weight: number;
 
+    @Column({ nullable: true })
+    zone: string;
+
     @Column({ default: false })
     verified: boolean;
 

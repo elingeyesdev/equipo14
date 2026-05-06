@@ -60,6 +60,16 @@ export class ReportsController {
         return this.reportsService.findCoincidences(verifyReportRequest)
     }
 
+    @Get('/zones')
+    getZonesSummary() {
+        return this.reportsService.getZonesSummary();
+    }
+
+    @Get('/zone/:name')
+    findByZone(@Param('name') name: string) {
+        return this.reportsService.findByZone(name);
+    }
+
     @Get(':id')
     findOne(@Param('id') id:string){
         return this.reportsService.findOne(id)

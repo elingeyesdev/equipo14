@@ -22,6 +22,7 @@ class AlertsApiService {
     required String user,
     required double latitude,
     required double longitude,
+    String? zone,
     File? imageFile,
   }) {
     return _api.crearReporte(
@@ -30,6 +31,7 @@ class AlertsApiService {
       userId: user,
       latitude: latitude,
       longitude: longitude,
+      zone: zone,
       imageFile: imageFile,
     );
   }
@@ -95,4 +97,8 @@ class AlertsApiService {
       radius: radius,
     );
   }
+
+  Future<List<Map<String, dynamic>>> getZonesSummary() => _api.obtenerResumenZonas();
+
+  Future<List<AlertModel>> getReportsByZone(String zoneName) => _api.obtenerReportesPorZona(zoneName);
 }

@@ -54,135 +54,135 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthProvider>().isLoading;
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro de usuario')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if ((value ?? '').trim().isEmpty) {
-                          return 'Ingresa tu nombre.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _lastNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Apellido',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if ((value ?? '').trim().isEmpty) {
-                          return 'Ingresa tu apellido.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Numero de telefono',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        final v = (value ?? '').trim();
-                        if (v.isEmpty) return 'Ingresa tu numero.';
-                        if (v.length != 8) {
-                          return 'El numero debe tener 8 digitos.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Contrasena',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        final v = (value ?? '').trim();
-                        if (v.isEmpty) return 'Ingresa una contrasena.';
-                        if (v.length < 6) return 'Minimo 6 caracteres.';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Confirmar contrasena',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if ((value ?? '').trim() !=
-                            _passwordController.text.trim()) {
-                          return 'Las contrasenas no coinciden.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      value: _selectedRoleId,
-                      decoration: const InputDecoration(
-                        labelText: 'Rol',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 1,
-                          child: Text('Usuario Normal'),
-                        ),
-                        DropdownMenuItem(
-                          value: 2,
-                          child: Text('Autoridad'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _selectedRoleId = val;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: isLoading ? null : _submit,
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Crear cuenta'),
-                    ),
-                  ],
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
             ),
           ),
-        ),
+          SafeArea(
+            child: Column(
+              children: [
+                AppBar(
+                  backgroundColor: Colors.transparent,
+                  title: const Text('Crear Cuenta'),
+                  elevation: 0,
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Únete a la red de seguridad',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _nameController,
+                                      decoration: const InputDecoration(hintText: 'Nombre'),
+                                      validator: (value) => (value ?? '').trim().isEmpty ? 'Requerido' : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _lastNameController,
+                                      decoration: const InputDecoration(hintText: 'Apellido'),
+                                      validator: (value) => (value ?? '').trim().isEmpty ? 'Requerido' : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                decoration: const InputDecoration(
+                                  hintText: 'Número de teléfono',
+                                  prefixIcon: Icon(Icons.phone_android_rounded, size: 20),
+                                ),
+                                validator: (value) {
+                                  final v = (value ?? '').trim();
+                                  if (v.isEmpty) return 'Requerido';
+                                  if (v.length < 7) return 'Número inválido';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  hintText: 'Contraseña',
+                                  prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
+                                ),
+                                validator: (value) => (value ?? '').trim().length < 6 ? 'Mínimo 6 caracteres' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _confirmPasswordController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  hintText: 'Confirmar contraseña',
+                                  prefixIcon: Icon(Icons.lock_reset_rounded, size: 20),
+                                ),
+                                validator: (value) => (value ?? '').trim() != _passwordController.text.trim() ? 'No coinciden' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<int>(
+                                initialValue: _selectedRoleId,
+                                dropdownColor: const Color(0xFF1E293B),
+                                decoration: const InputDecoration(
+                                  hintText: 'Tipo de usuario',
+                                  prefixIcon: Icon(Icons.badge_outlined, size: 20),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: 1, child: Text('Usuario Normal')),
+                                  DropdownMenuItem(value: 2, child: Text('Autoridad')),
+                                ],
+                                onChanged: (val) => setState(() => _selectedRoleId = val!),
+                              ),
+                              const SizedBox(height: 32),
+                              ElevatedButton(
+                                onPressed: isLoading ? null : _submit,
+                                child: isLoading
+                                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Text('CREAR CUENTA', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

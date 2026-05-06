@@ -20,7 +20,8 @@ String _mapboxDarkTileUrl() =>
     '?access_token=$_kMapboxAccessToken';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  final AlertModel? initialAlert;
+  const MapScreen({super.key, this.initialAlert});
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -28,6 +29,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   LatLng? currentLocation;
+  MapController mapController = MapController();
   final _alertsService = AlertsApiService();
   final _apiService = ApiService();
   final _fcmService = FcmService();
@@ -39,6 +41,11 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     getLocation();
     _initPushNotifications();
+    if (widget.initialAlert != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showAlertBottomSheet(widget.initialAlert!);
+      });
+    }
   }
 
   Future<void> _initPushNotifications() async {
@@ -122,17 +129,18 @@ class _MapScreenState extends State<MapScreen> {
                   Icon(
                     _iconByType(alert.type),
                     color: color,
-                    size: 32,
+                    size: 36,
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: color.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       alert.type.toUpperCase(),
-                      style: const TextStyle(fontSize: 11, color: Colors.white),
+                      style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -168,21 +176,23 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   IconData _iconByType(String type) {
-    switch (type.toLowerCase()) {
-      case 'robo': return Icons.warning;
-      case 'incendio': return Icons.local_fire_department;
-      case 'accidente': return Icons.car_crash;
-      default: return Icons.warning;
-    }
+    final t = type.toLowerCase();
+    if (t.contains('robo')) return Icons.security_rounded;
+    if (t.contains('hurto')) return Icons.person_off_rounded;
+    if (t.contains('incendio')) return Icons.local_fire_department_rounded;
+    if (t.contains('accidente')) return Icons.car_crash_rounded;
+    if (t.contains('vial') || t.contains('obstrucción')) return Icons.traffic_rounded;
+    if (t.contains('médica') || t.contains('salud')) return Icons.medical_services_rounded;
+    return Icons.warning_amber_rounded;
   }
 
   Color _colorByType(String type) {
-    switch (type.toLowerCase()) {
-      case 'robo': return Colors.red;
-      case 'incendio': return Colors.orange;
-      case 'accidente': return Colors.blue;
-      default: return Colors.yellow;
-    }
+    final t = type.toLowerCase();
+    if (t.contains('robo') || t.contains('hurto')) return const Color(0xFFEF4444);
+    if (t.contains('incendio')) return const Color(0xFFF59E0B);
+    if (t.contains('accidente') || t.contains('vial')) return const Color(0xFF3B82F6);
+    if (t.contains('médica') || t.contains('salud')) return const Color(0xFF10B981);
+    return const Color(0xFF8B5CF6);
   }
 
   @override
@@ -191,9 +201,12 @@ class _MapScreenState extends State<MapScreen> {
       body: currentLocation == null
           ? const Center(child: CircularProgressIndicator())
           : FlutterMap(
+              mapController: mapController,
               options: MapOptions(
-                initialCenter: currentLocation!,
-                initialZoom: 17,
+                initialCenter: widget.initialAlert != null && widget.initialAlert!.coordinates.length >= 2
+                    ? LatLng(widget.initialAlert!.coordinates[1], widget.initialAlert!.coordinates[0])
+                    : currentLocation!,
+                initialZoom: widget.initialAlert != null ? 18 : 17,
                 maxZoom: 22,
               ),
               children: [

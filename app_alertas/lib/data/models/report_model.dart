@@ -12,6 +12,7 @@ class ReportModel {
   final DateTime? expiresAt;
   final List<ImageModel> images;
   final bool verified;
+  final String? zone;
 
   const ReportModel({
     required this.id,
@@ -24,6 +25,7 @@ class ReportModel {
     this.expiresAt,
     this.images = const [],
     this.verified = false,
+    this.zone,
   });
 
   factory ReportModel.fromJson(Map<String, dynamic> json) {
@@ -62,6 +64,7 @@ class ReportModel {
           : null,
       images: images,
       verified: json['verified'] == true,
+      zone: json['zone']?.toString(),
     );
   }
 
@@ -76,5 +79,6 @@ class ReportModel {
     'expires_at': expiresAt?.toIso8601String(),
     'images': images.map((e) => e.toJson()).toList(),
     'verified': verified,
+    'zone': zone,
   };
 }

@@ -8,7 +8,8 @@ import 'package:app_alertas/data/models/alert_model.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  final Function(AlertModel)? onAlertTap;
+  const NotificationsScreen({super.key, this.onAlertTap});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -217,143 +218,204 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Notificaciones recientes",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Actividad Reciente",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Mantente al tanto de lo que sucede en tu zona",
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : RefreshIndicator(
-                        onRefresh: _loadAlerts,
-                        child: _alerts.isEmpty
-                            ? const Center(child: Text('No hay notificaciones'))
-                            : ListView.builder(
-                                itemCount: _alerts.length,
-                                itemBuilder: (context, index) {
-                                  final alert = _alerts[index];
-                                  return _buildItem(alert);
-                                },
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: _loadAlerts,
+                      displacement: 20,
+                      color: const Color(0xFF3B82F6),
+                      child: _alerts.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.notifications_none_rounded, size: 64, color: Colors.white.withValues(alpha: 0.1)),
+                                  const SizedBox(height: 16),
+                                  const Text('No hay notificaciones', style: TextStyle(color: Colors.grey)),
+                                ],
                               ),
-                      ),
-              ),
-            ],
-          ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: _alerts.length,
+                              itemBuilder: (context, index) {
+                                final alert = _alerts[index];
+                                return _buildItem(alert);
+                              },
+                            ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Color _alertColor(String type) {
+    final t = type.toUpperCase();
+    if (t.contains('ROBO') || t.contains('HURTO')) return const Color(0xFFEF4444);
+    if (t.contains('INCENDIO')) return const Color(0xFFF59E0B);
+    if (t.contains('ACCIDENTE') || t.contains('VIAL')) return const Color(0xFF3B82F6);
+    if (t.contains('MÉDICA') || t.contains('SALUD')) return const Color(0xFF10B981);
+    return const Color(0xFF8B5CF6);
+  }
+
+  IconData _alertIcon(String type) {
+    final t = type.toUpperCase();
+    if (t.contains('ROBO')) return Icons.security_rounded;
+    if (t.contains('HURTO')) return Icons.person_off_rounded;
+    if (t.contains('INCENDIO')) return Icons.local_fire_department_rounded;
+    if (t.contains('ACCIDENTE')) return Icons.car_crash_rounded;
+    if (t.contains('VIAL')) return Icons.traffic_rounded;
+    if (t.contains('MÉDICA')) return Icons.medical_services_rounded;
+    return Icons.warning_amber_rounded;
+  }
+
   Widget _buildItem(AlertModel alert) {
-    String typeLabel = alert.type.toUpperCase() == 'ROBO'
-        ? 'Robo'
-        : alert.type.toUpperCase() == 'INCENDIO'
-            ? 'Incendio'
-            : alert.type.toUpperCase() == 'ACCIDENTE'
-                ? 'Accidente'
-                : alert.type;
-
-    Color color = Colors.grey;
-    if (typeLabel == 'Robo') color = Colors.red;
-    if (typeLabel == 'Incendio') color = Colors.orange;
-    if (typeLabel == 'Accidente') color = Colors.blue;
-
+    final color = _alertColor(alert.type);
     final time = alert.createdAt != null
-        ? '${alert.createdAt!.day}/${alert.createdAt!.month}/${alert.createdAt!.year} ${alert.createdAt!.hour}:${alert.createdAt!.minute.toString().padLeft(2, '0')}'
+        ? '${alert.createdAt!.day}/${alert.createdAt!.month} ${alert.createdAt!.hour}:${alert.createdAt!.minute.toString().padLeft(2, '0')}'
         : 'Reciente';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(15),
-        border: alert.verified
-            ? Border.all(color: Colors.green, width: 1.5)
-            : null,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: alert.verified ? Colors.green.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => widget.onAlertTap?.call(alert),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.notifications_active, color: color),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(_alertIcon(alert.type), color: color, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            '$typeLabel reportado',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                alert.type.toUpperCase(),
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            if (alert.verified)
+                              const Icon(Icons.verified, color: Colors.green, size: 16),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          alert.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        if (alert.verified)
-                          const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.verified, color: Colors.green, size: 16),
-                              SizedBox(width: 4),
-                              Text('Verificado', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time_rounded, size: 12, color: Colors.white.withValues(alpha: 0.4)),
+                            const SizedBox(width: 4),
+                            Text(
+                              time,
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(Icons.location_on_outlined, size: 12, color: Colors.white.withValues(alpha: 0.4)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                alert.zone ?? 'Cerca de ti',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    Text(
-                      alert.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                    if (alert.weight > 0) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.people_outline, size: 14, color: Colors.blueAccent),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${alert.weight.toInt()} confirmaciones',
-                            style: const TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          if (!alert.verified) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.green,
-                  side: const BorderSide(color: Colors.green),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              if (!alert.verified) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.withValues(alpha: 0.1),
+                      foregroundColor: Colors.green,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.green.withValues(alpha: 0.2)),
+                      ),
+                    ),
+                    onPressed: () => _verifyAlert(alert),
+                    icon: const Icon(Icons.verified_outlined, size: 18),
+                    label: const Text('VERIFICAR ESTE INCIDENTE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
-                onPressed: () => _verifyAlert(alert),
-                icon: const Icon(Icons.verified_outlined, size: 18),
-                label: const Text('Verificar', style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ],
-        ],
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

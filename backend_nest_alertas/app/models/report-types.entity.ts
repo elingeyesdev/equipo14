@@ -12,6 +12,14 @@ export class ReportType{
     @Column()
     name: string;
 
+    @ApiProperty()
+    @Column({ nullable: true })
+    category: string;
+
+    @ApiProperty()
+    @Column({ default: 1 })
+    base_weight: number;
+
     @OneToMany(() => Report, report => report.type)
     reports: Report[]
 }

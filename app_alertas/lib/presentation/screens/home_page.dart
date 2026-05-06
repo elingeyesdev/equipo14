@@ -6,6 +6,7 @@ import 'package:app_alertas/presentation/screens/create_alert_screen.dart';
 import 'package:app_alertas/presentation/screens/notifications_screen.dart';
 import 'package:app_alertas/presentation/providers/auth_provider.dart';
 import 'package:app_alertas/presentation/screens/emergency_services_screen.dart';
+import 'package:app_alertas/data/models/alert_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,28 +17,36 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int currentIndex = 0;
+  AlertModel? selectedAlert;
   final GlobalKey<HistoryScreenState> _historyKey =
       GlobalKey<HistoryScreenState>();
+
+  void navigateToMap(AlertModel alert) {
+    setState(() {
+      selectedAlert = alert;
+      currentIndex = 0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final isAuthority = user?.roleId == 2;
     
     return Scaffold(
       body: SafeArea(
         child: IndexedStack(
           index: currentIndex,
           children: [
-            const MapScreen(),
+            MapScreen(key: ValueKey(selectedAlert?.id), initialAlert: selectedAlert),
             HistoryScreen(key: _historyKey),
             CreateAlertScreen(
               onCreated: () {
                 _historyKey.currentState?.reload();
                 setState(() => currentIndex = 1);
               },
+              onShowMap: navigateToMap,
             ),
-            const NotificationsScreen(),
+            NotificationsScreen(onAlertTap: navigateToMap),
             const _ProfileScreen(),
           ],
         ),

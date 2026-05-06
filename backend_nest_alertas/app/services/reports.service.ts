@@ -41,11 +41,16 @@ export class ReportsService {
 
         const createReport = createReportRequest.toReport();
 
-        createReport.weight = 0
+        // Prioridad inicial: base_weight + bonus por descripción larga
+        let initialWeight = type.base_weight || 1;
+        if (createReportRequest.description.length > 100) initialWeight += 2;
+        
+        createReport.weight = initialWeight;
         createReport.created_at = now;
         createReport.expires_at = expires;
         createReport.user = user;
         createReport.type = type
+        createReport.zone = createReportRequest.zone || 'Zona desconocida';
 
         const newReport = this.reportsRepository.create(createReport);
         const savedReport = await this.reportsRepository.save(newReport);
@@ -143,7 +148,9 @@ export class ReportsService {
 
         // Mark as verified
         report.verified = true;
-        report.weight = report.weight + 1;
+        // Cada verificación aumenta el peso significativamente (Prioridad)
+        // Si ya estaba verificado, suma menos
+        report.weight += report.verified ? 2 : 10;
         const saved = await this.reportsRepository.save(report);
 
         return ReportResponse.FromReportToResponse(saved);
@@ -229,5 +236,24 @@ export class ReportsService {
             throw new NotFoundException(`El reporte con ID ${id} no se encontro`)
         }
         return { message: "Reporte eliminado correctamente" };
+    }
+    async findByZone(zone: string) {
+        const reports = await this.reportsRepository.find({
+            where: { zone },
+            relations: ['user', 'images', 'type'],
+            order: { weight: 'DESC', created_at: 'DESC' }
+        });
+        return ReportResponse.FromReportListToResponse(reports);
+    }
+
+    async getZonesSummary() {
+        return this.reportsRepository
+            .createQueryBuilder('report')
+            .select('report.zone', 'zone')
+            .addSelect('COUNT(report.id)', 'count')
+            .addSelect('SUM(report.weight)', 'total_weight')
+            .groupBy('report.zone')
+            .orderBy('total_weight', 'DESC')
+            .getRawMany();
     }
 }

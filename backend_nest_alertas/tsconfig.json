@@ -2,6 +2,7 @@
   "compilerOptions": {
     //opcion q desactiva el error de inicializacion de propiedades
     "strictPropertyInitialization": false,
+    "ignoreDeprecations": "5.0",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
@@ -16,6 +17,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      "app/*": ["./app/*"],
+      "config/*": ["./config/*"],
+      "bootstrap/*": ["./bootstrap/*"]
+    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,

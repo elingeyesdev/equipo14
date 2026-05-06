@@ -1,4 +1,4 @@
-import {IsString, IsNumber, MaxLength } from "class-validator";
+import {IsString, IsNumber, MaxLength, IsOptional } from "class-validator";
 import { Report } from "../../../models/report.entity";
 import { Type } from "class-transformer";
 import { ApiProperty } from "@nestjs/swagger";
@@ -24,10 +24,15 @@ export class CreateReportRequest {
 
     @IsString()
     userId: string
+
+    @IsString()
+    @IsOptional()
+    zone?: string
     
     toReport(): Report{
         const report = new Report();
         report.description = this.description
+        report.zone = this.zone || ""
         report.location = {
             type: "Point",
             coordinates: [this.longitude, this.latitude]
