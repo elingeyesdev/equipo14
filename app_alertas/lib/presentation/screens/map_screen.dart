@@ -35,10 +35,17 @@ class _MapScreenState extends State<MapScreen> {
   final _fcmService = FcmService();
   List<AlertModel> _alerts = const [];
   bool _loadingAlerts = true;
+  bool _isAuthority = false;
 
   @override
   void initState() {
     super.initState();
+    // Detectar rol antes de cargar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().user;
+      _isAuthority = (user?.roleId == 2) ||
+          (user?.roleName?.toLowerCase().contains('autoridad') == true);
+    });
     getLocation();
     _initPushNotifications();
     if (widget.initialAlert != null) {
@@ -51,9 +58,11 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _initPushNotifications() async {
     final user = context.read<AuthProvider>().user;
     if (user != null) {
+      _isAuthority = (user.roleId == 2) ||
+          (user.roleName?.toLowerCase().contains('autoridad') == true);
       await _fcmService.init(user.id);
       _fcmService.listenToForegroundMessages(() {
-        _loadNearbyAlerts();
+        _loadAlerts();
       });
     }
   }
@@ -83,22 +92,34 @@ class _MapScreenState extends State<MapScreen> {
       }
     } catch (_) {}
 
-    await _loadNearbyAlerts();
+    await _loadAlerts();
   }
 
-  Future<void> _loadNearbyAlerts() async {
-    if (!mounted || currentLocation == null) return;
+  Future<void> _loadAlerts() async {
+    if (!mounted) return;
     setState(() => _loadingAlerts = true);
     try {
-      final data = await _alertsService.getNearbyAlerts(
-        latitude: currentLocation!.latitude,
-        longitude: currentLocation!.longitude,
-        radius: 150,
-      );
+      List<AlertModel> data;
+      if (_isAuthority) {
+        // Autoridades ven TODOS los reportes de la ciudad
+        data = await _alertsService.getAlerts();
+      } else {
+        // Usuarios normales ven reportes cercanos (5km de radio)
+        if (currentLocation == null) {
+          setState(() => _loadingAlerts = false);
+          return;
+        }
+        data = await _alertsService.getNearbyAlerts(
+          latitude: currentLocation!.latitude,
+          longitude: currentLocation!.longitude,
+          radius: 5000,
+        );
+      }
       if (!mounted) return;
       setState(() => _alerts = data);
     } catch (e) {
-      debugPrint('Error al cargar alertas cercanas: $e');
+      debugPrint('Error al cargar alertas: $e');
+      // Fallback: intentar cargar todos
       try {
         final data = await _alertsService.getAlerts();
         if (!mounted) return;
@@ -121,10 +142,11 @@ class _MapScreenState extends State<MapScreen> {
           return Marker(
             point: point,
             width: 120,
-            height: 56,
+            height: 80,
             child: GestureDetector(
               onTap: () => _showAlertBottomSheet(alert),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     _iconByType(alert.type),
@@ -140,7 +162,14 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     child: Text(
                       alert.type.toUpperCase(),
-                      style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -198,39 +227,81 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: currentLocation == null
-          ? const Center(child: CircularProgressIndicator())
-          : FlutterMap(
-              mapController: mapController,
-              options: MapOptions(
-                initialCenter: widget.initialAlert != null && widget.initialAlert!.coordinates.length >= 2
-                    ? LatLng(widget.initialAlert!.coordinates[1], widget.initialAlert!.coordinates[0])
-                    : currentLocation!,
-                initialZoom: widget.initialAlert != null ? 18 : 17,
-                maxZoom: 22,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: _mapboxDarkTileUrl(),
-                  userAgentPackageName: 'com.tuempresa.appalertas',
-                  maxNativeZoom: 22,
-                  maxZoom: 22,
-                ),
-                MarkerLayer(
-                  markers: [
-                    ..._buildAlertMarkers(),
-                    Marker(
-                      point: currentLocation!,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Icons.my_location, color: Colors.blue, size: 30),
+      body: Stack(
+        children: [
+          currentLocation == null
+              ? const Center(child: CircularProgressIndicator())
+              : FlutterMap(
+                  mapController: mapController,
+                  options: MapOptions(
+                    initialCenter: widget.initialAlert != null &&
+                            widget.initialAlert!.coordinates.length >= 2
+                        ? LatLng(widget.initialAlert!.coordinates[1],
+                            widget.initialAlert!.coordinates[0])
+                        : currentLocation!,
+                    initialZoom: widget.initialAlert != null ? 18 : 13,
+                    maxZoom: 22,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: _mapboxDarkTileUrl(),
+                      userAgentPackageName: 'com.tuempresa.appalertas',
+                      maxNativeZoom: 22,
+                      maxZoom: 22,
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        ..._buildAlertMarkers(),
+                        if (currentLocation != null)
+                          Marker(
+                            point: currentLocation!,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(Icons.my_location,
+                                color: Colors.blue, size: 30),
+                          ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+
+          // Badge de modo autoridad
+          if (_isAuthority)
+            Positioned(
+              top: 12,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B).withOpacity(0.92),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.shield_rounded,
+                          color: Color(0xFF3B82F6), size: 15),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Vista autoridad · ${_alerts.length} reportes',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _loadNearbyAlerts,
+        onPressed: _loadAlerts,
         child: _loadingAlerts
             ? const CircularProgressIndicator(color: Colors.white)
             : const Icon(Icons.refresh),

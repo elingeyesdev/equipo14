@@ -87,13 +87,17 @@ class AlertCard extends StatelessWidget {
                     child: Icon(_alertIcon(alert.type), color: color, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    alert.type.toUpperCase(),
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                      fontSize: 13,
+                  Expanded(
+                    child: Text(
+                      alert.type.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   const Spacer(),
