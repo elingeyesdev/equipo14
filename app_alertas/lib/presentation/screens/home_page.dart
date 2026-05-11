@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:app_alertas/presentation/screens/map_screen.dart';
 import 'package:app_alertas/presentation/screens/history_screen.dart';
 import 'package:app_alertas/presentation/screens/create_alert_screen.dart';
-import 'package:app_alertas/presentation/screens/notifications_screen.dart';
+import 'package:app_alertas/presentation/screens/recent_activity_screen.dart';
 import 'package:app_alertas/presentation/providers/auth_provider.dart';
 import 'package:app_alertas/presentation/screens/emergency_services_screen.dart';
 import 'package:app_alertas/data/models/alert_model.dart';
@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
               },
               onShowMap: navigateToMap,
             ),
-            NotificationsScreen(onAlertTap: navigateToMap),
+            RecentActivityScreen(onAlertTap: navigateToMap),
             const _ProfileScreen(),
           ],
         ),
@@ -61,7 +61,7 @@ class _HomePageState extends State<HomePage> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Mapa'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Historial'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Mis Reportes'),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle, size: 36, color: Colors.red),
             label: 'Crear',

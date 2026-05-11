@@ -24,8 +24,9 @@ export class ReportsService {
         private notificationsService: NotificationsService
 
     ){}
-    //revisar esto manana
-    //me gano el sueno, asi capaz este mal algo
+    // revisar esto manana
+    // me gano el sueno, asi capaz este mal algo
+    // Ahora q ya fue revisado parece q esta bien en general
     async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
         const user = await this.usersRepository.findOne({where: {id: createReportRequest.userId}})
         if(!user){
@@ -45,6 +46,7 @@ export class ReportsService {
         let initialWeight = type.base_weight || 1;
         if (createReportRequest.description.length > 100) initialWeight += 2;
         
+        // La verificacion es por default false por eso ya no se setea aqui
         createReport.weight = initialWeight;
         createReport.created_at = now;
         createReport.expires_at = expires;
@@ -87,17 +89,17 @@ export class ReportsService {
             }
         } catch (error) {
             console.error('No se pudo enviar la notificación Push:', error);
-            // No detenemos el flujo si la notificación falla
         }
 
         return ReportResponse.FromReportToResponse(savedReport);
     }
 
-    // ### Mejorar el return de esta funcion ###
+    // La funcion retorna lo justo y necesario
+    // Se planteara el uso de un respone si es necesario, pero de momento no
     async addImage(id: number, file: Express.Multer.File){
         const report = await this.reportsRepository.findOne({
             where: {id: Number(id)},
-            //relations: ['user','images', 'type']
+            // relations: ['user','images', 'type'] => por eso esto esta comentado
         });
         if(!report){
             throw new NotFoundException("Reporte no encontrado")
@@ -116,44 +118,20 @@ export class ReportsService {
         return savedReport
     }
 
-    async verifyReport(id: number, latitude: number, longitude: number, file: Express.Multer.File) {
+    // Marcar verificado, opcion reservada solo para el panel administrativo, solo para autoridades
+    // Permitiendo q los pesos para este reporte sean irrelevantes
+    // Y pasando a maxima prioridad
+    async verifyReport(id: number) {
         const report = await this.reportsRepository.findOne({
             where: { id: Number(id) },
-            relations: ['user', 'images', 'type'],
         });
         if (!report) {
             throw new NotFoundException('Reporte no encontrado');
         }
+        report.verified = true
+        const savedReport = await this.reportsRepository.save(report);
 
-        // Check distance: user must be within 50 meters of the report location
-        const distance = await this.reportsRepository
-            .createQueryBuilder('report')
-            .select(`ST_Distance(
-                ST_SetSRID(ST_MakePoint(:userLon, :userLat), 4326)::geography,
-                report.location::geography
-            )`, 'distance')
-            .where('report.id = :reportId', { reportId: id })
-            .setParameters({ userLat: latitude, userLon: longitude })
-            .getRawOne();
-
-        const distanceInMeters = parseFloat(distance?.distance ?? '99999');
-        if (distanceInMeters > 100) {
-            throw new BadRequestException(
-                `Debes estar a menos de 100 metros del incidente para verificar. Distancia actual: ${Math.round(distanceInMeters)}m`
-            );
-        }
-
-        // Attach the verification photo
-        await this.imagesServices.createFromReport(report, file);
-
-        // Mark as verified
-        report.verified = true;
-        // Cada verificación aumenta el peso significativamente (Prioridad)
-        // Si ya estaba verificado, suma menos
-        report.weight += report.verified ? 2 : 10;
-        const saved = await this.reportsRepository.save(report);
-
-        return ReportResponse.FromReportToResponse(saved);
+        return savedReport;
     }
 
     async findNearby(latitude: number, longitude: number, radius: number) {
@@ -229,14 +207,6 @@ export class ReportsService {
         return ReportResponse.FromReportToResponse(report)
     }
 
-    async remove(id: string){
-        const result = await this.reportsRepository.delete(id);
-
-        if(result.affected === 0){
-            throw new NotFoundException(`El reporte con ID ${id} no se encontro`)
-        }
-        return { message: "Reporte eliminado correctamente" };
-    }
     async findByZone(zone: string) {
         const reports = await this.reportsRepository.find({
             where: { zone },
@@ -255,5 +225,15 @@ export class ReportsService {
             .groupBy('report.zone')
             .orderBy('total_weight', 'DESC')
             .getRawMany();
+    }
+
+    
+    async remove(id: string){
+        const result = await this.reportsRepository.delete(id);
+
+        if(result.affected === 0){
+            throw new NotFoundException(`El reporte con ID ${id} no se encontro`)
+        }
+        return { message: "Reporte eliminado correctamente" };
     }
 }

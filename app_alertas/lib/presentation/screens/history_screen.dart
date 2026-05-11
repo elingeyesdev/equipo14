@@ -29,19 +29,15 @@ class HistoryScreenState extends State<HistoryScreen> {
     try {
       final data = await _service.getAlerts();
       if (!mounted) return;
-      
-      final user = context.read<AuthProvider>().user;
-      final isAuthority = user?.roleId == 2;
 
+      final user = context.read<AuthProvider>().user;
+
+      // Siempre mostrar solo los reportes del usuario actual
       setState(() {
-        if (isAuthority) {
-          _alerts = data;
-        } else {
-          _alerts = data.where((a) => a.userId == user?.id).toList();
-        }
+        _alerts = data.where((a) => a.userId == user?.id).toList();
       });
     } catch (e) {
-      debugPrint('Error cargando historial: $e');
+      debugPrint('Error cargando mis reportes: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -52,162 +48,76 @@ class HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Historial de Alertas")),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: loadAlerts,
-              child: CustomScrollView(
-                slivers: [
-                  if (_alerts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildZoneSummary(),
-                    ),
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => _buildItem(_alerts[index]),
-                        childCount: _alerts.length,
-                      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Mis Reportes",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                      color: Colors.white,
                     ),
                   ),
-                  if (_alerts.isEmpty)
-                    const SliverFillRemaining(
-                      child: Center(child: Text('No hay alertas registradas')),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Revisa los incidentes que has reportado",
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 14,
                     ),
+                  ),
                 ],
               ),
             ),
-    );
-  }
 
-  String? _selectedZone;
+            const SizedBox(height: 24),
 
-  Widget _buildZoneSummary() {
-    final Map<String, int> zoneCounts = {};
-    for (var alert in _alerts) {
-      final zone = alert.zone ?? 'Desconocida';
-      zoneCounts[zone] = (zoneCounts[zone] ?? 0) + 1;
-    }
-
-    final sortedZones = zoneCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withValues(alpha: 0.3),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Incidentes por Zona',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _ZoneChip(
-                  label: 'TODAS',
-                  count: _alerts.length,
-                  isSelected: _selectedZone == null,
-                  onTap: () => setState(() => _selectedZone = null),
-                ),
-                ...sortedZones.map((entry) {
-                  return _ZoneChip(
-                    label: entry.key,
-                    count: entry.value,
-                    isSelected: _selectedZone == entry.key,
-                    onTap: () => setState(() => _selectedZone = entry.key),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItem(AlertModel alert) {
-    if (_selectedZone != null && alert.zone != _selectedZone) {
-      return const SizedBox.shrink();
-    }
-    return AlertCard(alert: alert);
-  }
-}
-
-class _ZoneChip extends StatelessWidget {
-  final String label;
-  final int count;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ZoneChip({
-    required this.label,
-    required this.count,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ] : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: loadAlerts,
+                      displacement: 20,
+                      color: const Color(0xFF3B82F6),
+                      child: _alerts.isEmpty
+                          ? ListView(
+                              children: [
+                                SizedBox(
+                                  height: MediaQuery.of(context).size.height * 0.5,
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.assignment_outlined,
+                                          size: 64,
+                                          color: Colors.white.withValues(alpha: 0.1),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        const Text(
+                                          'Aún no has creado ningún reporte',
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: _alerts.length,
+                              itemBuilder: (context, index) => AlertCard(alert: _alerts[index]),
+                            ),
+                    ),
             ),
           ],
         ),

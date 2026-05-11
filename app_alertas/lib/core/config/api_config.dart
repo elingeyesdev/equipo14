@@ -8,7 +8,7 @@ class ApiConfig {
   static const String apiPrefix = '/api';
   static const bool useDevTunnel = true;
   static const String devTunnelBaseUrl =
-      'https://715h83m3-3000.brs.devtunnels.ms';
+      'https://srbd68d5-3000.brs.devtunnels.ms';
 
   /// Base URL del backend Nest. En el emulador de Android Studio usa `10.0.2.2`.
   static String get baseUrl => useDevTunnel

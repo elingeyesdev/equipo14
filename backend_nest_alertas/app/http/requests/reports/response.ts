@@ -24,11 +24,11 @@ export class ReportResponse{
         response.description = report.description
         response.coordinates = report.location.coordinates
         response.weight = report.weight
-        response.verified = report.verified ?? false
+        response.verified = report.verified
         response.created_at = report.created_at
         response.expires_at = report.expires_at
         response.images = report.images
-        response.zone = report.zone ?? ''
+        response.zone = report.zone
 
         return response
     }
@@ -55,10 +55,10 @@ export class ReportCoinicdenceResponse{
         response.description = report.description
         response.coordinates = report.location.coordinates
         response.weight = report.weight
-        response.verified = report.verified ?? false
+        response.verified = report.verified
         response.created_at = report.created_at
         response.images = report.images
-        response.zone = report.zone ?? ''
+        response.zone = report.zone
 
         return response
     }

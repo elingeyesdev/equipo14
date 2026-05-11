@@ -1,23 +1,22 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
 
 import 'package:app_alertas/data/models/alert_model.dart';
 import 'package:app_alertas/data/services/alerts_api_service.dart';
+import 'package:app_alertas/presentation/providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
-class NotificationsScreen extends StatefulWidget {
+class RecentActivityScreen extends StatefulWidget {
   final Function(AlertModel)? onAlertTap;
-  const NotificationsScreen({super.key, this.onAlertTap});
+  const RecentActivityScreen({super.key, this.onAlertTap});
 
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
+  State<RecentActivityScreen> createState() => _RecentActivityScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _RecentActivityScreenState extends State<RecentActivityScreen> {
   final _service = AlertsApiService();
-  final _picker = ImagePicker();
+  String? _selectedZone;
   List<AlertModel> _alerts = [];
   bool _loading = true;
 
@@ -49,33 +48,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _verifyAlert(AlertModel alert) async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Tomar foto'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Galería'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Confirmar verificación', style: TextStyle(color: Colors.white)),
+        content: const Text('¿Estás seguro de que deseas verificar este reporte como autoridad?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Verificar', style: TextStyle(color: Colors.green)),
+          ),
+        ],
       ),
     );
-    if (source == null || !mounted) return;
 
-    final pickedFile = await _picker.pickImage(source: source, imageQuality: 85);
-    if (pickedFile == null || !mounted) return;
+    if (confirm != true) return;
 
-    final imageFile = File(pickedFile.path);
-
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -83,43 +77,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
 
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) Navigator.pop(context);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Activa el GPS para verificar')),
-          );
-        }
-        return;
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (mounted) Navigator.pop(context);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Se necesita permiso de ubicación')),
-          );
-        }
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
-
-      await _service.verifyReport(
-        reportId: alert.id,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        imageFile: imageFile,
-      );
+      await _service.verifyReport(alert.id);
 
       if (mounted) Navigator.pop(context); // cerrar loading
 
@@ -258,17 +216,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 children: [
                                   Icon(Icons.notifications_none_rounded, size: 64, color: Colors.white.withValues(alpha: 0.1)),
                                   const SizedBox(height: 16),
-                                  const Text('No hay notificaciones', style: TextStyle(color: Colors.grey)),
+                                  const Text('No hay actividad reciente', style: TextStyle(color: Colors.grey)),
                                 ],
                               ),
                             )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: _alerts.length,
-                              itemBuilder: (context, index) {
-                                final alert = _alerts[index];
-                                return _buildItem(alert);
-                              },
+                          : CustomScrollView(
+                              slivers: [
+                                SliverToBoxAdapter(child: _buildZoneSummary()),
+                                SliverPadding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  sliver: SliverList(
+                                    delegate: SliverChildBuilderDelegate(
+                                      (context, index) {
+                                        final alert = _alerts[index];
+                                        if (_selectedZone != null && (alert.zone ?? 'Desconocida') != _selectedZone) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return _buildItem(alert);
+                                      },
+                                      childCount: _alerts.length,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                     ),
             ),
@@ -278,13 +248,79 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Color _alertColor(String type) {
-    final t = type.toUpperCase();
-    if (t.contains('ROBO') || t.contains('HURTO')) return const Color(0xFFEF4444);
-    if (t.contains('INCENDIO')) return const Color(0xFFF59E0B);
-    if (t.contains('ACCIDENTE') || t.contains('VIAL')) return const Color(0xFF3B82F6);
-    if (t.contains('MÉDICA') || t.contains('SALUD')) return const Color(0xFF10B981);
-    return const Color(0xFF8B5CF6);
+  Widget _buildZoneSummary() {
+    final Map<String, int> zoneCounts = {};
+    for (var alert in _alerts) {
+      final zone = alert.zone ?? 'Desconocida';
+      zoneCounts[zone] = (zoneCounts[zone] ?? 0) + 1;
+    }
+
+    final sortedZones = zoneCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B).withValues(alpha: 0.3),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Incidentes por Zona',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                _ZoneChip(
+                  label: 'TODAS',
+                  count: _alerts.length,
+                  isSelected: _selectedZone == null,
+                  onTap: () => setState(() => _selectedZone = null),
+                ),
+                ...sortedZones.map((entry) {
+                  return _ZoneChip(
+                    label: entry.key,
+                    count: entry.value,
+                    isSelected: _selectedZone == entry.key,
+                    onTap: () => setState(() => _selectedZone = entry.key),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Color basado en el peso (credibilidad) del reporte.
+  /// Verificado → rojo, weight >= 20 → rojo, >= 15 → naranja, < 15 → amarillo.
+  Color _credibilityColor(AlertModel alert) {
+    if (alert.verified) return const Color(0xFFC62828); // rojo apagado
+    if (alert.weight >= 20) return const Color(0xFFD84315); // rojo-naranja
+    if (alert.weight >= 15) return const Color(0xFFE65100); // naranja
+    return const Color(0xFFF9A825); // amarillo apagado
+  }
+
+  String _credibilityLabel(AlertModel alert) {
+    if (alert.verified) return 'Verificado por autoridad';
+    if (alert.weight >= 20) return 'Alta credibilidad';
+    if (alert.weight >= 15) return 'Credibilidad moderada';
+    return 'Baja credibilidad';
   }
 
   IconData _alertIcon(String type) {
@@ -299,9 +335,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildItem(AlertModel alert) {
-    final color = _alertColor(alert.type);
-    final time = alert.createdAt != null
-        ? '${alert.createdAt!.day}/${alert.createdAt!.month} ${alert.createdAt!.hour}:${alert.createdAt!.minute.toString().padLeft(2, '0')}'
+    final color = _credibilityColor(alert);
+    final credLabel = _credibilityLabel(alert);
+    final localDate = alert.createdAt?.toLocal();
+    final time = localDate != null
+        ? '${localDate.day}/${localDate.month} ${localDate.hour}:${localDate.minute.toString().padLeft(2, '0')}'
         : 'Reciente';
 
     return Container(
@@ -327,7 +365,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
+                      color: color.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(_alertIcon(alert.type), color: color, size: 22),
@@ -354,7 +392,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               const Icon(Icons.verified, color: Colors.green, size: 16),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              credLabel,
+                              style: TextStyle(
+                                color: color.withValues(alpha: 0.8),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
                         Text(
                           alert.description,
                           maxLines: 2,
@@ -392,7 +452,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ],
               ),
-              if (!alert.verified) ...[
+              if (!alert.verified && (context.read<AuthProvider>().user?.roleId == 2)) ...[
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
@@ -415,6 +475,81 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ZoneChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ZoneChip({
+    required this.label,
+    required this.count,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? Colors.white.withValues(alpha: 0.2)
+                : Colors.white.withValues(alpha: 0.05),
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

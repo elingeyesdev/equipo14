@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile } from '@nestjs/common';
 import { ReportsService } from '../../services/reports.service';
 import { CreateReportRequest, VerifyReportRequest } from '../requests/reports/request';
 import { ApiAddImageUpload, ApiImageUpload } from '../../decorators/request.decorator';
@@ -19,22 +19,15 @@ export class ReportsController {
     @Post(':id/images')
     @ApiAddImageUpload()
     uploadImage(@Param('id') id: number, @UploadedFile() file: Express.Multer.File,){
+        console.log("Estoy aqui")
         return this.reportsService.addImage(id, file)
     }
 
-    @Post(':id/verify')
-    @ApiImageUpload()
-    verifyReport(
-        @Param('id') id: number,
-        @UploadedFile() file: Express.Multer.File,
-        @Body() body: { latitude: number; longitude: number },
-    ) {
-        return this.reportsService.verifyReport(
-            id,
-            Number(body.latitude),
-            Number(body.longitude),
-            file,
-        );
+    // modificar, solo para autoridades
+    @Patch(':id/verify')
+    verifyReport(@Param('id') id: number) 
+    {
+        return this.reportsService.verifyReport(id);
     }
 
     @Get()
@@ -42,6 +35,7 @@ export class ReportsController {
         return this.reportsService.findAll()
     }
 
+    // este endpoint devuelve los reportes en un radio de proximo
     @Get('/nearby')
     findNearby(
         @Query('latitude') latitude: string,
@@ -51,7 +45,7 @@ export class ReportsController {
         return this.reportsService.findNearby(
             Number(latitude),
             Number(longitude),
-            Number(radius) || 150,
+            Number(radius),
         );
     }
 

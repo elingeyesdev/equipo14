@@ -39,7 +39,6 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
   final _descriptionController = TextEditingController();
   final _service = AlertsApiService();
 
-
   bool _isLoadingLocation = true;
   bool _isSubmitting = false;
   String _locationTitle = 'Detectando ubicación...';
@@ -359,8 +358,6 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     }
   }
 
-
-
   // ---------------------------------------------------------------
   // Envío del reporte
   // ---------------------------------------------------------------
@@ -415,9 +412,9 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       await _createActualAlert();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al verificar alertas: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al verificar alertas: $e')));
       setState(() => _isSubmitting = false);
     }
   }
@@ -490,7 +487,11 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 48),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 48,
+              ),
               const SizedBox(height: 16),
               const Text(
                 '¿Es el mismo incidente?',
@@ -521,7 +522,9 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E293B),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.05),
+                        ),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(12),
@@ -531,20 +534,33 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                             color: Colors.orange.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.emergency_share_rounded, color: Colors.orange, size: 20),
+                          child: const Icon(
+                            Icons.emergency_share_rounded,
+                            color: Colors.orange,
+                            size: 20,
+                          ),
                         ),
                         title: Text(
                           alert.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         subtitle: Text(
                           alert.zone ?? 'Zona cercana',
-                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
                         trailing: IconButton(
-                          icon: const Icon(Icons.map_outlined, color: Colors.blueAccent),
+                          icon: const Icon(
+                            Icons.map_outlined,
+                            color: Colors.blueAccent,
+                          ),
                           onPressed: () {
                             Navigator.pop(ctx);
                             widget.onShowMap?.call(alert);
@@ -594,12 +610,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await _service.verifyReport(
-        reportId: reportId,
-        latitude: _position!.latitude,
-        longitude: _position!.longitude,
-        imageFile: image!,
-      );
+      await _service.attachImageToReport(reportId, image!);
       _descriptionController.clear();
       setState(() {
         image = null;
@@ -608,13 +619,15 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       widget.onCreated?.call();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Has verificado el reporte existente exitosamente.')),
+        const SnackBar(
+          content: Text('Has aportado una imagen a la alerta existente exitosamente.'),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al verificar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al verificar: $e')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -626,247 +639,311 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Crear alerta',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              'Reporta una emergencia en tu zona',
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Tipo de alerta',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 10),
-            // ------ Dropdown de tipos desde el backend ------
-            if (_isLoadingTypes)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: CircularProgressIndicator(strokeWidth: 2),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+
+              const Text(
+                'Crear Alerta',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  color: Colors.white,
                 ),
-              )
-            else if (_typesError != null)
-              Row(
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 18,
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                'Reporta una emergencia en tu zona',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 14,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              const Text(
+                'Tipo de alerta',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              if (_isLoadingTypes)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _typesError!,
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
+                )
+              else if (_typesError != null)
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _typesError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
                       ),
                     ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _isLoadingTypes = true;
+                          _typesError = null;
+                        });
+                        _loadAlertTypes();
+                      },
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
                   ),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isLoadingTypes = true;
-                        _typesError = null;
-                      });
-                      _loadAlertTypes();
-                    },
-                    child: const Text('Reintentar'),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                ],
-              )
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<ReportTypeModel>(
+                      isExpanded: true,
+                      dropdownColor: const Color(0xFF1E293B),
+                      value: _selectedType,
+                      hint: const Text(
+                        'Selecciona un tipo',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.grey,
+                      ),
+                      items: _alertTypes.map((type) {
+                        return DropdownMenuItem<ReportTypeModel>(
+                          value: type,
+                          child: Text(
+                            type.name,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (ReportTypeModel? value) {
+                        setState(() => _selectedType = value);
+                      },
+                    ),
+                  ),
                 ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                'Descripción',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Container(
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<ReportTypeModel>(
-                    isExpanded: true,
-                    dropdownColor: const Color(0xFF1E293B),
-                    value: _selectedType,
-                    hint: const Text(
-                      'Selecciona un tipo',
-                      style: TextStyle(color: Colors.grey),
+                child: TextField(
+                  controller: _descriptionController,
+                  maxLines: 4,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Describe lo que está pasando...',
+                    hintStyle: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.3),
                     ),
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.grey,
-                    ),
-                    items: _alertTypes.map((type) {
-                      return DropdownMenuItem<ReportTypeModel>(
-                        value: type,
-                        child: Text(
-                          type.name,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (ReportTypeModel? value) {
-                      setState(() => _selectedType = value);
-                    },
+                    border: InputBorder.none,
                   ),
                 ),
               ),
 
-            const SizedBox(height: 20),
-            const Text('Descripción'),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: TextField(
-                controller: _descriptionController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'Describe lo que está pasando...',
-                  border: InputBorder.none,
+              const SizedBox(height: 20),
+
+              const Text(
+                'Ubicación',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-            const Text('Ubicación'),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.red),
-                  const SizedBox(width: 10),
-                  if (_isLoadingLocation)
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  if (_isLoadingLocation) const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_locationTitle),
-                        Text(
-                          _locationSubtitle,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+              const SizedBox(height: 10),
 
-            const SizedBox(height: 15),
-            GestureDetector(
-              onTap: pickImage,
-              child: Container(
+              Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.add_a_photo),
-                    SizedBox(width: 10),
-                    Text('Foto o galería'),
+                    const Icon(Icons.location_on, color: Colors.red),
+                    const SizedBox(width: 10),
+
+                    if (_isLoadingLocation)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+
+                    if (_isLoadingLocation) const SizedBox(width: 10),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _locationTitle,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          Text(
+                            _locationSubtitle,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
 
-            if (image != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: GestureDetector(
-                  onTap: pickImage, // Permitir cambiar la imagen
-                  child: ClipRRect(
+              const SizedBox(height: 15),
+
+              GestureDetector(
+                onTap: pickImage,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.file(
-                      image!,
-                      height: 150,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.add_a_photo, color: Colors.white),
+                      SizedBox(width: 10),
+                      Text(
+                        'Foto o galería',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              if (image != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: GestureDetector(
+                    onTap: pickImage,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Image.file(
+                        image!,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-            if (_lastUploadedImageUrl != null) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Última imagen en el servidor (Cloudinary)',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  _lastUploadedImageUrl!,
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return const SizedBox(
-                      height: 160,
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  },
-                ),
-              ),
-            ],
+              if (_lastUploadedImageUrl != null) ...[
+                const SizedBox(height: 16),
 
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                const Text(
+                  'Última imagen en el servidor',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                onPressed: _isSubmitting ? null : _submitAlert,
-                child: Text(
-                  _isSubmitting ? 'ENVIANDO...' : 'ENVIAR ALERTA',
-                  style: const TextStyle(fontSize: 16),
+
+                const SizedBox(height: 8),
+
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    _lastUploadedImageUrl!,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+
+                      return const SizedBox(
+                        height: 160,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  onPressed: _isSubmitting ? null : _submitAlert,
+                  child: Text(
+                    _isSubmitting ? 'ENVIANDO...' : 'ENVIAR ALERTA',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 10),
-            const Center(
-              child: Text(
-                'Tu alerta será enviada a las autoridades locales',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              const SizedBox(height: 10),
+
+              Center(
+                child: Text(
+                  'Tu alerta será enviada a las autoridades locales',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 30),
+            ],
+          ),
         ),
       ),
     );

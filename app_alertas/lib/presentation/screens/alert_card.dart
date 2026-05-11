@@ -38,8 +38,9 @@ class AlertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _alertColor(alert.type);
-    final dateLabel = alert.createdAt != null
-        ? '${alert.createdAt!.day}/${alert.createdAt!.month} ${alert.createdAt!.hour}:${alert.createdAt!.minute.toString().padLeft(2, '0')}'
+    final localDate = alert.createdAt?.toLocal();
+    final dateLabel = localDate != null
+        ? '${localDate.day}/${localDate.month} ${localDate.hour}:${localDate.minute.toString().padLeft(2, '0')}'
         : 'Reciente';
 
     final isAuthority = context.read<AuthProvider>().user?.roleId == 2;
@@ -149,29 +150,6 @@ class AlertCard extends StatelessWidget {
                     alert.description,
                     style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
                   ),
-                  
-                  if (alert.weight > 0) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.people_alt_rounded, size: 14, color: Colors.blue),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${alert.weight.toInt()} confirmaciones',
-                            style: const TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  
                   if (alert.images.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     SizedBox(

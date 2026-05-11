@@ -320,32 +320,15 @@ class ApiService {
 
   /// Verifica un reporte enviando una foto de confirmación.
   /// El backend comprueba que el usuario esté a ≤50m del incidente.
-  Future<ReportModel> verificarReporte({
-    required int reportId,
-    required double latitude,
-    required double longitude,
-    required File imageFile,
-  }) async {
-    final request = http.MultipartRequest(
-      'POST',
+  /// Verifica un reporte (uso administrativo).
+  Future<ReportModel> verificarReporte(int reportId) async {
+    final response = await http.patch(
       _uri('${ApiConfig.reportsPath}/$reportId/verify'),
+      headers: _tunnelHeaders,
     );
-    request.headers.addAll(_tunnelHeaders);
-    request.fields['latitude'] = latitude.toString();
-    request.fields['longitude'] = longitude.toString();
-    request.files.add(
-      await http.MultipartFile.fromPath('image', imageFile.path),
-    );
-
-    final streamed = await request.send();
-    final responseBody = await streamed.stream.bytesToString();
-    if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
-      throw Exception(
-        'Error al verificar reporte: ${streamed.statusCode} — $responseBody',
-      );
-    }
+    _ensureOk(response);
     return ReportModel.fromJson(
-      jsonDecode(responseBody) as Map<String, dynamic>,
+      jsonDecode(response.body) as Map<String, dynamic>,
     );
   }
 
