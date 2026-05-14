@@ -20,6 +20,9 @@ class _HomePageState extends State<HomePage> {
   AlertModel? selectedAlert;
   final GlobalKey<HistoryScreenState> _historyKey =
       GlobalKey<HistoryScreenState>();
+  final GlobalKey<MapScreenState> _mapKey = GlobalKey<MapScreenState>();
+  final GlobalKey<RecentActivityScreenState> _recentActivityKey =
+      GlobalKey<RecentActivityScreenState>();
 
   void navigateToMap(AlertModel alert) {
     setState(() {
@@ -30,23 +33,26 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    
     return Scaffold(
       body: SafeArea(
         child: IndexedStack(
           index: currentIndex,
           children: [
-            MapScreen(key: ValueKey(selectedAlert?.id), initialAlert: selectedAlert),
+            MapScreen(key: _mapKey, initialAlert: selectedAlert),
             HistoryScreen(key: _historyKey),
             CreateAlertScreen(
               onCreated: () {
                 _historyKey.currentState?.reload();
+                _recentActivityKey.currentState?.reload();
+                _mapKey.currentState?.reload();
                 setState(() => currentIndex = 1);
               },
               onShowMap: navigateToMap,
             ),
-            RecentActivityScreen(onAlertTap: navigateToMap),
+            RecentActivityScreen(
+              key: _recentActivityKey,
+              onAlertTap: navigateToMap,
+            ),
             const _ProfileScreen(),
           ],
         ),
@@ -56,7 +62,9 @@ class _HomePageState extends State<HomePage> {
         type: BottomNavigationBarType.fixed,
         currentIndex: currentIndex,
         onTap: (index) {
+          if (index == 0) _mapKey.currentState?.reload();
           if (index == 1) _historyKey.currentState?.reload();
+          if (index == 3) _recentActivityKey.currentState?.reload();
           setState(() => currentIndex = index);
         },
         items: const [

@@ -16,7 +16,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  int _selectedRoleId = 1;
 
   @override
   void dispose() {
@@ -38,7 +37,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         lastName: _lastNameController.text.trim(),
         phone: _phoneController.text.trim(),
         password: _passwordController.text.trim(),
-        roleId: _selectedRoleId,
       );
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -149,20 +147,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   prefixIcon: Icon(Icons.lock_reset_rounded, size: 20),
                                 ),
                                 validator: (value) => (value ?? '').trim() != _passwordController.text.trim() ? 'No coinciden' : null,
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<int>(
-                                initialValue: _selectedRoleId,
-                                dropdownColor: const Color(0xFF1E293B),
-                                decoration: const InputDecoration(
-                                  hintText: 'Tipo de usuario',
-                                  prefixIcon: Icon(Icons.badge_outlined, size: 20),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(value: 1, child: Text('Usuario Normal')),
-                                  DropdownMenuItem(value: 2, child: Text('Autoridad')),
-                                ],
-                                onChanged: (val) => setState(() => _selectedRoleId = val!),
                               ),
                               const SizedBox(height: 32),
                               ElevatedButton(

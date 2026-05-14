@@ -66,7 +66,7 @@ class AuthProvider extends ChangeNotifier {
     required String lastName,
     required String phone,
     required String password,
-    required int roleId,
+    int roleId = 1,
   }) async {
     _isLoading = true;
     notifyListeners();

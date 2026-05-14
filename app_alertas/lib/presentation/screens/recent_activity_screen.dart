@@ -11,12 +11,59 @@ class RecentActivityScreen extends StatefulWidget {
   const RecentActivityScreen({super.key, this.onAlertTap});
 
   @override
-  State<RecentActivityScreen> createState() => _RecentActivityScreenState();
+  State<RecentActivityScreen> createState() => RecentActivityScreenState();
 }
 
-class _RecentActivityScreenState extends State<RecentActivityScreen> {
+/// Filtros de segunda fila: alineados con las reglas de credibilidad de la lista.
+enum _PriorityFilter {
+  all,
+  highPriority,
+  verifiedAuthority,
+  credibilityHigh,
+  credibilityModerate,
+  credibilityLow,
+}
+
+extension _PriorityFilterMatch on _PriorityFilter {
+  bool matches(AlertModel a) {
+    switch (this) {
+      case _PriorityFilter.all:
+        return true;
+      case _PriorityFilter.highPriority:
+        return a.verified || a.weight >= 20;
+      case _PriorityFilter.verifiedAuthority:
+        return a.verified;
+      case _PriorityFilter.credibilityHigh:
+        return !a.verified && a.weight >= 20;
+      case _PriorityFilter.credibilityModerate:
+        return !a.verified && a.weight >= 15 && a.weight < 20;
+      case _PriorityFilter.credibilityLow:
+        return !a.verified && a.weight < 15;
+    }
+  }
+
+  String get chipLabel {
+    switch (this) {
+      case _PriorityFilter.all:
+        return 'PRI. TODAS';
+      case _PriorityFilter.highPriority:
+        return 'ALTA PRIOR.';
+      case _PriorityFilter.verifiedAuthority:
+        return 'VERIFICADO';
+      case _PriorityFilter.credibilityHigh:
+        return 'CRED. ALTA';
+      case _PriorityFilter.credibilityModerate:
+        return 'CRED. MOD.';
+      case _PriorityFilter.credibilityLow:
+        return 'CRED. BAJA';
+    }
+  }
+}
+
+class RecentActivityScreenState extends State<RecentActivityScreen> {
   final _service = AlertsApiService();
   String? _selectedZone;
+  _PriorityFilter _priorityFilter = _PriorityFilter.all;
   List<AlertModel> _alerts = [];
   bool _loading = true;
 
@@ -25,6 +72,8 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> {
     super.initState();
     _loadAlerts();
   }
+
+  Future<void> reload() => _loadAlerts();
 
   Future<void> _loadAlerts() async {
     if (!mounted) return;
@@ -232,6 +281,9 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> {
                                         if (_selectedZone != null && (alert.zone ?? 'Desconocida') != _selectedZone) {
                                           return const SizedBox.shrink();
                                         }
+                                        if (!_priorityFilter.matches(alert)) {
+                                          return const SizedBox.shrink();
+                                        }
                                         return _buildItem(alert);
                                       },
                                       childCount: _alerts.length,
@@ -279,26 +331,54 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _ZoneChip(
+                _FilterChip(
                   label: 'TODAS',
                   count: _alerts.length,
                   isSelected: _selectedZone == null,
                   onTap: () => setState(() => _selectedZone = null),
                 ),
                 ...sortedZones.map((entry) {
-                  return _ZoneChip(
+                  return _FilterChip(
                     label: entry.key,
                     count: entry.value,
                     isSelected: _selectedZone == entry.key,
                     onTap: () => setState(() => _selectedZone = entry.key),
                   );
                 }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Prioridad y credibilidad',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.75),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                for (final f in _PriorityFilter.values)
+                  _FilterChip(
+                    label: f.chipLabel,
+                    count: _alerts.where((a) => f.matches(a)).length,
+                    isSelected: _priorityFilter == f,
+                    onTap: () => setState(() => _priorityFilter = f),
+                  ),
               ],
             ),
           ),
@@ -481,13 +561,13 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> {
   }
 }
 
-class _ZoneChip extends StatelessWidget {
+class _FilterChip extends StatelessWidget {
   final String label;
   final int count;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _ZoneChip({
+  const _FilterChip({
     required this.label,
     required this.count,
     required this.isSelected,
@@ -499,11 +579,11 @@ class _ZoneChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? Colors.white.withValues(alpha: 0.2)
@@ -512,9 +592,9 @@ class _ZoneChip extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
@@ -526,25 +606,25 @@ class _ZoneChip extends StatelessWidget {
               label.toUpperCase(),
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.grey,
-                fontSize: 11,
+                fontSize: 9.5,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
+                letterSpacing: 0.2,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 5),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.white.withValues(alpha: 0.2)
                     : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(5),
               ),
               child: Text(
                 '$count',
                 style: TextStyle(
                   color: isSelected ? Colors.white : Colors.white70,
-                  fontSize: 12,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
               ),

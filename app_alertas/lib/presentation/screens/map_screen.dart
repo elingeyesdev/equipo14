@@ -24,10 +24,10 @@ class MapScreen extends StatefulWidget {
   const MapScreen({super.key, this.initialAlert});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  State<MapScreen> createState() => MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class MapScreenState extends State<MapScreen> {
   LatLng? currentLocation;
   MapController mapController = MapController();
   final _alertsService = AlertsApiService();
@@ -36,6 +36,10 @@ class _MapScreenState extends State<MapScreen> {
   List<AlertModel> _alerts = const [];
   bool _loadingAlerts = true;
   bool _isAuthority = false;
+
+  /// Radio de `/reports/nearby` en km (usuarios no autoridad). Por defecto 5 km.
+  double _radiusKm = 5.0;
+  bool _radiusPanelOpen = false;
 
   @override
   void initState() {
@@ -53,6 +57,34 @@ class _MapScreenState extends State<MapScreen> {
         _showAlertBottomSheet(widget.initialAlert!);
       });
     }
+  }
+
+  @override
+  void didUpdateWidget(MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialAlert?.id != oldWidget.initialAlert?.id &&
+        widget.initialAlert != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final a = widget.initialAlert!;
+        _showAlertBottomSheet(a);
+        final c = a.coordinates;
+        if (c.length >= 2) {
+          mapController.move(LatLng(c[1], c[0]), 18);
+        }
+      });
+    }
+  }
+
+  /// Recarga ubicación y reportes (p. ej. al volver a la pestaña Mapa).
+  Future<void> reload() async {
+    if (!mounted) return;
+    final user = context.read<AuthProvider>().user;
+    setState(() {
+      _isAuthority = (user?.roleId == 2) ||
+          (user?.roleName?.toLowerCase().contains('autoridad') == true);
+    });
+    await getLocation();
   }
 
   Future<void> _initPushNotifications() async {
@@ -109,10 +141,11 @@ class _MapScreenState extends State<MapScreen> {
           setState(() => _loadingAlerts = false);
           return;
         }
+        final radiusM = (_radiusKm * 1000).round().clamp(200, 50000);
         data = await _alertsService.getNearbyAlerts(
           latitude: currentLocation!.latitude,
           longitude: currentLocation!.longitude,
-          radius: 5000,
+          radius: radiusM,
         );
       }
       if (!mounted) return;
@@ -249,6 +282,19 @@ class _MapScreenState extends State<MapScreen> {
                       maxNativeZoom: 22,
                       maxZoom: 22,
                     ),
+                    if (!_isAuthority && currentLocation != null)
+                      CircleLayer(
+                        circles: [
+                          CircleMarker(
+                            point: currentLocation!,
+                            radius: (_radiusKm * 1000),
+                            useRadiusInMeter: true,
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.14),
+                            borderStrokeWidth: 2,
+                            borderColor: const Color(0xFF3B82F6).withValues(alpha: 0.55),
+                          ),
+                        ],
+                      ),
                     MarkerLayer(
                       markers: [
                         ..._buildAlertMarkers(),
@@ -275,9 +321,9 @@ class _MapScreenState extends State<MapScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withOpacity(0.92),
+                    color: const Color(0xFF1E293B).withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.5)),
+                    border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.5)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -294,6 +340,228 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+            ),
+
+          // Radio nearby: botón compacto que despliega el ajuste (solo ciudadanos)
+          if (!_isAuthority && currentLocation != null)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 8,
+              left: 12,
+              right: 12,
+              child: Material(
+                color: Colors.transparent,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B).withValues(alpha: 0.96),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _radiusPanelOpen
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.35)
+                          : Colors.white.withValues(alpha: 0.08),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: () =>
+                              setState(() => _radiusPanelOpen = !_radiusPanelOpen),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF3B82F6)
+                                        .withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.radar_rounded,
+                                    color: Color(0xFF3B82F6),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Reportes a tu alrededor',
+                                        style: TextStyle(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.45),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            _radiusKm % 1 == 0
+                                                ? '${_radiusKm.toStringAsFixed(0)} km'
+                                                : '${_radiusKm.toStringAsFixed(1)} km',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: -0.3,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF3B82F6)
+                                                  .withValues(alpha: 0.22),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: _loadingAlerts
+                                                ? const SizedBox(
+                                                    width: 14,
+                                                    height: 14,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Color(0xFF93C5FD),
+                                                    ),
+                                                  )
+                                                : Text(
+                                                    '${_alerts.length}',
+                                                    style: const TextStyle(
+                                                      color: Color(0xFFBFDBFE),
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w800,
+                                                    ),
+                                                  ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                AnimatedRotation(
+                                  turns: _radiusPanelOpen ? 0.5 : 0,
+                                  duration: const Duration(milliseconds: 220),
+                                  curve: Curves.easeOutCubic,
+                                  child: Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: Colors.white.withValues(alpha: 0.55),
+                                    size: 28,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 240),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: _radiusPanelOpen
+                              ? Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      color: Colors.white.withValues(alpha: 0.08),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          14, 10, 14, 14),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'El círculo en el mapa coincide con el radio enviado al servidor.',
+                                            style: TextStyle(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.42),
+                                              fontSize: 11,
+                                              height: 1.35,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          SliderTheme(
+                                            data: SliderTheme.of(context)
+                                                .copyWith(
+                                              activeTrackColor:
+                                                  const Color(0xFF3B82F6),
+                                              inactiveTrackColor: Colors.white
+                                                  .withValues(alpha: 0.12),
+                                              thumbColor:
+                                                  const Color(0xFF60A5FA),
+                                              overlayColor: const Color(0xFF3B82F6)
+                                                  .withValues(alpha: 0.18),
+                                              trackHeight: 3,
+                                              valueIndicatorColor:
+                                                  const Color(0xFF3B82F6),
+                                            ),
+                                            child: Slider(
+                                              value: _radiusKm.clamp(0.5, 20.0),
+                                              min: 0.5,
+                                              max: 20,
+                                              divisions: 39,
+                                              label: _radiusKm % 1 == 0
+                                                  ? '${_radiusKm.toStringAsFixed(0)} km'
+                                                  : '${_radiusKm.toStringAsFixed(1)} km',
+                                              onChanged: (v) =>
+                                                  setState(() => _radiusKm = v),
+                                              onChangeEnd: (_) => _loadAlerts(),
+                                            ),
+                                          ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                '0.5 km',
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.35),
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                              Text(
+                                                '20 km',
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.35),
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const SizedBox(width: double.infinity),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

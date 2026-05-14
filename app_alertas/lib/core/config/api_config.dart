@@ -7,10 +7,13 @@ class ApiConfig {
   static const int defaultPort = 3000;
   static const String apiPrefix = '/api';
   static const bool useDevTunnel = true;
-  static const String devTunnelBaseUrl =
-      'https://srbd68d5-3000.brs.devtunnels.ms';
 
-  /// Base URL del backend Nest. En el emulador de Android Studio usa `10.0.2.2`.
+  /// Origen HTTPS del Dev Tunnel (sin barra final; se concatena con [apiPrefix]).
+  static const String devTunnelBaseUrl =
+      'https://715h83m3-3000.brs.devtunnels.ms';
+
+  /// Base URL del backend Nest (`/api`). Con [useDevTunnel] usa el túnel anterior.
+  /// Sin túnel: emulador Android `10.0.2.2` vía [api_config_vm] / web `localhost`.
   static String get baseUrl => useDevTunnel
       ? '$devTunnelBaseUrl$apiPrefix'
       : 'http://${loopback.apiLoopbackHost()}:$defaultPort$apiPrefix';
