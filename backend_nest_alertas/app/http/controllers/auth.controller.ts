@@ -3,6 +3,7 @@ import { AuthService } from "app/services/auth.service";
 import { CreateUserRequest } from "../requests/users/request";
 import { ApiBody } from "@nestjs/swagger";
 import { AuthGuard } from "@nestjs/passport";
+import { Public } from "app/decorators/public.decorator";
 
 @Controller('auth')
 export class AuthController {
@@ -10,11 +11,13 @@ export class AuthController {
         private readonly authService: AuthService,
     ){}
 
+    @Public()
     @Post('/register')
     create(@Body() createUserDto: CreateUserRequest){
         return this.authService.register(createUserDto)
     }
 
+    @Public()
     @UseGuards(AuthGuard('local'))
     @Post('/login')
     @ApiBody({
@@ -41,6 +44,7 @@ export class AuthController {
         return this.authService.login(req.user)
     }
 
+    @Public()
     @Post('/refresh')
     @ApiBody({
         schema: {

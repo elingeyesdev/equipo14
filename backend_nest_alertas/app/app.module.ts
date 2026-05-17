@@ -13,6 +13,9 @@ import { ReportTypesModule } from './providers/report-types.module';
 import { AuthModule } from './providers/auth.module';
 import { RolesModule } from './providers/roles.module';
 import { NotificationsModule } from './providers/notifications.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtStrategy } from './guards/strategies/jwt.strategy';
+import { JwtGuard } from './guards/jwt.guard';
 
 @Module({
   imports: [
@@ -38,6 +41,11 @@ import { NotificationsModule } from './providers/notifications.module';
     NotificationsModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,{
+    provide: APP_GUARD,
+    useClass: JwtGuard,
+  },
+  JwtStrategy,
+],
 })
 export class AppModule {}

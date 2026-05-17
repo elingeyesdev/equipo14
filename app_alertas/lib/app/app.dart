@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:app_alertas/presentation/theme/app_theme.dart';
-import 'package:app_alertas/presentation/screens/home_page.dart';
-import 'package:app_alertas/presentation/screens/login_screen.dart';
-import 'package:app_alertas/presentation/screens/register_screen.dart';
-import 'package:app_alertas/presentation/providers/auth_provider.dart';
+import 'package:app_alertas/views/theme/app_theme.dart';
+import 'package:app_alertas/views/home_page.dart';
+import 'package:app_alertas/views/login_screen.dart';
+import 'package:app_alertas/views/register_screen.dart';
+import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/viewmodels/alert_type_viewmodel.dart';
+import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 
 /// Raíz de la app (MaterialApp + tema + pantalla inicial).
 class App extends StatefulWidget {
@@ -15,7 +17,7 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  final AuthProvider _authProvider = AuthProvider();
+  final AuthViewModel _authProvider = AuthViewModel();
 
   @override
   void initState() {
@@ -31,9 +33,17 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<AuthProvider>.value(
-      value: _authProvider,
-      child: Consumer<AuthProvider>(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthViewModel>.value(value: _authProvider),
+        ChangeNotifierProvider<AlertTypeViewModel>(
+          create: (_) => AlertTypeViewModel()..fetchAlertTypes(),
+        ),
+        ChangeNotifierProvider<AlertViewModel>(
+          create: (_) => AlertViewModel()..fetchAlerts(),
+        ),
+      ],
+      child: Consumer<AuthViewModel>(
         builder: (context, auth, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
@@ -55,3 +65,6 @@ class _AppState extends State<App> {
     );
   }
 }
+
+
+
