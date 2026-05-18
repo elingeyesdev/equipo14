@@ -1,5 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm"
 import { Report } from "./report.entity";
+import { User } from "./user.entity";
 
 @Entity()
 export class Image{
@@ -17,4 +18,7 @@ export class Image{
 
     @ManyToOne(() => Report, (report) => report.images)
     report: Report;
+
+    @ManyToOne(() => User, (user) => user.images)
+    uploadedBy: User;
 }

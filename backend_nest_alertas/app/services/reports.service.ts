@@ -20,6 +20,7 @@ export class ReportsService {
         private usersRepository: Repository<User>,
         @InjectRepository(ReportType)
         private reportTypeRepository: Repository<ReportType>,
+
         private imagesServices: ImagesService,
         private notificationsService: NotificationsService
 
@@ -28,6 +29,7 @@ export class ReportsService {
     // me gano el sueno, asi capaz este mal algo
     // Ahora q ya fue revisado parece q esta bien en general
     async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
+        console.time('upload');
         const user = await this.usersRepository.findOne({where: {id: createReportRequest.userId}})
         if(!user){
             throw new NotFoundException("Usuario no encontrado");
@@ -50,72 +52,58 @@ export class ReportsService {
         createReport.weight = initialWeight;
         createReport.created_at = now;
         createReport.expires_at = expires;
-        createReport.user = user;
+        createReport.creator = user;
         createReport.type = type
         createReport.zone = createReportRequest.zone || 'Zona desconocida';
 
         const newReport = this.reportsRepository.create(createReport);
         const savedReport = await this.reportsRepository.save(newReport);
 
-        await this.imagesServices.createFromReport(savedReport, file)
 
-        // Integración de Firebase: Enviar notificación a autoridades y usuarios cercanos (100 metros)
-        try {
-            const targetUsers = await this.usersRepository
-                .createQueryBuilder('user')
-                .leftJoinAndSelect('user.role', 'role')
-                .where('user.fcm_token IS NOT NULL')
-                .andWhere(
-                    `(role.id = 2 OR (role.id = 1 AND user.last_location IS NOT NULL AND ST_DWithin(
-                        user.last_location,
-                        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
-                        100
-                    )))`,
-                    {
-                        longitude: createReportRequest.longitude,
-                        latitude: createReportRequest.latitude,
-                    }
-                )
-                .getMany();
+        const image = await this.imagesServices.createFromReport(savedReport, user, file)
+        
 
-            const tokens = targetUsers.map(u => u.fcm_token).filter(t => t);
-
-            if (tokens.length > 0) {
-                await this.notificationsService.sendPushNotificationToMultipleTokens(
-                    tokens,
-                    `Nueva Alerta: ${type.name}`,
-                    createReport.description || 'Se ha reportado un nuevo incidente en tu zona.'
-                );
-            }
-        } catch (error) {
-            console.error('No se pudo enviar la notificación Push:', error);
+        if(!image){
+            throw new BadRequestException("Error al subir la imagen")
         }
+        savedReport.images = [image];
+
+        await this.notificationsService.notifyNearbyUsers(savedReport);
+        console.timeEnd('upload');
 
         return ReportResponse.FromReportToResponse(savedReport);
     }
 
     // La funcion retorna lo justo y necesario
     // Se planteara el uso de un respone si es necesario, pero de momento no
-    async addImage(id: number, file: Express.Multer.File){
+    async addImage(reportId: number, userId: string, file: Express.Multer.File){
         const report = await this.reportsRepository.findOne({
-            where: {id: Number(id)},
-            // relations: ['user','images', 'type'] => por eso esto esta comentado
+            where: {id: Number(reportId)},
+            relations: ['creator', 'type', 'images', 'images.uploadedBy']
         });
         if(!report){
             throw new NotFoundException("Reporte no encontrado")
         }
 
-        const image = await this.imagesServices.createFromReport(report, file)
+        const user = await this.usersRepository.findOne({
+            where: { id: userId }
+        });
+        if(!user){
+            throw new NotFoundException("Usuario no encontrado")
+        }
+
+        const image = await this.imagesServices.createFromReport(report, user, file)
 
         if(!image){
             throw new BadRequestException("Error al subir la imagen")
         }
 
+        report.images.push(image);
         report.weight += 1
 
         const savedReport = await this.reportsRepository.save(report)
 
-        return savedReport
+        return ReportResponse.FromReportToResponse(savedReport)
     }
 
     // Marcar verificado, opcion reservada solo para el panel administrativo, solo para autoridades
@@ -134,11 +122,49 @@ export class ReportsService {
         return savedReport;
     }
 
+    async findOne(id: string) {
+        const report = await this.reportsRepository.findOne({
+            where: {id: Number(id)},
+            relations: ['creator','images','images.uploadedBy', 'type']
+        });
+        if(!report){
+            throw new NotFoundException("Reporte no encontrado")
+        }
+        return ReportResponse.FromReportToResponse(report)
+    }
+    async findByUserId(userId: string) {
+        const reports = await this.reportsRepository.find({
+            where: {
+                creator: {
+                    id: userId,
+                },
+            },
+            relations: ['creator', 'images', 'images.uploadedBy', 'type'],
+            order: {
+                id: 'DESC',
+            },
+        });
+        return ReportResponse.FromReportListToResponse(reports)
+    }
+
+    async findAll(){
+        const reports = await this.reportsRepository.find({
+            //aqui se cargan las relaciones
+            relations: ['creator', 'images', 'images.uploadedBy', 'type'],
+            order: {
+                id: 'ASC'
+            }
+        });
+
+        return ReportResponse.FromReportListToResponse(reports)
+    }
+
     async findNearby(latitude: number, longitude: number, radius: number) {
         const reports = await this.reportsRepository
             .createQueryBuilder('report')
-            .leftJoinAndSelect('report.user', 'user')
+            .leftJoinAndSelect('report.creator', 'creator')
             .leftJoinAndSelect('report.images', 'images')
+            .leftJoinAndSelect('images.uploadedBy', 'uploadedBy')
             .leftJoinAndSelect('report.type', 'type')
             .where(
                 `ST_DWithin(
@@ -154,24 +180,15 @@ export class ReportsService {
         return ReportResponse.FromReportListToResponse(reports);
     }
 
-    async findAll(){
-        const reports = await this.reportsRepository.find({
-            //aqui se cargan las relaciones
-            relations: ['user', 'images', 'type'],
-            order: {
-                id: 'ASC'
-            }
-        });
-        return ReportResponse.FromReportListToResponse(reports)
-    }
-
     async findCoincidences(verifyReportRequest: VerifyReportRequest){
         const { latitude, longitude, type } = verifyReportRequest;
 
         const usersCoincidence =  await this.reportsRepository
             .createQueryBuilder('report')
             .leftJoinAndSelect('report.images', 'images')
+            .leftJoinAndSelect('images.uploadedBy', 'uploadedBy')
             .leftJoinAndSelect('report.type', 'type')
+            .leftJoinAndSelect('report.creator', 'creator')
             .where(
                 `
                 ST_DWithin(
@@ -192,41 +209,8 @@ export class ReportsService {
             )
             .orderBy('report.created_at', 'DESC')
             .getMany();
-        
         return ReportCoinicdenceResponse.FromReportListToResponse(usersCoincidence)
     }
-
-    async findOne(id: string) {
-        const report = await this.reportsRepository.findOne({
-            where: {id: Number(id)},
-            relations: ['user','images', 'type']
-        });
-        if(!report){
-            throw new NotFoundException("Reporte no encontrado")
-        }
-        return ReportResponse.FromReportToResponse(report)
-    }
-
-    async findByZone(zone: string) {
-        const reports = await this.reportsRepository.find({
-            where: { zone },
-            relations: ['user', 'images', 'type'],
-            order: { weight: 'DESC', created_at: 'DESC' }
-        });
-        return ReportResponse.FromReportListToResponse(reports);
-    }
-
-    async getZonesSummary() {
-        return this.reportsRepository
-            .createQueryBuilder('report')
-            .select('report.zone', 'zone')
-            .addSelect('COUNT(report.id)', 'count')
-            .addSelect('SUM(report.weight)', 'total_weight')
-            .groupBy('report.zone')
-            .orderBy('total_weight', 'DESC')
-            .getRawMany();
-    }
-
     
     async remove(id: string){
         const result = await this.reportsRepository.delete(id);

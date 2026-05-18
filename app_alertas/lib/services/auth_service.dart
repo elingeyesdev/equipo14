@@ -71,4 +71,9 @@ class AuthService {
     }
     return accessToken;
   }
+
+  Future<UserModel> getMe() async {
+    final response = await _dio.get('/auth/me');
+    return UserModel.fromJson(response.data);
+  }
 }

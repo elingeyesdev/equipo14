@@ -1,10 +1,11 @@
 import { Image } from "app/models/image.entity";
 import { ReportType } from "app/models/report-types.entity";
 import { Report } from "app/models/report.entity";
+import { ImageResponse } from "../images/response";
 
 export class ReportResponse{
     id: number;
-    user_uuid: string;
+    creator: string;
     type: ReportType;
     description: string;
     coordinates: number[];
@@ -12,14 +13,14 @@ export class ReportResponse{
     verified: boolean;
     created_at: Date;
     expires_at: Date;
-    images: Image[];
     zone: string;
+    images: ImageResponse[];
 
     static FromReportToResponse(report: Report): ReportResponse {
         const response = new ReportResponse();
 
         response.id = report.id
-        response.user_uuid = report.user.id
+        response.creator = report.creator.id
         response.type = report.type
         response.description = report.description
         response.coordinates = report.location.coordinates
@@ -27,8 +28,8 @@ export class ReportResponse{
         response.verified = report.verified
         response.created_at = report.created_at
         response.expires_at = report.expires_at
-        response.images = report.images
         response.zone = report.zone
+        response.images = ImageResponse.FromImageListToResponse(report.images)
 
         return response
     }
@@ -45,7 +46,7 @@ export class ReportCoinicdenceResponse{
     weight: number;
     verified: boolean;
     created_at: Date;
-    images: Image[];
+    images: ImageResponse[];
     zone: string;
 
     static FromReportToResponse(report: Report): ReportCoinicdenceResponse {
@@ -57,8 +58,8 @@ export class ReportCoinicdenceResponse{
         response.weight = report.weight
         response.verified = report.verified
         response.created_at = report.created_at
-        response.images = report.images
         response.zone = report.zone
+        response.images = ImageResponse.FromImageListToResponse(report.images)
 
         return response
     }

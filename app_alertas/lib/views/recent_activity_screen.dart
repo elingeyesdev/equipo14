@@ -3,8 +3,9 @@ import 'dart:convert';
 
 import 'package:app_alertas/models/alert_model.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
-import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:provider/provider.dart';
+import 'package:app_alertas/views/alert_card.dart';
+import 'package:app_alertas/views/widgets/custom_snackbar.dart';
 
 class RecentActivityScreen extends StatefulWidget {
   final Function(AlertModel)? onAlertTap;
@@ -82,7 +83,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF26292E),
         title: const Text('Confirmar verificación', style: TextStyle(color: Colors.white)),
         content: const Text('¿Estás seguro de que deseas verificar este reporte como autoridad?', style: TextStyle(color: Colors.white70)),
         actions: [
@@ -111,14 +112,13 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       final alertVM = context.read<AlertViewModel>();
       await alertVM.verifyReport(alert.id);
 
-      if (mounted) Navigator.pop(context); // cerrar loading
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Reporte verificado exitosamente!'),
-            backgroundColor: Colors.green,
-          ),
+        Navigator.pop(context); // cerrar loading
+        showCustomSnackBar(
+          context: context,
+          title: 'Éxito',
+          message: '¡Reporte verificado exitosamente!',
+          type: CustomSnackBarType.success,
         );
       }
 
@@ -152,7 +152,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF26292E),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -215,23 +215,22 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.only(top: 0, bottom: 12),
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withValues(alpha: 0.3),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      decoration: const BoxDecoration(
+        color: Colors.transparent, // Uniform color matching screen background
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               'Incidentes por Zona',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                color: Colors.white.withValues(alpha: 0.75),
+                fontSize: 13,
+                fontWeight: FontWeight.normal,
               ),
             ),
           ),
@@ -266,7 +265,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.75),
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.normal,
               ),
             ),
           ),
@@ -304,27 +303,17 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Actividad Reciente",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Mantente al tanto de lo que sucede en tu zona",
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
-                  ),
-                ],
+              child: const Text(
+                "Actividad Reciente",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.normal,
+                  letterSpacing: -0.3,
+                  color: Colors.white,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
             Expanded(
               child: loading
                   ? const Center(child: CircularProgressIndicator())
@@ -347,7 +336,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                               slivers: [
                                 SliverToBoxAdapter(child: _buildZoneSummary(alerts)),
                                 SliverPadding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  padding: EdgeInsets.zero,
                                   sliver: SliverList(
                                     delegate: SliverChildBuilderDelegate(
                                       (context, index) {
@@ -358,7 +347,11 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                                         if (!_priorityFilter.matches(alert)) {
                                           return const SizedBox.shrink();
                                         }
-                                        return _buildItem(alert);
+                                        return AlertCard(
+                                          alert: alert,
+                                          onTap: () => widget.onAlertTap?.call(alert),
+                                          onVerify: () => _verifyAlert(alert),
+                                        );
                                       },
                                       childCount: alerts.length,
                                     ),
@@ -374,178 +367,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     );
   }
 
-  /// Color basado en el peso (credibilidad) del reporte.
-  /// Verificado → rojo, weight >= 20 → rojo, >= 15 → naranja, < 15 → amarillo.
-  Color _credibilityColor(AlertModel alert) {
-    if (alert.verified) return const Color(0xFFC62828); // rojo apagado
-    if (alert.weight >= 20) return const Color(0xFFD84315); // rojo-naranja
-    if (alert.weight >= 15) return const Color(0xFFE65100); // naranja
-    return const Color(0xFFF9A825); // amarillo apagado
-  }
 
-  String _credibilityLabel(AlertModel alert) {
-    if (alert.verified) return 'Verificado por autoridad';
-    if (alert.weight >= 20) return 'Alta credibilidad';
-    if (alert.weight >= 15) return 'Credibilidad moderada';
-    return 'Baja credibilidad';
-  }
-
-  IconData _alertIcon(String type) {
-    final t = type.toUpperCase();
-    if (t.contains('ROBO')) return Icons.security_rounded;
-    if (t.contains('HURTO')) return Icons.person_off_rounded;
-    if (t.contains('INCENDIO')) return Icons.local_fire_department_rounded;
-    if (t.contains('ACCIDENTE')) return Icons.car_crash_rounded;
-    if (t.contains('VIAL')) return Icons.traffic_rounded;
-    if (t.contains('MÉDICA')) return Icons.medical_services_rounded;
-    return Icons.warning_amber_rounded;
-  }
-
-  Widget _buildItem(AlertModel alert) {
-    final color = _credibilityColor(alert);
-    final credLabel = _credibilityLabel(alert);
-    final localDate = alert.createdAt?.toLocal();
-    final time = localDate != null
-        ? '${localDate.day}/${localDate.month} ${localDate.hour}:${localDate.minute.toString().padLeft(2, '0')}'
-        : 'Reciente';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: alert.verified ? Colors.green.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => widget.onAlertTap?.call(alert),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(_alertIcon(alert.type), color: color, size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                alert.type.toUpperCase(),
-                                style: TextStyle(
-                                  color: color,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 12,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                            if (alert.verified)
-                              const Icon(Icons.verified, color: Colors.green, size: 16),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              credLabel,
-                              style: TextStyle(
-                                color: color.withValues(alpha: 0.8),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          alert.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(Icons.access_time_rounded, size: 12, color: Colors.white.withValues(alpha: 0.4)),
-                            const SizedBox(width: 4),
-                            Text(
-                              time,
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
-                            ),
-                            const SizedBox(width: 12),
-                            Icon(Icons.location_on_outlined, size: 12, color: Colors.white.withValues(alpha: 0.4)),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                alert.zone ?? 'Cerca de ti',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (!alert.verified && (context.read<AuthViewModel>().user?.roleId == 2)) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.withValues(alpha: 0.1),
-                      foregroundColor: Colors.green,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.green.withValues(alpha: 0.2)),
-                      ),
-                    ),
-                    onPressed: () => _verifyAlert(alert),
-                    icon: const Icon(Icons.verified_outlined, size: 18),
-                    label: const Text('VERIFICAR ESTE INCIDENTE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _FilterChip extends StatelessWidget {
@@ -569,22 +391,14 @@ class _FilterChip extends StatelessWidget {
         margin: const EdgeInsets.only(right: 6),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
+          borderRadius: BorderRadius.zero,
           border: Border.all(
             color: isSelected
-                ? Colors.white.withValues(alpha: 0.2)
-                : Colors.white.withValues(alpha: 0.05),
+                ? const Color(0xFF3B82F6)
+                : Colors.white.withValues(alpha: 0.15),
+            width: 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -605,7 +419,7 @@ class _FilterChip extends StatelessWidget {
                 color: isSelected
                     ? Colors.white.withValues(alpha: 0.2)
                     : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: BorderRadius.zero,
               ),
               child: Text(
                 '$count',

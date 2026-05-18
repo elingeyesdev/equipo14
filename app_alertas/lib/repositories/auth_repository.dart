@@ -108,4 +108,8 @@ class AuthRepository {
 
     return newAccessToken;
   }
+
+  Future<UserModel> getProfile() async {
+    return await _authService.getMe();
+  }
 }

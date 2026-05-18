@@ -254,7 +254,7 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            color: const Color(0xFF0F172A),
+            color: const Color(0xFF0D1015),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Image } from '../models/image.entity';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary } from 'cloudinary';
+import { User } from 'app/models/user.entity';
 
 @Injectable()
 export class ImagesService {
@@ -51,14 +52,15 @@ export class ImagesService {
         });
     }
 
-    async createFromReport(report: Report, file: Express.Multer.File) {
+    async createFromReport(report: Report, user: User, file: Express.Multer.File) {
         const result = await this.uploadToCloudinary(file)
 
         const newImage = this.imagesRepository.create({
             cloudinary_id: result.public_id,
             report: report,
             uploaded_at: new Date(),
-            url: result.url
+            url: result.url,
+            uploadedBy: user
         })
         
         return await this.imagesRepository.save(newImage);

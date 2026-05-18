@@ -17,19 +17,24 @@ class HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AlertViewModel>().fetchAlerts();
+      final userId = context.read<AuthViewModel>().user?.id;
+      if (userId != null) {
+        context.read<AlertViewModel>().fetchMyAlerts(userId);
+      }
     });
   }
 
   Future<void> reload() async {
-    await context.read<AlertViewModel>().fetchAlerts();
+    final userId = context.read<AuthViewModel>().user?.id;
+    if (userId != null) {
+      await context.read<AlertViewModel>().fetchMyAlerts(userId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final alertVM = context.watch<AlertViewModel>();
-    final user = context.watch<AuthViewModel>().user;
-    final myAlerts = alertVM.alerts.where((a) => a.userId == user?.id).toList();
+    final myAlerts = alertVM.myAlerts;
 
     return Scaffold(
       body: SafeArea(
@@ -38,37 +43,24 @@ class HistoryScreenState extends State<HistoryScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Mis Reportes",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Revisa los incidentes que has reportado",
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+              child: const Text(
+                "Mis Reportes",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.normal,
+                  letterSpacing: -0.3,
+                  color: Colors.white,
+                ),
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
             Expanded(
               child: alertVM.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : RefreshIndicator(
-                      onRefresh: () => alertVM.fetchAlerts(),
+                      onRefresh: () => reload(),
                       displacement: 20,
                       color: const Color(0xFF3B82F6),
                       child: myAlerts.isEmpty
@@ -97,7 +89,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                               ],
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              padding: EdgeInsets.zero,
                               itemCount: myAlerts.length,
                               itemBuilder: (context, index) => AlertCard(alert: myAlerts[index]),
                             ),

@@ -5,17 +5,17 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      scaffoldBackgroundColor: const Color(0xFF0D1015),
       primaryColor: const Color(0xFF3B82F6),
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF3B82F6),
         brightness: Brightness.dark,
-        surface: const Color(0xFF1E293B),
+        surface: const Color(0xFF26292E),
         onSurface: Colors.white,
       ),
       
       cardTheme: CardThemeData(
-        color: const Color(0xFF1E293B),
+        color: const Color(0xFF26292E),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -24,7 +24,7 @@ class AppTheme {
       ),
 
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF0F172A),
+        backgroundColor: Color(0xFF0D1015),
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
@@ -46,7 +46,7 @@ class AppTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF1E293B),
+        fillColor: const Color(0xFF26292E),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,

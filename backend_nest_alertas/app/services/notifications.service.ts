@@ -1,97 +1,105 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+import { Report } from 'app/models/report.entity';
+import { User } from 'app/models/user.entity';
+import admin from 'config/firebase.config';
 
 @Injectable()
 export class NotificationsService {
-    private readonly logger = new Logger(NotificationsService.name);
 
-    constructor() {
-        // Inicializar Firebase Admin SDK si no está inicializado
-        if (!admin.apps.length) {
-            try {
-                const fs = require('fs');
-                const path = require('path');
-                const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
-                const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-                admin.initializeApp({
-                    credential: admin.credential.cert(serviceAccount),
-                });
-                this.logger.log('Firebase Admin inicializado correctamente');
-            } catch (error) {
-                this.logger.error('Error al inicializar Firebase Admin', error);
+    private readonly logger = new Logger(
+        NotificationsService.name,
+    );
+
+    constructor(
+        @InjectRepository(User)
+        private readonly usersRepository: Repository<User>,
+    ) {}
+
+    async notifyNearbyUsers(report: Report): Promise<void> {
+        try {
+            const [longitude, latitude] =
+                report.location.coordinates;
+            const nearbyUsers = await this.usersRepository
+                .createQueryBuilder('user')
+                .where('user.fcm_token IS NOT NULL')
+                .andWhere('user.last_location IS NOT NULL')
+                .andWhere('user.id != :creatorId', {
+                    creatorId: report.creator.id,
+                })
+                .andWhere(
+                    `ST_DWithin(
+                        user.last_location,
+                        ST_SetSRID(
+                            ST_MakePoint(:longitude, :latitude),
+                            4326
+                        )::geography,
+                        100
+                    )`,
+                    {
+                        longitude,
+                        latitude,
+                    }
+                )
+                .getMany();
+            const tokens = nearbyUsers
+                .map(user => user.fcm_token)
+                .filter(Boolean);
+            if (!tokens.length) {
+                this.logger.log(
+                    'No hay usuarios cercanos para notificar',
+                );
+                return;
             }
+            await this.sendPushNotificationToMultipleTokens(
+                tokens,
+                `Nueva alerta: ${report.type.name}`,
+                report.description ||
+                    'Se ha reportado un incidente cerca de ti.',
+                {
+                    reportId: report.id.toString(),
+                }
+            );
+        } catch (error) {
+            this.logger.error(
+                'Error notificando usuarios cercanos',
+                error,
+            );
         }
     }
 
-    /**
-     * Enviar notificación push a un token específico (dispositivo)
-     */
-    async sendPushNotificationToToken(token: string, title: string, body: string, data?: any) {
-        if (!token) return;
-        
+    async sendPushNotificationToMultipleTokens(
+        tokens: string[],
+        title: string,
+        body: string,
+        data?: any,
+    ): Promise<any> {
+        if (!tokens?.length) {
+            return;
+        }
         const message = {
             notification: {
                 title,
                 body,
             },
             data: data || {},
-            token: token,
+            tokens,
         };
-
         try {
-            const response = await admin.messaging().send(message);
-            this.logger.log(`Notificación enviada con éxito: ${response}`);
+            const response =
+                await admin.messaging()
+                    .sendEachForMulticast(message);
+            this.logger.log(
+                `Notificaciones enviadas. Exitos: ${response.successCount}, Fallos: ${response.failureCount}`
+            );
             return response;
         } catch (error) {
-            this.logger.error('Error enviando notificación push:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Enviar notificación push a un grupo de dispositivos (por tema/topic)
-     */
-    async sendPushNotificationToTopic(topic: string, title: string, body: string, data?: any) {
-        const message = {
-            notification: {
-                title,
-                body,
-            },
-            data: data || {},
-            topic: topic,
-        };
-
-        try {
-            const response = await admin.messaging().send(message);
-            this.logger.log(`Notificación enviada al tema ${topic}: ${response}`);
-            return response;
-        } catch (error) {
-            this.logger.error(`Error enviando notificación al tema ${topic}:`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * Enviar notificación push a multiples dispositivos (Multicast)
-     */
-    async sendPushNotificationToMultipleTokens(tokens: string[], title: string, body: string, data?: any): Promise<any> {
-        if (!tokens || tokens.length === 0) return;
-
-        const message = {
-            notification: {
-                title,
-                body,
-            },
-            data: data || {},
-            tokens: tokens,
-        };
-
-        try {
-            const response = await admin.messaging().sendEachForMulticast(message);
-            this.logger.log(`Notificaciones enviadas. Exitos: ${response.successCount}, Fallos: ${response.failureCount}`);
-            return response;
-        } catch (error) {
-            this.logger.error('Error enviando notificaciones multicast:', error);
+            this.logger.error(
+                'Error enviando notificaciones multicast:',
+                error,
+            );
             throw error;
         }
     }

@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
 import { UsersService } from '../../services/users.service';
 import { UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
-
-
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}

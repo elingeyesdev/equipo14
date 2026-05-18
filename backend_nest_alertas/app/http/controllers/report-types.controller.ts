@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Param, Post, Get, Request } from "@nestjs/common";
-import { ApiBody } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody } from "@nestjs/swagger";
 import { ReportTypesService } from "app/services/report-types.service";
 
+@ApiBearerAuth()
 @Controller('report-types')
 export class ReportTypeController{
     constructor(private readonly reportTypesService: ReportTypesService){}

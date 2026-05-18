@@ -2,6 +2,7 @@ import 'package:app_alertas/views/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/views/widgets/custom_snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.onGoToRegister});
@@ -35,8 +36,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      showCustomSnackBar(
+        context: context,
+        title: 'Error de Inicio',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: CustomSnackBarType.error,
       );
     }
   }
@@ -52,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  colors: [Color(0xFF0D1015), Color(0xFF26292E)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),

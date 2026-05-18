@@ -14,6 +14,12 @@ class AlertService {
     return data.map((json) => AlertModel.fromJson(json)).toList();
   }
 
+  Future<List<AlertModel>> getAlertsByUser(String userId) async {
+    final response = await _dio.get('/reports/user/$userId');
+    final List<dynamic> data = response.data;
+    return data.map((json) => AlertModel.fromJson(json)).toList();
+  }
+
   Future<List<AlertModel>> getNearbyAlerts({
     required double latitude,
     required double longitude,
@@ -77,24 +83,22 @@ class AlertService {
     return data.map((json) => AlertModel.fromJson(json)).toList();
   }
 
-  Future<void> attachImageToReport(int reportId, File imageFile) async {
+  Future<void> attachImageToReport({
+    required int reportId,
+    required String userId,
+    required File imageFile,
+  }) async {
     final formData = FormData();
     formData.files.add(MapEntry(
       'image',
       await MultipartFile.fromFile(imageFile.path),
     ));
 
-    await _dio.post('/reports/$reportId/images', data: formData);
+    await _dio.post('/reports/$reportId/images/$userId', data: formData);
   }
 
   Future<AlertModel> verifyReport(int reportId) async {
     final response = await _dio.patch('/reports/$reportId/verify');
     return AlertModel.fromJson(response.data);
-  }
-
-  Future<List<AlertModel>> getReportsByZone(String zoneName) async {
-    final response = await _dio.get('/reports/zone/$zoneName');
-    final List<dynamic> data = response.data;
-    return data.map((json) => AlertModel.fromJson(json)).toList();
   }
 }

@@ -2,7 +2,9 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile 
 import { ReportsService } from '../../services/reports.service';
 import { CreateReportRequest, VerifyReportRequest } from '../requests/reports/request';
 import { ApiAddImageUpload, ApiImageUpload } from '../../decorators/request.decorator';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('reports')
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService){}
@@ -16,14 +18,18 @@ export class ReportsController {
         return this.reportsService.create(createReportDto, file)
     }
 
-    @Post(':id/images')
+    @Post(':id/images/:userId')
     @ApiAddImageUpload()
-    uploadImage(@Param('id') id: number, @UploadedFile() file: Express.Multer.File,){
-        console.log("Estoy aqui")
-        return this.reportsService.addImage(id, file)
+    uploadImage(
+        @Param('userId') userId: string,
+        @Param('id') reportId: number, 
+        @UploadedFile() file: Express.Multer.File
+    ){
+        return this.reportsService.addImage(reportId, userId, file)
     }
 
     // modificar, solo para autoridades
+    // unicamnete permite a autoridades verificar los reportes
     @Patch(':id/verify')
     verifyReport(@Param('id') id: number) 
     {
@@ -54,19 +60,14 @@ export class ReportsController {
         return this.reportsService.findCoincidences(verifyReportRequest)
     }
 
-    @Get('/zones')
-    getZonesSummary() {
-        return this.reportsService.getZonesSummary();
-    }
-
-    @Get('/zone/:name')
-    findByZone(@Param('name') name: string) {
-        return this.reportsService.findByZone(name);
-    }
-
     @Get(':id')
     findOne(@Param('id') id:string){
         return this.reportsService.findOne(id)
+    }
+
+    @Get('/user/:userId')
+    findByUser(@Param('userId') userId: string) {
+        return this.reportsService.findByUserId(userId);
     }
 
     @Delete(':id')

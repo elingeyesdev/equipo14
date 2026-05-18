@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/views/widgets/custom_snackbar.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -42,8 +43,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      showCustomSnackBar(
+        context: context,
+        title: 'Error de Registro',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: CustomSnackBarType.error,
       );
     }
   }
@@ -58,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  colors: [Color(0xFF0D1015), Color(0xFF26292E)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),

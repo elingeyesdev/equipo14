@@ -36,6 +36,11 @@ class MapScreenState extends State<MapScreen> {
   bool _loadingAlerts = true;
   bool _isAuthority = false;
 
+  // Variables para la ubicación personalizada
+  LatLng? customLocation;
+  bool isCustomLocationActive = false;
+  bool isEditingCustomLocation = false;
+
   /// Radio de `/reports/nearby` en km (usuarios no autoridad). Por defecto 5 km.
   double _radiusKm = 5.0;
   bool _radiusPanelOpen = false;
@@ -126,6 +131,32 @@ class MapScreenState extends State<MapScreen> {
     await _loadAlerts();
   }
 
+  void _centerOnUser() {
+    final target = isCustomLocationActive ? customLocation : currentLocation;
+    if (target != null) {
+      mapController.move(target, 16);
+    } else {
+      getLocation().then((_) {
+        final newTarget = isCustomLocationActive ? customLocation : currentLocation;
+        if (newTarget != null && mounted) {
+          mapController.move(newTarget, 16);
+        }
+      });
+    }
+  }
+
+  Future<void> _refreshRealLocation() async {
+    setState(() {
+      isCustomLocationActive = false;
+      isEditingCustomLocation = false;
+      customLocation = null;
+    });
+    await _loadAlerts();
+    if (currentLocation != null) {
+      mapController.move(currentLocation!, 13);
+    }
+  }
+
   Future<void> _loadAlerts() async {
     if (!mounted) return;
     setState(() => _loadingAlerts = true);
@@ -135,15 +166,16 @@ class MapScreenState extends State<MapScreen> {
         // Autoridades ven TODOS los reportes de la ciudad
         await alertVM.fetchAlerts();
       } else {
-        // Usuarios normales ven reportes cercanos (5km de radio)
-        if (currentLocation == null) {
+        // Usuarios normales ven reportes cercanos
+        final fetchLocation = isCustomLocationActive ? customLocation : currentLocation;
+        if (fetchLocation == null) {
           setState(() => _loadingAlerts = false);
           return;
         }
         final radiusM = (_radiusKm * 1000).round().clamp(200, 50000);
         await alertVM.fetchNearbyAlerts(
-          latitude: currentLocation!.latitude,
-          longitude: currentLocation!.longitude,
+          latitude: fetchLocation.latitude,
+          longitude: fetchLocation.longitude,
           radius: radiusM,
         );
       }
@@ -189,7 +221,7 @@ class MapScreenState extends State<MapScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A),
+                      color: const Color(0xFF0D1015),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: color.withValues(alpha: 0.3)),
                     ),
@@ -217,15 +249,19 @@ class MapScreenState extends State<MapScreen> {
   void _showAlertBottomSheet(AlertModel alert) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFF0D1015), // Premium extremely deep dark slate
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      showDragHandle: true,
       isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Wrap(
-            children: [
-              AlertCard(alert: alert),
-            ],
+        return SingleChildScrollView(
+          child: SafeArea(
+            child: AlertCard(
+              alert: alert,
+              isInBottomSheet: true,
+            ),
           ),
         );
       },
@@ -274,6 +310,14 @@ class MapScreenState extends State<MapScreen> {
                         : currentLocation!,
                     initialZoom: widget.initialAlert != null ? 18 : 13,
                     maxZoom: 22,
+                    onTap: (tapPosition, point) {
+                      if (isEditingCustomLocation) {
+                        setState(() {
+                          customLocation = point;
+                        });
+                        mapController.move(point, mapController.camera.zoom);
+                      }
+                    },
                   ),
                   children: [
                     TileLayer(
@@ -282,11 +326,11 @@ class MapScreenState extends State<MapScreen> {
                       maxNativeZoom: 22,
                       maxZoom: 22,
                     ),
-                    if (!_isAuthority && currentLocation != null)
+                    if (!_isAuthority && (isCustomLocationActive ? customLocation != null : currentLocation != null))
                       CircleLayer(
                         circles: [
                           CircleMarker(
-                            point: currentLocation!,
+                            point: isCustomLocationActive ? customLocation! : currentLocation!,
                             radius: (_radiusKm * 1000),
                             useRadiusInMeter: true,
                             color: const Color(0xFF3B82F6).withValues(alpha: 0.14),
@@ -303,8 +347,22 @@ class MapScreenState extends State<MapScreen> {
                             point: currentLocation!,
                             width: 40,
                             height: 40,
-                            child: const Icon(Icons.my_location,
-                                color: Colors.blue, size: 30),
+                            child: Icon(
+                              Icons.my_location,
+                              color: isCustomLocationActive ? Colors.grey : Colors.blue,
+                              size: 28,
+                            ),
+                          ),
+                        if (customLocation != null && (isCustomLocationActive || isEditingCustomLocation))
+                          Marker(
+                            point: customLocation!,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(
+                              Icons.my_location,
+                              color: Colors.blue,
+                              size: 30,
+                            ),
                           ),
                       ],
                     ),
@@ -321,7 +379,7 @@ class MapScreenState extends State<MapScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withValues(alpha: 0.92),
+                    color: const Color(0xFF26292E).withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.5)),
                   ),
@@ -355,7 +413,7 @@ class MapScreenState extends State<MapScreen> {
                 color: Colors.transparent,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withValues(alpha: 0.96),
+                    color: const Color(0xFF26292E).withValues(alpha: 0.96),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: _radiusPanelOpen
@@ -553,6 +611,157 @@ class MapScreenState extends State<MapScreen> {
                                               ),
                                             ],
                                           ),
+                                          const SizedBox(height: 16),
+                                          Divider(
+                                            height: 1,
+                                            thickness: 1,
+                                            color: Colors.white.withValues(alpha: 0.08),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.my_location,
+                                                color: Color(0xFF3B82F6),
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Text(
+                                                'Ubicación Personalizada',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              if (isCustomLocationActive)
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      isCustomLocationActive = false;
+                                                      customLocation = null;
+                                                    });
+                                                    _loadAlerts();
+                                                  },
+                                                  child: Text(
+                                                    'RESTABLECER',
+                                                    style: TextStyle(
+                                                      color: Colors.redAccent.shade100,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          if (isEditingCustomLocation) ...[
+                                            Text(
+                                              'Toque en cualquier parte del mapa',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(alpha: 0.5),
+                                                fontSize: 11,
+                                                height: 1.35,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: ElevatedButton(
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: Colors.transparent,
+                                                      foregroundColor: Colors.white,
+                                                      elevation: 0,
+                                                      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                    ),
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        isEditingCustomLocation = false;
+                                                        if (!isCustomLocationActive) {
+                                                          customLocation = null;
+                                                        }
+                                                      });
+                                                    },
+                                                    child: const Text('CANCELAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: ElevatedButton(
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: const Color(0xFF3B82F6),
+                                                      foregroundColor: Colors.black,
+                                                      elevation: 0,
+                                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                    ),
+                                                    onPressed: customLocation == null ? null : () {
+                                                      setState(() {
+                                                        isEditingCustomLocation = false;
+                                                        isCustomLocationActive = true;
+                                                      });
+                                                      _loadAlerts();
+                                                    },
+                                                    child: const Text('CONFIRMAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ] else ...[
+                                            Text(
+                                              isCustomLocationActive
+                                                  ? 'Ubicación virtual activa. Todos los reportes cercanos se calcularán desde este punto.'
+                                                  : 'Establece un punto virtual para explorar incidentes fuera de tu posición física.',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(alpha: 0.42),
+                                                fontSize: 11,
+                                                height: 1.35,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 10),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: ElevatedButton.icon(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: isCustomLocationActive
+                                                      ? const Color(0xFF3B82F6).withValues(alpha: 0.1)
+                                                      : Colors.white.withValues(alpha: 0.05),
+                                                  foregroundColor: isCustomLocationActive ? const Color(0xFF3B82F6) : Colors.white,
+                                                  elevation: 0,
+                                                  side: BorderSide(
+                                                    color: isCustomLocationActive
+                                                        ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
+                                                        : Colors.white.withValues(alpha: 0.1),
+                                                  ),
+                                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                ),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    isEditingCustomLocation = true;
+                                                    customLocation ??= mapController.camera.center;
+                                                  });
+                                                },
+                                                icon: Icon(
+                                                  isCustomLocationActive
+                                                      ? Icons.edit_location_alt_rounded
+                                                      : Icons.add_location_alt_rounded,
+                                                  size: 16,
+                                                ),
+                                                label: Text(
+                                                  isCustomLocationActive
+                                                      ? 'MODIFICAR UBICACIÓN PERSONALIZADA'
+                                                      : 'ESTABLECER UBICACIÓN PERSONALIZADA',
+                                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                            ),
+                                          ]
                                         ],
                                       ),
                                     ),
@@ -568,11 +777,34 @@ class MapScreenState extends State<MapScreen> {
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _loadAlerts,
-        child: _loadingAlerts
-            ? const CircularProgressIndicator(color: Colors.white)
-            : const Icon(Icons.refresh),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'center_location_btn',
+            backgroundColor: const Color(0xFF26292E),
+            foregroundColor: const Color(0xFF3B82F6),
+            onPressed: _centerOnUser,
+            child: const Icon(Icons.my_location_rounded),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'refresh_alerts_btn',
+            backgroundColor: const Color(0xFF26292E),
+            foregroundColor: Colors.white,
+            onPressed: _refreshRealLocation,
+            child: _loadingAlerts
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.refresh_rounded),
+          ),
+        ],
       ),
     );
   }

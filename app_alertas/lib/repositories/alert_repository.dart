@@ -12,6 +12,10 @@ class AlertRepository {
     return await _service.getAlerts();
   }
 
+  Future<List<AlertModel>> getAlertsByUser(String userId) async {
+    return await _service.getAlertsByUser(userId);
+  }
+
   Future<List<AlertModel>> getNearbyAlerts({
     required double latitude,
     required double longitude,
@@ -56,15 +60,19 @@ class AlertRepository {
     );
   }
 
-  Future<void> attachImageToReport(int reportId, File imageFile) async {
-    await _service.attachImageToReport(reportId, imageFile);
+  Future<void> attachImageToReport({
+    required int reportId,
+    required String userId,
+    required File imageFile,
+  }) async {
+    await _service.attachImageToReport(
+      reportId: reportId,
+      userId: userId,
+      imageFile: imageFile,
+    );
   }
 
   Future<AlertModel> verifyReport(int reportId) async {
     return await _service.verifyReport(reportId);
-  }
-
-  Future<List<AlertModel>> getReportsByZone(String zoneName) async {
-    return await _service.getReportsByZone(zoneName);
   }
 }

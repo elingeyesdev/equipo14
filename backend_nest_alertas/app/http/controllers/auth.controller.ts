@@ -1,9 +1,10 @@
-import { Body, Controller, Post, Request, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Request, UseGuards } from "@nestjs/common";
 import { AuthService } from "app/services/auth.service";
 import { CreateUserRequest } from "../requests/users/request";
-import { ApiBody } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody } from "@nestjs/swagger";
 import { AuthGuard } from "@nestjs/passport";
 import { Public } from "app/decorators/public.decorator";
+import { UserResponse } from "../requests/users/response";
 
 @Controller('auth')
 export class AuthController {
@@ -42,6 +43,13 @@ export class AuthController {
     // el Body solo devuelve los datos enviados por el cliente anadidos el body de la consulta
     async login(@Request() req){
         return this.authService.login(req.user)
+    }
+
+    @Get('/me')
+    @ApiBearerAuth()
+    @UseGuards(AuthGuard('jwt'))
+    async me(@Request() req) {
+        return UserResponse.FromUserToResponse(req.user);
     }
 
     @Public()

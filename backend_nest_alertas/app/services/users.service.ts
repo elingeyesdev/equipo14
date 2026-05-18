@@ -76,10 +76,8 @@ export class UsersService {
         if(!user){
             throw new NotFoundException(`El user con ID ${id} no se encontro`)
         }
-
         Object.assign(user, updateUserDto);
         const updateUser = await this.usersRepository.save(user)
-
         return UserResponse.FromUserToResponse(updateUser)
     }
 

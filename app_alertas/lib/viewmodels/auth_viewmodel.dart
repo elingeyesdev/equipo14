@@ -35,15 +35,7 @@ class AuthViewModel extends ChangeNotifier {
         // Si el refresco es exitoso, marcamos al usuario como autenticado.
         final token = await _repository.refreshSession();
         if (token != null) {
-          // Nota: Como la persistencia del UserModel fue removida del storage para JWT puro,
-          // inicializamos un UserModel básico o mock en esta etapa. En una fase posterior
-          // se puede cargar el perfil completo desde un endpoint '/auth/me'.
-          _user = const UserModel(
-            id: '',
-            firstName: 'Usuario',
-            lastName: 'Autenticado',
-            phone: '',
-          );
+          _user = await _repository.getProfile();
         } else {
           await logout();
         }

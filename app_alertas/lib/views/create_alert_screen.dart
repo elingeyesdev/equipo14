@@ -13,6 +13,7 @@ import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:app_alertas/models/alert_model.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/views/widgets/custom_snackbar.dart';
 import 'package:app_alertas/viewmodels/alert_type_viewmodel.dart';
 
 class CreateAlertScreen extends StatefulWidget {
@@ -22,10 +23,10 @@ class CreateAlertScreen extends StatefulWidget {
   final Function(AlertModel)? onShowMap;
 
   @override
-  State<CreateAlertScreen> createState() => _CreateAlertScreenState();
+  State<CreateAlertScreen> createState() => CreateAlertScreenState();
 }
 
-class _CreateAlertScreenState extends State<CreateAlertScreen> {
+class CreateAlertScreenState extends State<CreateAlertScreen> {
   // --- Tipo de alerta (cargado desde el backend) ---
   AlertTypeModel? _selectedType;
 
@@ -41,6 +42,21 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
   String _locationTitle = 'Detectando ubicación...';
   String _locationSubtitle = 'Esperando permisos';
   Position? _position;
+
+  void resetFields() {
+    _descriptionController.clear();
+    setState(() {
+      _selectedType = null;
+      image = null;
+      _lastUploadedImageUrl = null;
+      _isSubmitting = false;
+      _isLoadingLocation = true;
+      _locationTitle = 'Detectando ubicación...';
+      _locationSubtitle = 'Esperando permisos';
+      _position = null;
+    });
+    _loadCurrentLocation();
+  }
 
   // ---------------------------------------------------------------
   // Lifecycle
@@ -349,22 +365,31 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
   Future<void> _submitAlert() async {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Ingresa una descripción')));
+      showCustomSnackBar(
+        context: context,
+        title: 'Falta información',
+        message: 'Ingresa una descripción',
+        type: CustomSnackBarType.warning,
+      );
       return;
     }
 
     if (_position == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo obtener tu ubicación')),
+      showCustomSnackBar(
+        context: context,
+        title: 'Error de Ubicación',
+        message: 'No se pudo obtener tu ubicación',
+        type: CustomSnackBarType.error,
       );
       return;
     }
 
     if (_selectedType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un tipo de alerta')),
+      showCustomSnackBar(
+        context: context,
+        title: 'Falta información',
+        message: 'Selecciona un tipo de alerta',
+        type: CustomSnackBarType.warning,
       );
       return;
     }
@@ -419,20 +444,22 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       });
       widget.onCreated?.call();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            url != null
-                ? 'Alerta creada. Imagen en Cloudinary.'
-                : 'Alerta creada (sin foto: no hay URL remota).',
-          ),
-        ),
+      showCustomSnackBar(
+        context: context,
+        title: 'Éxito',
+        message: url != null
+            ? 'Alerta creada. Imagen en Cloudinary.'
+            : 'Alerta creada (sin foto: no hay URL remota).',
+        type: CustomSnackBarType.success,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('No se pudo crear la alerta: $e')));
+      showCustomSnackBar(
+        context: context,
+        title: 'Error al Reportar',
+        message: 'No se pudo crear la alerta: $e',
+        type: CustomSnackBarType.error,
+      );
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -448,7 +475,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       builder: (ctx) {
         return Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
+            color: Color(0xFF0D1015),
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -497,7 +524,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
+                        color: const Color(0xFF26292E),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: Colors.white.withValues(alpha: 0.05),
@@ -577,8 +604,11 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
 
   Future<void> _attachToExistingAlert(int reportId) async {
     if (image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Te has sumado a la alerta existente.')),
+      showCustomSnackBar(
+        context: context,
+        title: 'Reporte Existente',
+        message: 'Te has sumado a la alerta existente.',
+        type: CustomSnackBarType.info,
       );
       _descriptionController.clear();
       widget.onCreated?.call();
@@ -588,7 +618,12 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
     setState(() => _isSubmitting = true);
     try {
       final alertVM = context.read<AlertViewModel>();
-      await alertVM.attachImageToReport(reportId, image!);
+      final userId = await _resolveReportUserId();
+      await alertVM.attachImageToReport(
+        reportId: reportId,
+        userId: userId,
+        imageFile: image!,
+      );
       _descriptionController.clear();
       setState(() {
         image = null;
@@ -596,16 +631,20 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
       });
       widget.onCreated?.call();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Has aportado una imagen a la alerta existente exitosamente.'),
-        ),
+      showCustomSnackBar(
+        context: context,
+        title: 'Éxito',
+        message: 'Has aportado una imagen a la alerta existente exitosamente.',
+        type: CustomSnackBarType.success,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al verificar: $e')));
+      showCustomSnackBar(
+        context: context,
+        title: 'Error de Aportación',
+        message: 'Error al verificar: $e',
+        type: CustomSnackBarType.error,
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -638,24 +677,14 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               const Text(
                 'Crear Alerta',
                 style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
+                  fontSize: 22,
+                  fontWeight: FontWeight.normal,
+                  letterSpacing: -0.3,
                   color: Colors.white,
                 ),
               ),
 
-              const SizedBox(height: 4),
-
-              Text(
-                'Reporta una emergencia en tu zona',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  fontSize: 14,
-                ),
-              ),
-
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
               const Text(
                 'Tipo de alerta',
@@ -704,13 +733,13 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
+                    color: const Color(0xFF26292E),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<AlertTypeModel>(
                       isExpanded: true,
-                      dropdownColor: const Color(0xFF1E293B),
+                      dropdownColor: const Color(0xFF26292E),
                       value: _selectedType,
                       hint: const Text(
                         'Selecciona un tipo',
@@ -751,7 +780,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: const Color(0xFF26292E),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: TextField(
@@ -783,7 +812,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: const Color(0xFF26292E),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Row(
@@ -826,7 +855,7 @@ class _CreateAlertScreenState extends State<CreateAlertScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
+                    color: const Color(0xFF26292E),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: const Row(

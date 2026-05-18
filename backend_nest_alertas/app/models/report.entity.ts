@@ -37,7 +37,7 @@ export class Report {
     expires_at: Date;
 
     @ManyToOne(() => User, (user) => user.reports)
-    user: User;
+    creator: User;
 
     @ManyToOne(() => ReportType, (report_type) =>  report_type.reports)
     type: ReportType

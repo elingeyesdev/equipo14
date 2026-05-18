@@ -23,29 +23,65 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<MapScreenState> _mapKey = GlobalKey<MapScreenState>();
   final GlobalKey<RecentActivityScreenState> _recentActivityKey =
       GlobalKey<RecentActivityScreenState>();
+  final GlobalKey<CreateAlertScreenState> _createAlertKey =
+      GlobalKey<CreateAlertScreenState>();
+
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void navigateToMap(AlertModel alert) {
     setState(() {
       selectedAlert = alert;
       currentIndex = 0;
     });
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(
-          index: currentIndex,
+        child: PageView(
+          controller: _pageController,
+          physics: currentIndex == 0
+              ? const NeverScrollableScrollPhysics() // Desactivar swipe en el mapa para poder moverlo libremente
+              : const BouncingScrollPhysics(),
+          onPageChanged: (index) {
+            if (index == 0) _mapKey.currentState?.reload();
+            if (index == 1) _historyKey.currentState?.reload();
+            if (index == 2) _createAlertKey.currentState?.resetFields();
+            if (index == 3) _recentActivityKey.currentState?.reload();
+            setState(() => currentIndex = index);
+          },
           children: [
             MapScreen(key: _mapKey, initialAlert: selectedAlert),
             HistoryScreen(key: _historyKey),
             CreateAlertScreen(
+              key: _createAlertKey,
               onCreated: () {
+                // Solo recargamos el historial ya que el usuario es redirigido allí.
                 _historyKey.currentState?.reload();
-                _recentActivityKey.currentState?.reload();
-                _mapKey.currentState?.reload();
                 setState(() => currentIndex = 1);
+                if (_pageController.hasClients) {
+                  _pageController.animateToPage(
+                    1,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
               },
               onShowMap: navigateToMap,
             ),
@@ -58,25 +94,90 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
 
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: currentIndex,
-        onTap: (index) {
-          if (index == 0) _mapKey.currentState?.reload();
-          if (index == 1) _historyKey.currentState?.reload();
-          if (index == 3) _recentActivityKey.currentState?.reload();
-          setState(() => currentIndex = index);
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Mapa'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Mis Reportes'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle, size: 36, color: Colors.red),
-            label: 'Crear',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D1015),
+          border: Border(
+            top: BorderSide(
+              color: Colors.white.withValues(alpha: 0.12),
+              width: 0.5,
+            ),
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alertas'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
-        ],
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+          ),
+          child: BottomNavigationBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            type: BottomNavigationBarType.fixed,
+            currentIndex: currentIndex,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.white.withValues(alpha: 0.38),
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 11.5,
+              letterSpacing: 0.4,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.normal,
+              fontSize: 11,
+              letterSpacing: 0.4,
+            ),
+            onTap: (index) {
+              if (_pageController.hasClients) {
+                _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
+            items: [
+              BottomNavigationBarItem(
+                icon: Icon(
+                  currentIndex == 0 ? Icons.map_rounded : Icons.map_outlined,
+                  size: currentIndex == 0 ? 23 : 22,
+                ),
+                label: 'Mapa',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(
+                  currentIndex == 1 ? Icons.assignment_rounded : Icons.assignment_outlined,
+                  size: currentIndex == 1 ? 23 : 22,
+                ),
+                label: 'Mis Reportes',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(
+                  currentIndex == 2 ? Icons.add_circle_rounded : Icons.add_circle_outline_rounded,
+                  size: currentIndex == 2 ? 23 : 22,
+                  color: currentIndex == 2
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFFEF4444).withValues(alpha: 0.65),
+                ),
+                label: 'Crear',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(
+                  currentIndex == 3 ? Icons.notifications_rounded : Icons.notifications_none_rounded,
+                  size: currentIndex == 3 ? 23 : 22,
+                ),
+                label: 'Alertas',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(
+                  currentIndex == 4 ? Icons.person_rounded : Icons.person_outline_rounded,
+                  size: currentIndex == 4 ? 23 : 22,
+                ),
+                label: 'Perfil',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -93,98 +194,90 @@ class _ProfileScreen extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final roleName = (user.roleName ?? '').toLowerCase();
-    final isService = roleName == 'services';
     final fullName = '${user.firstName} ${user.lastName}'.trim();
     final initials = _initials(user.firstName, user.lastName);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 18, bottom: 28),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Section
           Center(
             child: Container(
-              width: 100,
-              height: 100,
+              width: 90,
+              height: 90,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.blueGrey,
+                color: Color(0xFF26292E),
               ),
               child: Center(
                 child: Text(
                   initials,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 1.5,
                   ),
                 ),
               ),
             ),
           ),
+
+          const SizedBox(height: 40),
+
+          // Section 1: CUENTA
+          const Text(
+            'CUENTA',
+            style: TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          _InfoRow(
+            icon: Icons.person_outline,
+            label: 'NOMBRE COMPLETO',
+            value: fullName,
+          ),
+          const Divider(height: 1, color: Color(0xFF26292E)),
+          _InfoRow(
+            icon: Icons.phone_outlined,
+            label: 'TELÉFONO',
+            value: user.phone,
+          ),
+          if (user.roleName != null) ...[
+            const Divider(height: 1, color: Color(0xFF26292E)),
+            _InfoRow(
+              icon: Icons.badge_outlined,
+              label: 'ROL DEL SISTEMA',
+              value: user.roleName!,
+            ),
+          ],
+          const Divider(height: 1, color: Color(0xFF26292E)),
+
+          const SizedBox(height: 36),
+
+          // Section 2: OPCIONES Y SEGURIDAD
+          const Text(
+            'OPCIONES Y SEGURIDAD',
+            style: TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
           const SizedBox(height: 16),
-
-          Text(
-            fullName,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          if (isService)
-            Container(
-              margin: const EdgeInsets.only(top: 4, bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.blueGrey.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'Proveedor de Servicios',
-                style: TextStyle(
-                  color: Colors.blueGrey,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 28),
-
-          _InfoCard(
-            children: [
-              _InfoRow(
-                icon: Icons.person_outline,
-                label: 'Nombre',
-                value: fullName,
-              ),
-              const _RowDivider(),
-              _InfoRow(
-                icon: Icons.phone_outlined,
-                label: 'Teléfono',
-                value: user.phone,
-              ),
-              if (user.roleName != null) ...[
-                const _RowDivider(),
-                _InfoRow(
-                  icon: Icons.badge_outlined,
-                  label: 'Rol',
-                  value: user.roleName!,
-                ),
-              ],
-            ],
-          ),
-
-          const SizedBox(height: 20),
 
           _ActionButton(
             icon: Icons.local_hospital_outlined,
             label: 'Servicios de Emergencia',
-            color: Colors.blueGrey,
+            color: const Color(0xFF3B82F6),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -194,18 +287,16 @@ class _ProfileScreen extends StatelessWidget {
             },
           ),
           const SizedBox(height: 12),
-
-          // ── Logout button ──
           _ActionButton(
             icon: Icons.logout,
             label: 'Cerrar sesión',
-            color: Colors.red.shade700,
+            color: const Color(0xFFEF4444),
             onPressed: () async {
               await auth.logout();
             },
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -215,26 +306,6 @@ class _ProfileScreen extends StatelessWidget {
     final f = (first?.isNotEmpty == true) ? first![0].toUpperCase() : '';
     final l = (last?.isNotEmpty == true) ? last![0].toUpperCase() : '';
     return '$f$l';
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  final List<Widget> children;
-  const _InfoCard({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(children: children),
-      ),
-    );
   }
 }
 
@@ -251,11 +322,11 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
         children: [
-          Icon(icon, color: Colors.blueGrey, size: 22),
-          const SizedBox(width: 14),
+          Icon(icon, color: Colors.white, size: 22),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,19 +334,19 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   label,
                   style: const TextStyle(
-                    color: Color(0xFF94A3B8),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5,
+                    color: Color(0xFF64748B),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.normal,
                   ),
                 ),
               ],
@@ -284,15 +355,6 @@ class _InfoRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _RowDivider extends StatelessWidget {
-  const _RowDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Divider(height: 1, color: Color(0xFF1E293B), indent: 54);
   }
 }
 
@@ -313,23 +375,24 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: BorderSide(color: color, width: 1.4),
-          backgroundColor: color.withValues(alpha: 0.1),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF26292E),
+          foregroundColor: color,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
           ),
         ),
         icon: Icon(icon, color: color, size: 20),
         label: Text(
-          label,
+          label.toUpperCase(),
           style: TextStyle(
             color: color,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+            letterSpacing: 1.0,
           ),
         ),
         onPressed: onPressed,

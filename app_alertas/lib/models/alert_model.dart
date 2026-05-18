@@ -52,11 +52,20 @@ class AlertModel {
       typeName = (rawType ?? '').toString();
     }
 
+    // Extraer creador/userId de forma ultra robusta
+    String creatorId = '';
+    final rawCreator = json['creator'] ?? json['userId'] ?? json['user_uuid'];
+    if (rawCreator is Map) {
+      creatorId = (rawCreator['id'] ?? '').toString();
+    } else {
+      creatorId = (rawCreator ?? '').toString();
+    }
+
     return AlertModel(
       id: json['id'] is int
           ? json['id'] as int
           : int.tryParse('${json['id']}') ?? 0,
-      userId: (json['userId'] ?? json['user_uuid'] ?? '').toString(),
+      userId: creatorId,
       type: typeName,
       description: (json['description'] ?? '').toString(),
       coordinates: rawCoords,

@@ -20,7 +20,6 @@ export async function bootstrap() {
 
     // swagger
     const config = new DocumentBuilder()
-    .addBearerAuth()
     .setTitle('API REST BACKEND NEST ')
     .setDescription('Esta es la api backend')
     .setVersion('1.0')

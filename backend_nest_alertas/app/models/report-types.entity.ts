@@ -13,10 +13,6 @@ export class ReportType{
     name: string;
 
     @ApiProperty()
-    @Column({ nullable: true })
-    category: string;
-
-    @ApiProperty()
     @Column({ default: 1 })
     base_weight: number;
 
