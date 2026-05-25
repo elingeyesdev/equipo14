@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/views/theme/app_theme.dart';
-import 'package:app_alertas/views/home_page.dart';
+import 'package:app_alertas/views/main_navigation_screen.dart';
 import 'package:app_alertas/views/login_screen.dart';
 import 'package:app_alertas/views/register_screen.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
@@ -53,7 +53,7 @@ class _AppState extends State<App> {
                     body: Center(child: CircularProgressIndicator()),
                   )
                 : auth.isAuthenticated
-                ? const HomePage()
+                ? const MainNavigationScreen()
                 : LoginScreen(
                     onGoToRegister: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const RegisterScreen()),

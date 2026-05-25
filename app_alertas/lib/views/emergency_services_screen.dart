@@ -53,24 +53,35 @@ class EmergencyServicesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1015),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1015),
-        elevation: 0,
-        title: const Text(
-          'Servicios de Emergencia',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.normal,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Banner informativo
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 20, 24, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Servicios de Emergencia",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.normal,
+                      letterSpacing: -0.3,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Banner informativo
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: const Color(0xFFEF4444).withValues(alpha: 0.12),
@@ -113,6 +124,7 @@ class EmergencyServicesScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

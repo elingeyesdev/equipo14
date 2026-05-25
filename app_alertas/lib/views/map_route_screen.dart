@@ -42,6 +42,7 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
   bool _isFollowingRoute = false;
   List<LatLng> _routePoints = [];
   bool _isLoadingRoute = false;
+  DateTime? _lastRouteUpdate;
 
   LatLng get _incidentLocation => LatLng(widget.latitude, widget.longitude);
 
@@ -52,9 +53,16 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
     try {
       final start = _currentLocation!;
       final end = _incidentLocation;
-      // Usamos OSRM público para obtener la ruta de conducción
       final url = Uri.parse(
-          'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?geometries=geojson');
+        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        '${start.longitude},${start.latitude};'
+        '${end.longitude},${end.latitude}'
+        '?alternatives=false'
+        '&geometries=geojson'
+        '&overview=full'
+        '&steps=true'
+        '&access_token=$_kMapboxAccessToken',
+      );
 
       final response = await http.get(url);
 
@@ -145,7 +153,7 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
       
       // Zoom inicial estilo Google Maps (acercar a la posición actual)
       if (_currentLocation != null) {
-        _mapController.move(_currentLocation!, 17.5);
+        _mapController.move(_currentLocation!, 16);
       }
 
       final stream = await _locationService.getLocationStream();
@@ -158,9 +166,18 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
           });
           
           if (_isFollowingRoute) {
-             // Seguir al usuario constantemente estilo Google Maps
-            _mapController.move(position, 17.5);
-            // Idealmente aquí podríamos comprobar si se salió de la ruta y llamar a _fetchRoute()
+            _mapController.move(position, 16);
+
+            final now = DateTime.now();
+
+            final shouldRefreshRoute =
+                _lastRouteUpdate == null ||
+                now.difference(_lastRouteUpdate!).inSeconds >= 5;
+
+            if (shouldRefreshRoute && !_isLoadingRoute) {
+              _lastRouteUpdate = now;
+              _fetchRoute();
+            }
           }
         },
         onError: (error) {
@@ -186,15 +203,7 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
     final initialCenter = hasCurrentLocation
         ? _currentLocation!
         : _incidentLocation;
-    
-    // Si tenemos puntos de la ruta generados por OSRM, los usamos. 
-    // Si no (ej. mientras carga), usamos una línea recta como fallback.
-    final points = _routePoints.isNotEmpty
-        ? _routePoints
-        : (hasCurrentLocation
-            ? <LatLng>[_currentLocation!, _incidentLocation]
-            : <LatLng>[_incidentLocation]);
-
+    final points = _routePoints;
     return Scaffold(
       appBar: AppBar(title: const Text('Ruta al incidente')),
       body: Column(
@@ -213,13 +222,17 @@ class _MapRouteScreenState extends State<MapRouteScreen> {
                   maxNativeZoom: 22,
                   maxZoom: 22,
                 ),
-                if (hasCurrentLocation)
+                if (_routePoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
                       Polyline(
                         points: points,
-                        strokeWidth: 6,
-                        color: _isLoadingRoute ? Colors.grey : Colors.blueAccent,
+                        strokeWidth: 8,
+                        color: _isLoadingRoute
+                            ? Colors.grey
+                            : Colors.blueAccent,
+                        strokeCap: StrokeCap.round,
+                        strokeJoin: StrokeJoin.round,
                       ),
                     ],
                   ),

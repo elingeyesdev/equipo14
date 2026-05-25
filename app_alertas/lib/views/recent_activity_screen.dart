@@ -46,17 +46,17 @@ extension _PriorityFilterMatch on _PriorityFilter {
   String get chipLabel {
     switch (this) {
       case _PriorityFilter.all:
-        return 'PRI. TODAS';
+        return 'Todas';
       case _PriorityFilter.highPriority:
-        return 'ALTA PRIOR.';
+        return 'Alta prioridad';
       case _PriorityFilter.verifiedAuthority:
-        return 'VERIFICADO';
+        return 'Verificado';
       case _PriorityFilter.credibilityHigh:
-        return 'CRED. ALTA';
+        return 'Credibilidad alta';
       case _PriorityFilter.credibilityModerate:
-        return 'CRED. MOD.';
+        return 'Credibilidad moderada';
       case _PriorityFilter.credibilityLow:
-        return 'CRED. BAJA';
+        return 'Credibilidad baja';
     }
   }
 }
@@ -204,89 +204,28 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     );
   }
 
-  Widget _buildZoneSummary(List<AlertModel> alerts) {
-    final Map<String, int> zoneCounts = {};
-    for (var alert in alerts) {
-      final zone = alert.zone ?? 'Desconocida';
-      zoneCounts[zone] = (zoneCounts[zone] ?? 0) + 1;
-    }
-
-    final sortedZones = zoneCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return Container(
-      padding: const EdgeInsets.only(top: 0, bottom: 12),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: const BoxDecoration(
-        color: Colors.transparent, // Uniform color matching screen background
+  void _openFilterBottomSheet(List<AlertModel> alerts) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E2126),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Incidentes por Zona',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.75),
-                fontSize: 13,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _FilterChip(
-                  label: 'TODAS',
-                  count: alerts.length,
-                  isSelected: _selectedZone == null,
-                  onTap: () => setState(() => _selectedZone = null),
-                ),
-                ...sortedZones.map((entry) {
-                  return _FilterChip(
-                    label: entry.key,
-                    count: entry.value,
-                    isSelected: _selectedZone == entry.key,
-                    onTap: () => setState(() => _selectedZone = entry.key),
-                  );
-                }),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Prioridad y credibilidad',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.75),
-                fontSize: 13,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                for (final f in _PriorityFilter.values)
-                  _FilterChip(
-                    label: f.chipLabel,
-                    count: alerts.where((a) => f.matches(a)).length,
-                    isSelected: _priorityFilter == f,
-                    onTap: () => setState(() => _priorityFilter = f),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        return _FilterBottomSheet(
+          alerts: alerts,
+          initialZone: _selectedZone,
+          initialPriority: _priorityFilter,
+          onConfirm: (zone, priority) {
+            setState(() {
+              _selectedZone = zone;
+              _priorityFilter = priority;
+            });
+            Navigator.of(ctx).pop();
+          },
+        );
+      },
     );
   }
 
@@ -295,6 +234,16 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     final alertVM = context.watch<AlertViewModel>();
     final alerts = alertVM.alerts;
     final loading = alertVM.isLoading;
+
+    final filteredAlerts = alerts.where((alert) {
+      if (_selectedZone != null && (alert.zone ?? 'Desconocida') != _selectedZone) {
+        return false;
+      }
+      if (!_priorityFilter.matches(alert)) {
+        return false;
+      }
+      return true;
+    }).toList();
 
     return Scaffold(
       body: SafeArea(
@@ -334,28 +283,56 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                             )
                           : CustomScrollView(
                               slivers: [
-                                SliverToBoxAdapter(child: _buildZoneSummary(alerts)),
-                                SliverPadding(
-                                  padding: EdgeInsets.zero,
-                                  sliver: SliverList(
-                                    delegate: SliverChildBuilderDelegate(
-                                      (context, index) {
-                                        final alert = alerts[index];
-                                        if (_selectedZone != null && (alert.zone ?? 'Desconocida') != _selectedZone) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        if (!_priorityFilter.matches(alert)) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        return AlertCard(
-                                          alert: alert,
-                                          onTap: () => widget.onAlertTap?.call(alert),
-                                          onVerify: () => _verifyAlert(alert),
-                                        );
-                                      },
-                                      childCount: alerts.length,
+                                SliverToBoxAdapter(
+                                  child: GestureDetector(
+                                    onTap: () => _openFilterBottomSheet(alerts),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            'Filtrar Reportes',
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.6),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.normal,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Icon(Icons.filter_list, color: Colors.white.withValues(alpha: 0.6), size: 16),
+                                        ],
+                                      ),
                                     ),
                                   ),
+                                ),
+                                SliverPadding(
+                                  padding: EdgeInsets.zero,
+                                  sliver: filteredAlerts.isEmpty
+                                      ? SliverFillRemaining(
+                                          hasScrollBody: false,
+                                          child: Center(
+                                            child: Text(
+                                              'No se hallaron coincidencias',
+                                              style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : SliverList(
+                                          delegate: SliverChildBuilderDelegate(
+                                            (context, index) {
+                                              final alert = filteredAlerts[index];
+                                              return AlertCard(
+                                                alert: alert,
+                                                onTap: () => widget.onAlertTap?.call(alert),
+                                                onVerify: () => _verifyAlert(alert),
+                                              );
+                                            },
+                                            childCount: filteredAlerts.length,
+                                          ),
+                                        ),
                                 ),
                               ],
                             ),
@@ -366,67 +343,158 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       ),
     );
   }
-
-
 }
 
-class _FilterChip extends StatelessWidget {
+class _FilterBottomSheet extends StatefulWidget {
+  final List<AlertModel> alerts;
+  final String? initialZone;
+  final _PriorityFilter initialPriority;
+  final Function(String?, _PriorityFilter) onConfirm;
+
+  const _FilterBottomSheet({
+    required this.alerts,
+    this.initialZone,
+    required this.initialPriority,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<_FilterBottomSheet> {
+  String? _selectedZone;
+  late _PriorityFilter _priorityFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedZone = widget.initialZone;
+    _priorityFilter = widget.initialPriority;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, int> zoneCounts = {};
+    for (var alert in widget.alerts) {
+      final zone = alert.zone ?? 'Desconocida';
+      zoneCounts[zone] = (zoneCounts[zone] ?? 0) + 1;
+    }
+    final sortedZones = zoneCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return FractionallySizedBox(
+      heightFactor: 0.9,
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 16, 24, 16),
+            child: Row(
+              children: [
+                 IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                 ),
+                 const SizedBox(width: 8),
+                 const Text("Filtrar por", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.normal)),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFF26292E)),
+          
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              children: [
+                const Text(
+                  'INCIDENTES POR ZONA',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                ),
+                const SizedBox(height: 12),
+                _FilterRowItem(
+                  label: 'Todas',
+                  isSelected: _selectedZone == null,
+                  onTap: () => setState(() => _selectedZone = null),
+                ),
+                ...sortedZones.map((z) => _FilterRowItem(
+                  label: z.key,
+                  isSelected: _selectedZone == z.key,
+                  onTap: () => setState(() => _selectedZone = z.key),
+                )),
+                
+                const SizedBox(height: 32),
+                const Text(
+                  'PRIORIDAD Y CREDIBILIDAD',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                ),
+                const SizedBox(height: 12),
+                for (final f in _PriorityFilter.values)
+                  _FilterRowItem(
+                    label: f.chipLabel,
+                    isSelected: _priorityFilter == f,
+                    onTap: () => setState(() => _priorityFilter = f),
+                  ),
+              ],
+            )
+          ),
+          
+          Padding(
+             padding: const EdgeInsets.all(24),
+             child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                   style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                   ),
+                   onPressed: () => widget.onConfirm(_selectedZone, _priorityFilter),
+                   child: const Text('Confirmar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterRowItem extends StatelessWidget {
   final String label;
-  final int count;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _FilterChip({
-    required this.label,
-    required this.count,
-    required this.isSelected,
-    required this.onTap,
+  const _FilterRowItem({
+    required this.label, required this.isSelected, required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
-          borderRadius: BorderRadius.zero,
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFF3B82F6)
-                : Colors.white.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey,
-                fontSize: 9.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
-            ),
-            const SizedBox(width: 5),
+            // Check on the far left
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              width: 22, height: 22,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.2)
-                    : Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.zero,
+                shape: BoxShape.circle,
+                border: Border.all(color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.withValues(alpha: 0.5), width: 2),
+                color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
               ),
+              child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
               child: Text(
-                '$count',
+                label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white70,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8), 
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -436,6 +504,3 @@ class _FilterChip extends StatelessWidget {
     );
   }
 }
-
-
-
