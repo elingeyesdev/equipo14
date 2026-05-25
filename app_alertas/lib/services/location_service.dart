@@ -1,6 +1,14 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+/// Extiende LatLng para incluir el bearing (dirección de desplazamiento).
+class PositionWithBearing {
+  final LatLng latLng;
+  final double bearing;
+
+  const PositionWithBearing({required this.latLng, required this.bearing});
+}
+
 class LocationService {
   const LocationService();
 
@@ -47,6 +55,22 @@ class LocationService {
       ),
     ).map((position) => LatLng(position.latitude, position.longitude));
   }
+
+  /// Stream con bearing incluido para animación del vehículo.
+  Future<Stream<PositionWithBearing>> getPositionStream() async {
+    await ensureLocationAccess();
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 5,
+      ),
+    ).map(
+      (position) => PositionWithBearing(
+        latLng: LatLng(position.latitude, position.longitude),
+        bearing: position.heading,
+      ),
+    );
+  }
 }
 
 class LocationException implements Exception {
@@ -56,6 +80,3 @@ class LocationException implements Exception {
   @override
   String toString() => message;
 }
-
-
-

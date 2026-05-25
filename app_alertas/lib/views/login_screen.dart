@@ -17,6 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Estado para mostrar/ocultar contraseña
+  bool _obscurePassword = true;
+
   @override
   void dispose() {
     _phoneController.dispose();
@@ -106,7 +109,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 48),
-                        
+
+                        // Campo de teléfono/usuario
                         TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
@@ -121,13 +125,31 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
+                        // Campo de contraseña con botón de ojo
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
                             hintText: 'Contraseña',
-                            prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
+                            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                                size: 20,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                              tooltip: _obscurePassword
+                                  ? 'Mostrar contraseña'
+                                  : 'Ocultar contraseña',
+                            ),
                           ),
                           validator: (value) {
                             final v = value?.trim() ?? '';
@@ -137,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                         const SizedBox(height: 32),
-                        
+
                         ElevatedButton(
                           onPressed: isLoading ? null : _submit,
                           child: isLoading
@@ -152,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -193,6 +215,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-
-

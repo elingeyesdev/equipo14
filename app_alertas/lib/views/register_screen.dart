@@ -18,6 +18,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Estado para mostrar/ocultar contraseñas (independientes)
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -98,6 +102,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                               const SizedBox(height: 32),
+
+                              // Nombre y Apellido
                               Row(
                                 children: [
                                   Expanded(
@@ -118,6 +124,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ],
                               ),
                               const SizedBox(height: 16),
+
+                              // Teléfono
                               TextFormField(
                                 controller: _phoneController,
                                 keyboardType: TextInputType.phone,
@@ -133,31 +141,81 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 },
                               ),
                               const SizedBox(height: 16),
+
+                              // Contraseña con icono de ojo
                               TextFormField(
                                 controller: _passwordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
+                                obscureText: _obscurePassword,
+                                decoration: InputDecoration(
                                   hintText: 'Contraseña',
-                                  prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
+                                  prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
+                                      size: 20,
+                                      color: const Color(0xFF94A3B8),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                    tooltip: _obscurePassword
+                                        ? 'Mostrar contraseña'
+                                        : 'Ocultar contraseña',
+                                  ),
                                 ),
-                                validator: (value) => (value ?? '').trim().length < 6 ? 'Mínimo 6 caracteres' : null,
+                                validator: (value) =>
+                                    (value ?? '').trim().length < 6 ? 'Mínimo 6 caracteres' : null,
                               ),
                               const SizedBox(height: 16),
+
+                              // Confirmar contraseña con icono de ojo independiente
                               TextFormField(
                                 controller: _confirmPasswordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
+                                obscureText: _obscureConfirmPassword,
+                                decoration: InputDecoration(
                                   hintText: 'Confirmar contraseña',
-                                  prefixIcon: Icon(Icons.lock_reset_rounded, size: 20),
+                                  prefixIcon: const Icon(Icons.lock_reset_rounded, size: 20),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility_off_rounded
+                                          : Icons.visibility_rounded,
+                                      size: 20,
+                                      color: const Color(0xFF94A3B8),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                                      });
+                                    },
+                                    tooltip: _obscureConfirmPassword
+                                        ? 'Mostrar contraseña'
+                                        : 'Ocultar contraseña',
+                                  ),
                                 ),
-                                validator: (value) => (value ?? '').trim() != _passwordController.text.trim() ? 'No coinciden' : null,
+                                validator: (value) =>
+                                    (value ?? '').trim() != _passwordController.text.trim()
+                                        ? 'No coinciden'
+                                        : null,
                               ),
                               const SizedBox(height: 32),
+
                               ElevatedButton(
                                 onPressed: isLoading ? null : _submit,
                                 child: isLoading
-                                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                    : const Text('CREAR CUENTA', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Text(
+                                        'CREAR CUENTA',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
                               ),
                               const SizedBox(height: 24),
                             ],
@@ -175,6 +233,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-
-
-

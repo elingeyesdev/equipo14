@@ -5,8 +5,8 @@ import 'package:geocoding/geocoding.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 
 import 'package:app_alertas/models/alert_type_model.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/views/widgets/custom_snackbar.dart';
 import 'package:app_alertas/viewmodels/alert_type_viewmodel.dart';
+import 'package:app_alertas/views/widgets/location_picker_map.dart';
 
 class CreateAlertScreen extends StatefulWidget {
   const CreateAlertScreen({super.key, this.onCreated, this.onShowMap});
@@ -43,6 +44,11 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
   String _locationSubtitle = 'Esperando permisos';
   Position? _position;
 
+  /// Coordenadas seleccionadas por el usuario en el mapa (puede diferir de _position).
+  LatLng? _selectedAlertLocation;
+  /// Indica si la ubicación seleccionada está dentro del radio permitido.
+  bool _alertLocationInsideRadius = true;
+
   void resetFields() {
     _descriptionController.clear();
     setState(() {
@@ -54,6 +60,8 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       _locationTitle = 'Detectando ubicación...';
       _locationSubtitle = 'Esperando permisos';
       _position = null;
+      _selectedAlertLocation = null;
+      _alertLocationInsideRadius = true;
     });
     _loadCurrentLocation();
   }
@@ -95,6 +103,12 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
 
       final position = await _getBestPosition();
       _position = position;
+      // Inicializar la ubicación seleccionada con la posición actual del usuario
+      if (!mounted) return;
+      setState(() {
+        _selectedAlertLocation = LatLng(position.latitude, position.longitude);
+        _alertLocationInsideRadius = true;
+      });
       final precise = await _reverseGeocodePrecise(
         position.latitude,
         position.longitude,
@@ -394,13 +408,28 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       return;
     }
 
+    // Validar que la ubicación seleccionada esté dentro del radio permitido
+    if (!_alertLocationInsideRadius) {
+      showCustomSnackBar(
+        context: context,
+        title: 'Ubicación fuera de rango',
+        message:
+            'La ubicación de la alerta debe encontrarse dentro de un radio máximo de 100 metros de su posición actual.',
+        type: CustomSnackBarType.warning,
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       final alertVM = context.read<AlertViewModel>();
+      // Usar la ubicación seleccionada por el usuario en el mapa
+      final alertLat = _selectedAlertLocation?.latitude ?? _position!.latitude;
+      final alertLon = _selectedAlertLocation?.longitude ?? _position!.longitude;
       final similars = await alertVM.findSimilarAlerts(
         typeId: _selectedType!.id,
-        latitude: _position!.latitude,
-        longitude: _position!.longitude,
+        latitude: alertLat,
+        longitude: alertLon,
       );
 
       if (similars.isNotEmpty) {
@@ -425,12 +454,15 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
     try {
       final alertVM = context.read<AlertViewModel>();
       final userId = await _resolveReportUserId();
+      // Usar las coordenadas seleccionadas por el usuario en el mapa
+      final alertLat = _selectedAlertLocation?.latitude ?? _position!.latitude;
+      final alertLon = _selectedAlertLocation?.longitude ?? _position!.longitude;
       final report = await alertVM.createAlert(
         typeId: _selectedType!.id,
         description: _descriptionController.text.trim(),
         userId: userId,
-        latitude: _position!.latitude,
-        longitude: _position!.longitude,
+        latitude: alertLat,
+        longitude: alertLon,
         zone: _locationTitle,
         imageFile: image,
       );
@@ -800,34 +832,35 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
               const SizedBox(height: 20),
 
               const Text(
-                'Ubicación',
+                'Ubicación del incidente',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
 
+              // Dirección detectada del usuario
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: const Color(0xFF26292E),
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_on, color: Colors.red),
+                    const Icon(Icons.my_location_rounded, color: Color(0xFF3B82F6), size: 20),
                     const SizedBox(width: 10),
 
                     if (_isLoadingLocation)
                       const SizedBox(
-                        width: 18,
-                        height: 18,
+                        width: 16,
+                        height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
 
-                    if (_isLoadingLocation) const SizedBox(width: 10),
+                    if (_isLoadingLocation) const SizedBox(width: 8),
 
                     Expanded(
                       child: Column(
@@ -835,11 +868,15 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                         children: [
                           Text(
                             _locationTitle,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           Text(
                             _locationSubtitle,
-                            style: const TextStyle(color: Colors.grey),
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                         ],
                       ),
@@ -847,6 +884,94 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 10),
+
+              // Mapa interactivo de selección de ubicación
+              if (_position != null && _selectedAlertLocation != null)
+                LocationPickerMap(
+                  userLocation: LatLng(_position!.latitude, _position!.longitude),
+                  onLocationChanged: (selected, isInside) {
+                    setState(() {
+                      _selectedAlertLocation = selected;
+                      _alertLocationInsideRadius = isInside;
+                    });
+                  },
+                )
+              else if (_isLoadingLocation)
+                Container(
+                  height: 240,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF26292E),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(strokeWidth: 2),
+                        SizedBox(height: 12),
+                        Text(
+                          'Obteniendo ubicación...',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF26292E),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.location_off_rounded, color: Colors.orangeAccent, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'No se pudo obtener la ubicación GPS',
+                          style: TextStyle(color: Colors.orangeAccent, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Advertencia cuando el punto seleccionado está fuera del radio
+              if (!_alertLocationInsideRadius) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.warning_rounded, color: Colors.redAccent, size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'La ubicación de la alerta debe encontrarse dentro de un radio máximo de 100 metros de su posición actual.',
+                          style: TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 12.5,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 15),
 
