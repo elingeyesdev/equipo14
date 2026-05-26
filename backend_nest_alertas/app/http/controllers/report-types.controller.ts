@@ -23,7 +23,6 @@ export class ReportTypeController{
         return this.reportTypesService.create(name)
     }
 
-    @Public()
     @Get()
     findAll(){
         return this.reportTypesService.findAll()

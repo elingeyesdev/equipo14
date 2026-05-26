@@ -46,7 +46,7 @@ export class AuthService{
         return { 
             access_token : access_token,
             refresh_token : refreshToken,
-            user: UserResponse.FromUserToResponse(user)
+            user: UserResponse.FromUserToResponse(savedUser)
         }
     }
 

@@ -3,17 +3,16 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:app_alertas/services/location_service.dart';
+import 'package:app_alertas/core/constants/api_constants.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 
-const _kMapboxAccessToken =
-    'pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA';
-
 String _mapboxDarkTileUrl() =>
     'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
-    '?access_token=$_kMapboxAccessToken';
+    '?access_token=${ApiConstants.mapboxToken}';
 
 /// Calcula la distancia en metros entre dos coordenadas (fórmula Haversine).
 double _distanceInMeters(LatLng a, LatLng b) {
@@ -113,7 +112,7 @@ class _MapRouteScreenState extends State<MapRouteScreen>
         '&geometries=geojson'
         '&overview=full'
         '&steps=true'
-        '&access_token=$_kMapboxAccessToken',
+        '&access_token=${ApiConstants.mapboxToken}',
       );
 
       final response = await http.get(url);

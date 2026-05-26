@@ -1,3 +1,7 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ApiConstants {
-    static const String baseUrl = 'https://rlwn0tb6-3000.brs.devtunnels.ms/api';
+  static String get apiBaseUrl => dotenv.env['API_BASE_URL'] ?? '';
+
+  static String get mapboxToken => dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '';
 }

@@ -1,3 +1,4 @@
+import 'package:app_alertas/core/constants/api_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,14 +11,10 @@ import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/views/alert_card.dart';
 
-/// Token público Mapbox
-const _kMapboxAccessToken =
-    'pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA';
-
 /// Raster tiles
 String _mapboxDarkTileUrl() =>
     'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
-    '?access_token=$_kMapboxAccessToken';
+    '??access_token=${ApiConstants.mapboxToken}';
 
 class MapScreen extends StatefulWidget {
   final AlertModel? initialAlert;

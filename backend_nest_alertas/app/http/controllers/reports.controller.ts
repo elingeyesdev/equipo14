@@ -3,6 +3,7 @@ import { ReportsService } from '../../services/reports.service';
 import { CreateReportRequest, VerifyReportRequest } from '../requests/reports/request';
 import { ApiAddImageUpload, ApiImageUpload } from '../../decorators/request.decorator';
 import { ApiBearerAuth } from '@nestjs/swagger';
+
 @ApiBearerAuth()
 @Controller('reports')
 export class ReportsController {
@@ -40,6 +41,7 @@ export class ReportsController {
         return this.reportsService.findAll()
     }
 
+    // este endpoint devuelve los reportes en un radio de proximo
     @Get('/nearby')
     findNearby(
         @Query('latitude') latitude: string,

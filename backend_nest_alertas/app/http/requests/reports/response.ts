@@ -3,12 +3,15 @@ import { Report } from "app/models/report.entity";
 import { ImageResponse } from "../images/response";
 import { extractCoordinates } from "app/utils/geo.util";
 
-const FALLBACK_TYPE: ReportType = {
-    id: 0,
-    name: 'Desconocido',
-    base_weight: 1,
-    reports: [],
-} as ReportType;
+
+// // datos a enviar si no existe un ReportType Asociado
+// // de momento comentado
+// const FALLBACK_TYPE: ReportType = {
+//     id: 0,
+//     name: 'Desconocido',
+//     base_weight: 1,
+//     reports: [],
+// } as ReportType;
 
 export class ReportResponse{
     id: number;
@@ -28,9 +31,11 @@ export class ReportResponse{
 
         response.id = report.id;
         response.creator = report.creator?.id ?? '';
-        response.type = report.type ?? FALLBACK_TYPE;
+        // // ejmplo implementado la clase
+        // response.type = report.type ?? FALLBACK_TYPE;
+        response.type = report.type;
         response.description = report.description ?? '';
-        response.coordinates = extractCoordinates(report.location);
+        response.coordinates = report.location.coordinates;
         response.weight = report.weight ?? 0;
         response.verified = report.verified ?? false;
         response.created_at = report.created_at;
@@ -62,7 +67,7 @@ export class ReportCoinicdenceResponse{
 
         response.id = report.id;
         response.description = report.description ?? '';
-        response.coordinates = extractCoordinates(report.location);
+        response.coordinates = report.location.coordinates;
         response.weight = report.weight ?? 0;
         response.verified = report.verified ?? false;
         response.created_at = report.created_at;
