@@ -38,12 +38,36 @@ function createZonesGeoJSON(zoneRegions, selectedZone) {
   return { type: 'FeatureCollection', features }
 }
 
+function createSearchCircleGeoJSON(center, radiusMeters) {
+  if (!center || !radiusMeters) return null
+  const polygon = circle([center.longitude, center.latitude], radiusMeters, {
+    steps: 64,
+    units: 'meters',
+  })
+  return { type: 'FeatureCollection', features: [polygon] }
+}
+
 function ReportMarker({ color }) {
   return (
     <span
       className="block h-4 w-4 rounded-full border-2 border-white shadow-lg ring-2 ring-black/10"
       style={{ background: color }}
     />
+  )
+}
+
+function ReferencePointMarker({ pending = false }) {
+  return (
+    <div className="map-ref-marker" title="Punto de referencia">
+      <span
+        className="map-ref-marker__pin"
+        style={{
+          background: pending ? '#f59e0b' : 'var(--accent)',
+          opacity: pending ? 0.85 : 1,
+        }}
+      />
+      <span className="map-ref-marker__dot" />
+    </div>
   )
 }
 
@@ -56,6 +80,11 @@ export default function MapaInteractivo({
   compact = false,
   externalReports = null,
   externalLoading = false,
+  searchCenter = null,
+  searchRadiusMeters = null,
+  placementMode = false,
+  onPlacementClick,
+  showReferenceMarker = false,
 }) {
   const { isDark } = useTheme()
   const mapRef = useRef(null)
@@ -161,11 +190,27 @@ export default function MapaInteractivo({
     setup3D(map)
   }, [isDark, mapReady, setup3D, getMapInstance])
 
+  useEffect(() => {
+    if (!mapReady || !searchCenter || !searchRadiusMeters) return
+    const map = getMapInstance()
+    if (!map) return
+    const zoom = Math.min(
+      16,
+      Math.max(13, 15 - Math.log10(searchRadiusMeters / 1000) * 0.8),
+    )
+    flyTo3DView(map, [searchCenter.longitude, searchCenter.latitude], { zoom })
+  }, [searchCenter?.latitude, searchCenter?.longitude, mapReady, getMapInstance])
+
   const zoneRegions = useMemo(() => computeZoneRegions(reports), [reports])
 
   const zonesGeoJSON = useMemo(
     () => (showZones ? createZonesGeoJSON(zoneRegions, selectedZone) : null),
     [showZones, zoneRegions, selectedZone],
+  )
+
+  const searchCircleGeoJSON = useMemo(
+    () => createSearchCircleGeoJSON(searchCenter, searchRadiusMeters),
+    [searchCenter, searchRadiusMeters],
   )
 
   const filteredReports = useMemo(() => {
@@ -180,6 +225,21 @@ export default function MapaInteractivo({
       return region?.color ?? '#2563eb'
     },
     [zoneRegions],
+  )
+
+  const handleMapClick = useCallback(
+    (evt) => {
+      if (placementMode && evt.lngLat) {
+        onPlacementClick?.(evt.lngLat.lat, evt.lngLat.lng)
+        return
+      }
+      const feature = evt.features?.[0]
+      if (feature?.layer?.id === 'zones-fill' && feature.properties?.name) {
+        const name = feature.properties.name
+        onZoneSelect?.(selectedZone === name ? null : name)
+      }
+    },
+    [placementMode, onPlacementClick, onZoneSelect, selectedZone],
   )
 
   if (!MAPBOX_TOKEN) {
@@ -207,6 +267,12 @@ export default function MapaInteractivo({
         </div>
       )}
 
+      {placementMode && (
+        <div className="absolute top-14 left-1/2 z-20 -translate-x-1/2 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-lg">
+          Toca el mapa para colocar el punto de referencia
+        </div>
+      )}
+
       <Map
         key={`mapbox-standard-${isDark ? 'night' : 'day'}`}
         ref={mapRef}
@@ -225,17 +291,45 @@ export default function MapaInteractivo({
         onStyleData={(evt) => {
           if (evt.target.isStyleLoaded()) setup3D(evt.target)
         }}
-        onClick={(evt) => {
-          const feature = evt.features?.[0]
-          if (feature?.layer?.id === 'zones-fill' && feature.properties?.name) {
-            const name = feature.properties.name
-            onZoneSelect?.(selectedZone === name ? null : name)
-          }
-        }}
-        interactiveLayerIds={showZones ? ['zones-fill'] : []}
-        cursor="pointer"
+        onClick={handleMapClick}
+        interactiveLayerIds={placementMode ? [] : showZones ? ['zones-fill'] : []}
+        cursor={placementMode ? 'crosshair' : 'pointer'}
       >
         <NavigationControl position="top-left" visualizePitch showCompass />
+
+        {searchCircleGeoJSON && (
+          <Source id="search-radius" type="geojson" data={searchCircleGeoJSON}>
+            <Layer
+              id="search-radius-fill"
+              type="fill"
+              slot="middle"
+              paint={{
+                'fill-color': '#3b82f6',
+                'fill-opacity': 0.14,
+              }}
+            />
+            <Layer
+              id="search-radius-outline"
+              type="line"
+              slot="middle"
+              paint={{
+                'line-color': '#3b82f6',
+                'line-width': 2.5,
+                'line-opacity': 0.7,
+              }}
+            />
+          </Source>
+        )}
+
+        {showReferenceMarker && searchCenter && (
+          <Marker
+            longitude={searchCenter.longitude}
+            latitude={searchCenter.latitude}
+            anchor="bottom"
+          >
+            <ReferencePointMarker pending={placementMode} />
+          </Marker>
+        )}
 
         {showZones && zonesGeoJSON && (
           <Source id="zones" type="geojson" data={zonesGeoJSON}>
@@ -326,12 +420,9 @@ export default function MapaInteractivo({
         )}
       </Map>
 
-      <div className="absolute bottom-3 right-3 z-10 flex flex-col items-end gap-1">
+      <div className="absolute bottom-3 right-3 z-10">
         <span className="rounded-lg bg-[#2563eb] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-md">
           Mapbox 3D
-        </span>
-        <span className="rounded-md bg-[var(--elevated)]/95 px-2 py-0.5 text-[9px] text-[var(--muted)] border border-[var(--border)]">
-          Acerca el zoom (≥15) para ver edificios
         </span>
       </div>
     </div>
