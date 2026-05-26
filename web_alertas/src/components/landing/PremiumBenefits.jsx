@@ -75,8 +75,8 @@ export default function PremiumBenefits() {
         />
 
         {/* 2 large + 4 small grid */}
-        <div className="grid gap-4">
-          <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid gap-8">
+          <div className="grid sm:grid-cols-2 gap-8">
             {features.filter(f => f.size === 'large').map((feat, i) => {
               const Icon = feat.icon
               return (
@@ -118,7 +118,7 @@ export default function PremiumBenefits() {
             })}
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.filter(f => f.size === 'normal').map((feat, i) => {
               const Icon = feat.icon
               return (

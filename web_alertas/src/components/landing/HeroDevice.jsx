@@ -101,7 +101,9 @@ export default function HeroDevice() {
                 >
                   <span className={`h-2 w-2 shrink-0 rounded-full ${item.dot}`} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-[var(--ink)]">{item.title}</p>
+                    <p className="text-[13px] font-semibold text-[var(--ink)] leading-snug break-words">
+                      {item.title}
+                    </p>
                   </div>
                   <span className="text-[11px] text-[var(--muted)]">{item.time}</span>
                 </motion.div>

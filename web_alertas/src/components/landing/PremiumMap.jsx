@@ -312,8 +312,12 @@ export default function PremiumMap() {
                           <Icon className="h-3 w-3" style={{ color: cat.color }} strokeWidth={2.5} />
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-semibold text-[var(--ink)] truncate">{cat.label}</p>
-                          <p className="text-[10px] text-[var(--muted)] truncate">{pin.label}</p>
+                          <p className="text-[11px] font-semibold text-[var(--ink)] leading-snug break-words">
+                            {cat.label}
+                          </p>
+                          <p className="text-[10px] text-[var(--muted)] leading-snug break-words">
+                            {pin.label}
+                          </p>
                         </div>
                         <span className="text-[10px] text-[var(--muted)] shrink-0">{pin.time}m</span>
                       </motion.div>
