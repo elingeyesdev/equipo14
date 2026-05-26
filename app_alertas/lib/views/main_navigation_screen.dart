@@ -83,7 +83,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               key: _recentActivityKey,
               onAlertTap: navigateToMap,
             ),
-            HomePage(key: _homePageKey),
+            HomePage(
+              key: _homePageKey,
+              onAlertTap: navigateToMap,
+            ),
           ],
         ),
       ),

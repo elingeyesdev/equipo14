@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import 'package:app_alertas/models/alert_type_model.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
@@ -388,6 +389,16 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       return;
     }
 
+    if (image == null) {
+      showCustomSnackBar(
+        context: context,
+        title: 'Falta imagen',
+        message: 'Debes adjuntar una imagen del incidente',
+        type: CustomSnackBarType.warning,
+      );
+      return;
+    }
+
     if (_position == null) {
       showCustomSnackBar(
         context: context,
@@ -500,12 +511,16 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
   }
 
   void _showSimilarsDialog(List<AlertModel> similars) {
+    int? expandedAlertId;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Container(
           decoration: const BoxDecoration(
             color: Color(0xFF0D1015),
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -546,67 +561,87 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
               const SizedBox(height: 24),
               ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  maxHeight: MediaQuery.of(context).size.height * 0.6,
                 ),
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemCount: similars.length,
                   itemBuilder: (context, index) {
                     final alert = similars[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF26292E),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.05),
-                        ),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
+                    final isExpanded = expandedAlertId == alert.id;
+                    return Column(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
+                            color: const Color(0xFF26292E),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.05),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.emergency_share_rounded,
-                            color: Colors.orange,
-                            size: 20,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(12),
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.emergency_share_rounded,
+                                color: Colors.orange,
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              alert.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: Text(
+                              alert.zone ?? 'Zona cercana',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(
+                                isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                color: Colors.blueAccent,
+                              ),
+                              onPressed: () {
+                                setModalState(() {
+                                  if (isExpanded) {
+                                    expandedAlertId = null;
+                                  } else {
+                                    expandedAlertId = alert.id;
+                                  }
+                                });
+                              },
+                            ),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _attachToExistingAlert(alert.id);
+                            },
                           ),
                         ),
-                        title: Text(
-                          alert.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
+                        if (isExpanded)
+                          Container(
+                            height: 160,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            clipBehavior: Clip.hardEdge,
+                            child: _buildMiniMap(alert),
                           ),
-                        ),
-                        subtitle: Text(
-                          alert.zone ?? 'Zona cercana',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            Icons.map_outlined,
-                            color: Colors.blueAccent,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            widget.onShowMap?.call(alert);
-                          },
-                        ),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _attachToExistingAlert(alert.id);
-                        },
-                      ),
+                      ],
                     );
                   },
                 ),
@@ -630,7 +665,63 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
             ],
           ),
         );
+          },
+        );
       },
+    );
+  }
+
+  Widget _buildMiniMap(AlertModel alert) {
+    if (_position == null || alert.coordinates.length < 2) {
+      return const Center(child: Text('Ubicación no disponible', style: TextStyle(color: Colors.white)));
+    }
+    
+    final userLocation = LatLng(_position!.latitude, _position!.longitude);
+    final alertLocation = LatLng(alert.coordinates[1], alert.coordinates[0]);
+
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: alertLocation,
+        initialZoom: 16.0,
+        interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
+              '?access_token=pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA',
+          userAgentPackageName: 'com.tuempresa.appalertas.app_alertas',
+        ),
+        MarkerLayer(
+          markers: [
+            Marker(
+              point: userLocation,
+              width: 30,
+              height: 30,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(Icons.my_location_rounded, color: Colors.white, size: 14),
+              ),
+            ),
+            Marker(
+              point: alertLocation,
+              width: 30,
+              height: 30,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(Icons.warning_rounded, color: Colors.white, size: 14),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

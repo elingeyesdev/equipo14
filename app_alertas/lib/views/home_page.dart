@@ -3,11 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:app_alertas/views/settings_screen.dart';
-import 'package:app_alertas/views/alert_card.dart';
-import 'package:app_alertas/views/alert_card.dart';
+import 'package:app_alertas/models/alert_model.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final Function(AlertModel)? onAlertTap;
+  const HomePage({super.key, this.onAlertTap});
 
   @override
   State<HomePage> createState() => HomePageState();
@@ -134,7 +134,7 @@ class HomePageState extends State<HomePage> {
                                       label: 'Reportes',
                                     ),
                                     _StatItem(
-                                      value: user.phone ?? '-',
+                                      value: user.phone,
                                       label: 'Teléfono',
                                     ),
                                     if (user.roleName != null) 
@@ -195,9 +195,63 @@ class HomePageState extends State<HomePage> {
               else
                 SliverPadding(
                   padding: const EdgeInsets.only(bottom: 24),
-                  sliver: SliverList(
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 2,
+                      mainAxisSpacing: 2,
+                      childAspectRatio: 0.8,
+                    ),
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => AlertCard(alert: myAlerts[index]),
+                      (context, index) {
+                        final alert = myAlerts[index];
+                        return GestureDetector(
+                          onTap: () => widget.onAlertTap?.call(alert),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF26292E),
+                            ),
+                            clipBehavior: Clip.hardEdge,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: alert.images.isNotEmpty
+                                      ? Image.network(
+                                          alert.images.first,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (ctx, err, stack) =>
+                                              const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                                        )
+                                      : const Center(
+                                          child: Icon(
+                                            Icons.warning_amber_rounded,
+                                            color: Colors.white54,
+                                            size: 32,
+                                          ),
+                                        ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                                  color: const Color(0xFF1E2126),
+                                  child: Text(
+                                    alert.type.toUpperCase(),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                       childCount: myAlerts.length,
                     ),
                   ),

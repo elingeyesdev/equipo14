@@ -76,4 +76,13 @@ class AuthService {
     final response = await _dio.get('/auth/me');
     return UserModel.fromJson(response.data);
   }
+
+  Future<void> logout() async {
+    try {
+      // Llamada al backend para invalidar la sesión
+      await _dio.post('/auth/logout');
+    } catch (_) {
+      // Se ignora el error de red para asegurar que se borre localmente
+    }
+  }
 }

@@ -86,6 +86,9 @@ class SettingsScreen extends StatelessWidget {
                   InkWell(
                     onTap: () async {
                       await auth.logout();
+                      if (context.mounted) {
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      }
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 10.0),
