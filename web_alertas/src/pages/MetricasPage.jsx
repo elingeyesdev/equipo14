@@ -1,9 +1,10 @@
 import Stats from '../components/Stats'
+import DashboardPageShell from '../components/ui/DashboardPageShell'
 
 export default function MetricasPage() {
   return (
-    <div className="app-shell pt-20 pb-12 w-full">
+    <DashboardPageShell>
       <Stats />
-    </div>
+    </DashboardPageShell>
   )
 }

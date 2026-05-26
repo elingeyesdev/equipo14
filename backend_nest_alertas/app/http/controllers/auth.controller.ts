@@ -49,7 +49,9 @@ export class AuthController {
     @ApiBearerAuth()
     @UseGuards(AuthGuard('jwt'))
     async me(@Request() req) {
-        return UserResponse.FromUserToResponse(req.user);
+        const u = req.user;
+        if (u?.id && u?.phone) return u;
+        return UserResponse.FromUserToResponse(u);
     }
 
     @Public()

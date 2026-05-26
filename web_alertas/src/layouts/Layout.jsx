@@ -31,7 +31,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--surface)]">
       <Navbar isHome={isHome} />
-      <main className={`flex-1 ${isHome ? '' : 'pt-16 md:pt-20'}`}>
+      <main className={`flex-1 w-full min-w-0 ${isHome ? '' : 'pt-[4.25rem] md:pt-20'}`}>
         <Outlet />
       </main>
       {!isHome && <Footer />}

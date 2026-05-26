@@ -7,8 +7,11 @@ import { CreateReportRequest, VerifyReportRequest } from '../http/requests/repor
 import { ImagesService } from './images.service';
 import { ReportCoinicdenceResponse, ReportResponse } from 'app/http/requests/reports/response';
 import { ReportType } from 'app/models/report-types.entity';
-
 import { NotificationsService } from './notifications.service';
+import {
+    FilterReportsQuery,
+    REPORT_CATEGORY_TYPE_IDS,
+} from '../http/requests/reports/filter-query';
 
 @Injectable()
 export class ReportsService {
@@ -22,12 +25,10 @@ export class ReportsService {
         private reportTypeRepository: Repository<ReportType>,
 
         private imagesServices: ImagesService,
-        private notificationsService: NotificationsService
+        private notificationsService: NotificationsService,
 
     ){}
-    // revisar esto manana
-    // me gano el sueno, asi capaz este mal algo
-    // Ahora q ya fue revisado parece q esta bien en general
+
     async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
         console.time('upload');
         const user = await this.usersRepository.findOne({where: {id: createReportRequest.userId}})
@@ -40,15 +41,13 @@ export class ReportsService {
         }
         const now = new Date();
         const expires = new Date();
-        expires.setHours(now.getHours() + 24); // expira en 24h (ejemplo)
+        expires.setHours(now.getHours() + 24);
 
         const createReport = createReportRequest.toReport();
 
-        // Prioridad inicial: base_weight + bonus por descripción larga
         let initialWeight = type.base_weight || 1;
         if (createReportRequest.description.length > 100) initialWeight += 2;
-        
-        // La verificacion es por default false por eso ya no se setea aqui
+
         createReport.weight = initialWeight;
         createReport.created_at = now;
         createReport.expires_at = expires;
@@ -59,9 +58,7 @@ export class ReportsService {
         const newReport = this.reportsRepository.create(createReport);
         const savedReport = await this.reportsRepository.save(newReport);
 
-
         const image = await this.imagesServices.createFromReport(savedReport, user, file)
-        
 
         if(!image){
             throw new BadRequestException("Error al subir la imagen")
@@ -74,8 +71,6 @@ export class ReportsService {
         return ReportResponse.FromReportToResponse(savedReport);
     }
 
-    // La funcion retorna lo justo y necesario
-    // Se planteara el uso de un respone si es necesario, pero de momento no
     async addImage(reportId: number, userId: string, file: Express.Multer.File){
         const report = await this.reportsRepository.findOne({
             where: {id: Number(reportId)},
@@ -106,9 +101,6 @@ export class ReportsService {
         return ReportResponse.FromReportToResponse(savedReport)
     }
 
-    // Marcar verificado, opcion reservada solo para el panel administrativo, solo para autoridades
-    // Permitiendo q los pesos para este reporte sean irrelevantes
-    // Y pasando a maxima prioridad
     async verifyReport(id: number) {
         const report = await this.reportsRepository.findOne({
             where: { id: Number(id) },
@@ -132,6 +124,7 @@ export class ReportsService {
         }
         return ReportResponse.FromReportToResponse(report)
     }
+
     async findByUserId(userId: string) {
         const reports = await this.reportsRepository.find({
             where: {
@@ -147,16 +140,56 @@ export class ReportsService {
         return ReportResponse.FromReportListToResponse(reports)
     }
 
-    async findAll(){
-        const reports = await this.reportsRepository.find({
-            //aqui se cargan las relaciones
-            relations: ['creator', 'images', 'images.uploadedBy', 'type'],
-            order: {
-                id: 'ASC'
-            }
-        });
+    async findAll(filters?: FilterReportsQuery) {
+        const qb = this.reportsRepository
+            .createQueryBuilder('report')
+            .leftJoinAndSelect('report.creator', 'creator')
+            .leftJoinAndSelect('report.type', 'type')
+            .leftJoinAndSelect('report.images', 'images')
+            .leftJoinAndSelect('images.uploadedBy', 'uploadedBy');
 
-        return ReportResponse.FromReportListToResponse(reports)
+        if (filters?.typeId) {
+            qb.andWhere('type.id = :typeId', { typeId: Number(filters.typeId) });
+        }
+
+        if (filters?.category && REPORT_CATEGORY_TYPE_IDS[filters.category]) {
+            qb.andWhere('type.id IN (:...categoryIds)', {
+                categoryIds: REPORT_CATEGORY_TYPE_IDS[filters.category],
+            });
+        }
+
+        if (filters?.status === 'verified') {
+            qb.andWhere('report.verified = true');
+        } else if (filters?.status === 'pending') {
+            qb.andWhere('report.verified = false');
+        }
+
+        if (filters?.zone && filters.zone !== 'all') {
+            qb.andWhere('TRIM(report.zone) = :zone', { zone: filters.zone.trim() });
+        }
+
+        if (filters?.from) {
+            qb.andWhere('report.created_at >= :from', {
+                from: new Date(`${filters.from}T00:00:00`),
+            });
+        }
+
+        if (filters?.to) {
+            qb.andWhere('report.created_at <= :to', {
+                to: new Date(`${filters.to}T23:59:59`),
+            });
+        }
+
+        if (filters?.search?.trim()) {
+            const q = `%${filters.search.trim().toLowerCase()}%`;
+            qb.andWhere(
+                `(LOWER(report.description) LIKE :q OR LOWER(report.zone) LIKE :q OR LOWER(type.name) LIKE :q OR CAST(report.id AS TEXT) LIKE :q)`,
+                { q },
+            );
+        }
+
+        const reports = await qb.orderBy('report.created_at', 'DESC').getMany();
+        return ReportResponse.FromReportListToResponse(reports);
     }
 
     async findNearby(latitude: number, longitude: number, radius: number) {
@@ -200,7 +233,7 @@ export class ReportsService {
                 {
                     latitude,
                     longitude,
-                    radius: 100, // metros (aumentado para mejor UX)
+                    radius: 100,
                 }
             )
             .andWhere('type.id = :typeId', { typeId: type })
@@ -211,7 +244,7 @@ export class ReportsService {
             .getMany();
         return ReportCoinicdenceResponse.FromReportListToResponse(usersCoincidence)
     }
-    
+
     async remove(id: string){
         const result = await this.reportsRepository.delete(id);
 

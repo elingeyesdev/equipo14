@@ -1,16 +1,27 @@
-import { useState } from 'react'
-import { useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useLocation, useNavigate, Navigate, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import PageContainer from '../components/ui/PageContainer'
-import { Shield } from 'lucide-react'
+import InputWithIcon from '../components/ui/InputWithIcon'
+import PasswordInput from '../components/ui/PasswordInput'
+import { Shield, Phone, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [apiOnline, setApiOnline] = useState(null)
   const { login, loading, error, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from || '/mapa'
+
+  useEffect(() => {
+    const base = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api'
+    fetch(`${base}/report-types`)
+      .then((r) => setApiOnline(r.ok))
+      .catch(() => setApiOnline(false))
+  }, [])
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />
@@ -23,59 +34,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="app-shell pt-28 pb-20 flex items-center justify-center min-h-screen">
-      <PageContainer className="max-w-md w-full">
-        <div className="admin-card p-8">
-          <div className="flex justify-center mb-6">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--btn-primary-bg)]">
-              <Shield className="h-8 w-8 text-[var(--btn-primary-fg)]" strokeWidth={2} />
-            </div>
+    <div className="login-page">
+      <PageContainer className="max-w-[440px] w-full">
+        <motion.div
+          className="admin-card login-card"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="login-card-icon">
+            <Shield className="h-8 w-8 text-[var(--btn-primary-fg)]" strokeWidth={2} />
           </div>
-          <h1 className="text-2xl font-bold text-center text-[var(--ink)] mb-2">
-            Iniciar sesión
-          </h1>
-          <p className="text-center text-[var(--body)] mb-8 text-sm">
-            Accede al mapa en vivo y herramientas según tu rol (ciudadano o autoridad).
+
+          <h1 className="login-card-title">Bienvenido a Alertas</h1>
+          <p className="login-card-subtitle">
+            Accede con tu cuenta al mapa en vivo y herramientas según tu rol.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-[var(--ink)] mb-1">Teléfono</label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-2.5 rounded-lg border border-[var(--border-strong)] bg-[var(--elevated)] text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-                placeholder="Ej. +591..."
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+          {apiOnline === false && (
+            <div className="login-alert login-alert--warn">
+              El backend no responde. Ejecuta <code>npm run start:dev</code> en{' '}
+              <code>backend_nest_alertas</code> y reinicia la web.
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--ink)] mb-1">Contraseña</label>
-              <input
-                type="password"
-                required
-                className="w-full px-4 py-2.5 rounded-lg border border-[var(--border-strong)] bg-[var(--elevated)] text-[var(--ink)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+          )}
+
+          {apiOnline === true && (
+            <p className="login-alert login-alert--ok">
+              <span className="login-status-dot" />
+              Servidor conectado
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <InputWithIcon
+              id="phone"
+              label="Teléfono"
+              icon={Phone}
+              type="tel"
+              inputMode="numeric"
+              maxLength={8}
+              required
+              autoComplete="tel"
+              placeholder="98765432"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
+            />
+
+            <PasswordInput
+              id="password"
+              label="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
 
             {error && (
-              <div className="p-3 rounded-lg border border-[var(--danger)]/30 bg-red-500/10 text-sm text-[var(--danger)]">
+              <div className="auth-error" role="alert">
                 {error}
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="w-full btn-primary py-3">
+            <button type="submit" disabled={loading} className="w-full btn-primary !h-11">
               {loading ? (
-                <span className="inline-block h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Verificando…
+                </span>
               ) : (
-                'Entrar al mapa'
+                <span className="inline-flex items-center gap-2">
+                  Entrar al sistema
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               )}
             </button>
           </form>
-        </div>
+
+          <p className="login-footnote">Teléfono de 8 dígitos · misma cuenta que la app móvil</p>
+
+          <Link to="/" className="login-back">
+            ← Volver al inicio
+          </Link>
+        </motion.div>
       </PageContainer>
     </div>
   )

@@ -1,7 +1,12 @@
 import { api } from './apiClient'
 
-export async function getAllReports() {
-  return api.get('/reports')
+export async function getAllReports(params = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v != null && v !== '') qs.append(k, v)
+  })
+  const query = qs.toString()
+  return api.get(query ? `/reports?${query}` : '/reports')
 }
 
 export async function getNearbyReports(latitude, longitude, radius = 5000) {

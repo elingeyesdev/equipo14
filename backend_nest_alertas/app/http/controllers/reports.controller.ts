@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile } from '@nestjs/common';
 import { ReportsService } from '../../services/reports.service';
 import { CreateReportRequest, VerifyReportRequest } from '../requests/reports/request';
+import { FilterReportsQuery } from '../requests/reports/filter-query';
 import { ApiAddImageUpload, ApiImageUpload } from '../../decorators/request.decorator';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
@@ -37,8 +38,8 @@ export class ReportsController {
     }
 
     @Get()
-    findAll(){
-        return this.reportsService.findAll()
+    findAll(@Query() filters: FilterReportsQuery) {
+        return this.reportsService.findAll(filters);
     }
 
     // este endpoint devuelve los reportes en un radio de proximo
