@@ -34,17 +34,32 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page">
-      <PageContainer className="max-w-[440px] w-full">
+    <div className="login-page login-premium-bg relative overflow-hidden">
+      {/* Background orbs */}
+      <div className="absolute top-[10%] left-[15%] w-[400px] h-[400px] rounded-full opacity-[0.06] animate-morph pointer-events-none"
+        style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+        aria-hidden
+      />
+      <div className="absolute bottom-[10%] right-[10%] w-[300px] h-[300px] rounded-full opacity-[0.04] animate-morph pointer-events-none"
+        style={{ background: 'linear-gradient(135deg, #7c3aed, #ec4899)', animationDelay: '4s' }}
+        aria-hidden
+      />
+
+      <PageContainer className="max-w-[440px] w-full relative z-10">
         <motion.div
-          className="admin-card login-card"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="admin-card login-card glass-card"
+          initial={{ opacity: 0, y: 20, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="login-card-icon">
+          <motion.div
+            className="login-card-icon"
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.15 }}
+          >
             <Shield className="h-8 w-8 text-[var(--btn-primary-fg)]" strokeWidth={2} />
-          </div>
+          </motion.div>
 
           <h1 className="login-card-title">Bienvenido a Alertas</h1>
           <p className="login-card-subtitle">
@@ -52,17 +67,26 @@ export default function LoginPage() {
           </p>
 
           {apiOnline === false && (
-            <div className="login-alert login-alert--warn">
+            <motion.div
+              className="login-alert login-alert--warn"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+            >
               El backend no responde. Ejecuta <code>npm run start:dev</code> en{' '}
               <code>backend_nest_alertas</code> y reinicia la web.
-            </div>
+            </motion.div>
           )}
 
           {apiOnline === true && (
-            <p className="login-alert login-alert--ok">
+            <motion.p
+              className="login-alert login-alert--ok"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
               <span className="login-status-dot" />
               Servidor conectado
-            </p>
+            </motion.p>
           )}
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -89,9 +113,14 @@ export default function LoginPage() {
             />
 
             {error && (
-              <div className="auth-error" role="alert">
+              <motion.div
+                className="auth-error"
+                role="alert"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
                 {error}
-              </div>
+              </motion.div>
             )}
 
             <button type="submit" disabled={loading} className="w-full btn-primary !h-11">
