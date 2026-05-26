@@ -853,6 +853,16 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
 }
 
+.mapbox-3d-root .mapboxgl-map,
+.mapbox-3d-root .mapboxgl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mapbox-3d-root .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl-attrib {
+  font-size: 10px;
+}
+
 @media (min-width: 1024px) {
   .map-sidebar {
     order: 1;

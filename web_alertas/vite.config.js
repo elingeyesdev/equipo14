@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     server: {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
       proxy: {
         '/api': {
           target: apiTarget,

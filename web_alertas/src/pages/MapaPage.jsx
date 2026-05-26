@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Layers } from 'lucide-react'
-import MapaInteractivo, { MapZonePanel } from '../components/MapaInteractivo'
+import MapZonePanel from '../components/MapZonePanel'
+
+const MapaInteractivo = lazy(() => import('../components/MapaInteractivo'))
 import IncidentFilterBar from '../components/filters/IncidentFilterBar'
 import DashboardPageShell, { DashboardPageHeader } from '../components/ui/DashboardPageShell'
 import { useReportFilters } from '../context/ReportFilterContext'
@@ -61,14 +63,22 @@ export default function MapaPage() {
         </aside>
 
         <div className="admin-card map-canvas-wrap">
-          <MapaInteractivo
-            className="h-full w-full"
-            showZones={showZones}
-            selectedZone={selectedZone}
-            onZoneSelect={setSelectedZone}
-            externalReports={filteredReports}
-            externalLoading={loading}
-          />
+          <Suspense
+            fallback={
+              <div className="flex h-full min-h-[320px] items-center justify-center text-sm text-[var(--muted)]">
+                Cargando mapa Mapbox 3D…
+              </div>
+            }
+          >
+            <MapaInteractivo
+              className="h-full w-full"
+              showZones={showZones}
+              selectedZone={selectedZone}
+              onZoneSelect={setSelectedZone}
+              externalReports={filteredReports}
+              externalLoading={loading}
+            />
+          </Suspense>
         </div>
       </div>
     </DashboardPageShell>
