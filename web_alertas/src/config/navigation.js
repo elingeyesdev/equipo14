@@ -1,11 +1,23 @@
 export const NAV_ITEMS = [
   { path: '/', label: 'Inicio', end: true },
-  { path: '/producto', label: 'Producto' },
-  { path: '/como-funciona', label: 'Cómo funciona' },
-  { path: '/mapa', label: 'Mapa' },
-  { path: '/tecnologia', label: 'Tecnología' },
+  { path: '/mapa', label: 'Mapa en vivo' },
   { path: '/metricas', label: 'Métricas' },
-  { path: '/testimonios', label: 'Testimonios' },
+  { path: '/admin', label: 'Panel Admin' },
+  { path: '/reportes', label: 'Reportes' },
+]
+
+/** Anclas de la landing (scroll en inicio) */
+export const LANDING_SECTIONS = [
+  { id: 'beneficios', label: 'Producto' },
+  { id: 'mapa-live', label: 'Mapa' },
+  { id: 'tecnologia', label: 'Tecnología' },
 ]
 
 export const CTA_PATH = '/descarga'
+
+export function scrollToLandingSection(id) {
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}

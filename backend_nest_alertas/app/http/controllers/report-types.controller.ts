@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Param, Post, Get, Request } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody } from "@nestjs/swagger";
 import { ReportTypesService } from "app/services/report-types.service";
+import { Public } from "app/decorators/public.decorator";
 
 @ApiBearerAuth()
 @Controller('report-types')
@@ -22,6 +23,7 @@ export class ReportTypeController{
         return this.reportTypesService.create(name)
     }
 
+    @Public()
     @Get()
     findAll(){
         return this.reportTypesService.findAll()

@@ -2,23 +2,45 @@ import { motion } from 'framer-motion'
 import SectionHeader from './ui/SectionHeader'
 import PageContainer from './ui/PageContainer'
 import { FadeUp } from './ui/Animate'
-
-const stats = [
-  { value: '50K+', label: 'Alertas procesadas', sub: 'Desde el lanzamiento en 12 ciudades' },
-  { value: '12K+', label: 'Usuarios activos', sub: 'Vecinos registrados y verificados' },
-  { value: '<30s', label: 'Latencia media', sub: 'Del reporte a la notificación push' },
-  { value: '99.9%', label: 'Uptime del sistema', sub: 'Canales WebSocket monitoreados 24/7' },
-]
-
-const bars = [42, 58, 48, 72, 85, 78, 65, 92, 70, 88, 55, 80]
-
-const highlights = [
-  { label: 'Reportes verificados', value: '98.4%' },
-  { label: 'Zonas cubiertas', value: '47' },
-  { label: 'Incidentes evitados*', value: '2.1K' },
-]
+import { useReports } from '../hooks/useReports'
+import { useStats } from '../hooks/useStats'
 
 export default function Stats() {
+  const { reports, loading } = useReports()
+  const { total, verified, verifiedPct, zones, today, byType } = useStats(reports)
+
+  const typeNames = Object.keys(byType)
+  const maxCount = Math.max(...Object.values(byType), 1)
+
+  const stats = [
+    {
+      value: loading ? '...' : `${total}`,
+      label: 'Alertas procesadas',
+      sub: 'Total acumulado en la base de datos',
+    },
+    {
+      value: loading ? '...' : `${today}`,
+      label: 'Alertas hoy',
+      sub: 'Reportes creados en el día actual',
+    },
+    {
+      value: loading ? '...' : verifiedPct,
+      label: 'Verificación',
+      sub: 'Reportes confirmados por autoridades',
+    },
+    {
+      value: loading ? '...' : `${zones}`,
+      label: 'Zonas cubiertas',
+      sub: 'Zonas distintas con actividad registrada',
+    },
+  ]
+
+  const highlights = [
+    { label: 'Reportes verificados', value: loading ? '...' : `${verified}` },
+    { label: 'Zonas activas', value: loading ? '...' : `${zones}` },
+    { label: 'Total reportes', value: loading ? '...' : `${total}` },
+  ]
+
   return (
     <PageContainer>
       <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 items-start">
@@ -26,7 +48,7 @@ export default function Stats() {
           <SectionHeader
             label="Métricas"
             title="Impacto medible en la comunidad"
-            description="Datos reales de una plataforma construida para velocidad, confiabilidad y escala urbana."
+            description="Datos reales extraídos de la base de datos en tiempo real."
           />
 
           <div className="grid grid-cols-2 gap-5 lg:gap-6">
@@ -53,45 +75,73 @@ export default function Stats() {
               </div>
             ))}
           </div>
-          <p className="text-sm text-muted-readable mt-4">* Estimado según encuestas a usuarios activos.</p>
+          <p className="text-sm text-muted-readable mt-4">* Datos en tiempo real desde la base de datos.</p>
         </div>
 
         <FadeUp>
           <div className="card p-7 lg:p-8 shadow-elevated">
             <div className="flex items-center justify-between mb-6 pb-5 border-b border-zinc-100">
               <div>
-                <p className="text-lg font-bold text-zinc-900">Actividad de alertas</p>
-                <p className="text-base text-muted-readable mt-1">Últimas 24 horas · todos los nodos</p>
+                <p className="text-lg font-bold text-zinc-900">Actividad por tipo de alerta</p>
+                <p className="text-base text-muted-readable mt-1">
+                  {loading ? 'Cargando...' : `${total} reportes totales · base de datos`}
+                </p>
               </div>
               <span className="text-sm font-semibold text-teal-900 bg-teal-50 border border-teal-100 px-3 py-1.5 rounded-lg">
-                Operativo
+                {loading ? '...' : 'Operativo'}
               </span>
             </div>
 
-            <div className="flex items-end gap-2 h-48 lg:h-52">
-              {bars.map((h, idx) => (
-                <motion.div
-                  key={idx}
-                  className="flex-1 rounded-md bg-zinc-200 hover:bg-teal-600 transition-colors"
-                  initial={{ height: 0 }}
-                  animate={{ height: `${h}%` }}
-                  transition={{ delay: 0.15 + idx * 0.03, duration: 0.4 }}
-                />
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex items-center justify-center h-48">
+                <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : typeNames.length === 0 ? (
+              <div className="flex items-center justify-center h-48 text-muted-readable">
+                Sin datos disponibles
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {typeNames.map((name, idx) => {
+                  const count = byType[name]
+                  const pct = Math.round((count / maxCount) * 100)
+                  return (
+                    <motion.div
+                      key={name}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + idx * 0.05 }}
+                    >
+                      <div className="flex justify-between text-sm font-medium text-zinc-800 mb-1">
+                        <span>{name}</span>
+                        <span className="text-teal-700 font-bold">{count}</span>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-zinc-200 overflow-hidden">
+                        <motion.div
+                          className="h-full rounded-full bg-teal-600"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ delay: 0.2 + idx * 0.05, duration: 0.5 }}
+                        />
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-6 mt-8 pt-6 border-t border-zinc-100">
               <div>
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Carga</p>
-                <p className="text-lg font-bold text-zinc-900 mt-1">384 req/s</p>
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Total</p>
+                <p className="text-lg font-bold text-zinc-900 mt-1">{loading ? '...' : total}</p>
               </div>
               <div>
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Push OK</p>
-                <p className="text-lg font-bold text-zinc-900 mt-1">99.98%</p>
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Verificados</p>
+                <p className="text-lg font-bold text-zinc-900 mt-1">{loading ? '...' : verified}</p>
               </div>
               <div>
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Verificación</p>
-                <p className="text-lg font-bold text-zinc-900 mt-1">98.4%</p>
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Hoy</p>
+                <p className="text-lg font-bold text-zinc-900 mt-1">{loading ? '...' : today}</p>
               </div>
             </div>
           </div>

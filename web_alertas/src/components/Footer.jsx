@@ -26,7 +26,7 @@ export default function Footer() {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className="text-base text-body hover:text-teal-800 transition-colors"
+                    className="text-base text-body hover:text-blue-700 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -54,7 +54,7 @@ export default function Footer() {
 
         <div className="mt-12 pt-8 border-t border-zinc-100 flex flex-col sm:flex-row justify-between gap-4 text-base text-muted-readable">
           <p>© {new Date().getFullYear()} Alertas. Todos los derechos reservados.</p>
-          <p className="text-teal-800 font-semibold">Hecho para ciudades más seguras.</p>
+          <p className="text-blue-700 font-semibold">Hecho para ciudades más seguras.</p>
         </div>
       </div>
     </footer>

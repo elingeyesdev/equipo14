@@ -148,13 +148,14 @@ export class ReportsService {
     }
 
     async findAll(){
-        const reports = await this.reportsRepository.find({
-            //aqui se cargan las relaciones
-            relations: ['creator', 'images', 'images.uploadedBy', 'type'],
-            order: {
-                id: 'ASC'
-            }
-        });
+        const reports = await this.reportsRepository
+            .createQueryBuilder('report')
+            .leftJoinAndSelect('report.creator', 'creator')
+            .leftJoinAndSelect('report.type', 'type')
+            .leftJoinAndSelect('report.images', 'images')
+            .leftJoinAndSelect('images.uploadedBy', 'uploadedBy')
+            .orderBy('report.id', 'ASC')
+            .getMany();
 
         return ReportResponse.FromReportListToResponse(reports)
     }

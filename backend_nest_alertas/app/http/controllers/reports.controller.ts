@@ -3,7 +3,6 @@ import { ReportsService } from '../../services/reports.service';
 import { CreateReportRequest, VerifyReportRequest } from '../requests/reports/request';
 import { ApiAddImageUpload, ApiImageUpload } from '../../decorators/request.decorator';
 import { ApiBearerAuth } from '@nestjs/swagger';
-
 @ApiBearerAuth()
 @Controller('reports')
 export class ReportsController {
@@ -41,7 +40,6 @@ export class ReportsController {
         return this.reportsService.findAll()
     }
 
-    // este endpoint devuelve los reportes en un radio de proximo
     @Get('/nearby')
     findNearby(
         @Query('latitude') latitude: string,
@@ -60,14 +58,14 @@ export class ReportsController {
         return this.reportsService.findCoincidences(verifyReportRequest)
     }
 
-    @Get(':id')
-    findOne(@Param('id') id:string){
-        return this.reportsService.findOne(id)
-    }
-
     @Get('/user/:userId')
     findByUser(@Param('userId') userId: string) {
         return this.reportsService.findByUserId(userId);
+    }
+
+    @Get(':id')
+    findOne(@Param('id') id:string){
+        return this.reportsService.findOne(id)
     }
 
     @Delete(':id')
