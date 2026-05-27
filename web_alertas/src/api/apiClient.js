@@ -1,7 +1,6 @@
-// En dev, el proxy de Vite evita CORS: /api → túnel o backend local
-const BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? '/api' : 'http://127.0.0.1:3000/api')
+import { API_BASE_URL } from '../config/api'
+
+const BASE_URL = API_BASE_URL
 
 function getToken() {
   return localStorage.getItem('admin_token')

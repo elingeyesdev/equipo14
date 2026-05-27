@@ -27,7 +27,7 @@ export default function SectionHeader({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-60px' }}
         transition={{ duration: 0.5, delay: 0.04 }}
-        className="text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-zinc-950 leading-[1.1]"
+        className="text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[var(--ink)] leading-[1.1]"
       >
         {title}
       </motion.h2>
@@ -37,7 +37,7 @@ export default function SectionHeader({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.5, delay: 0.08 }}
-          className={`mt-4 text-base text-zinc-500 leading-[1.7] ${centered ? 'mx-auto' : ''} max-w-lg`}
+          className={`mt-4 text-base text-[var(--body)] leading-[1.7] ${centered ? 'mx-auto' : ''} max-w-lg`}
         >
           {description}
         </motion.p>
