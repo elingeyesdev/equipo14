@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_alertas/views/map_screen.dart';
 import 'package:app_alertas/views/create_alert_screen.dart';
 import 'package:app_alertas/views/recent_activity_screen.dart';
-import 'package:app_alertas/views/home_page.dart'; // the new HomePage (profile)
+import 'package:app_alertas/views/home_page.dart';
 import 'package:app_alertas/models/alert_model.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -52,7 +52,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: PageView(
           controller: _pageController,
           physics: currentIndex == 0
-              ? const NeverScrollableScrollPhysics() // Desactivar swipe en el mapa para poder moverlo libremente
+              ? const NeverScrollableScrollPhysics() 
               : const BouncingScrollPhysics(),
           onPageChanged: (index) {
             if (index == 0) _mapKey.currentState?.reload();
@@ -66,7 +66,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             CreateAlertScreen(
               key: _createAlertKey,
               onCreated: () {
-                // Solo recargamos el perfil ya que el usuario es redirigido allí.
                 _homePageKey.currentState?.reload();
                 setState(() => currentIndex = 3);
                 if (_pageController.hasClients) {

@@ -9,6 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/services/tracking_service.dart';
 
 String _mapboxDarkTileUrl() =>
     'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
@@ -61,6 +64,10 @@ class _MapRouteScreenState extends State<MapRouteScreen>
   List<LatLng> _routePoints = [];
   bool _isLoadingRoute = false;
   DateTime? _lastRouteUpdate;
+  
+  // Tracking
+  final _trackingService = TrackingService();
+  Timer? _trackingTimer;
 
   // Animación del vehículo
   late AnimationController _vehicleAnimController;
@@ -94,6 +101,11 @@ class _MapRouteScreenState extends State<MapRouteScreen>
   void dispose() {
     _positionSubscription?.cancel();
     _vehicleAnimController.dispose();
+    if (_isFollowingRoute) {
+      final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
+      _trackingService.stopTracking(userId);
+    }
+    _trackingTimer?.cancel();
     super.dispose();
   }
 
@@ -197,6 +209,12 @@ class _MapRouteScreenState extends State<MapRouteScreen>
   void _stopNavigation() {
     _positionSubscription?.cancel();
     _positionSubscription = null;
+    
+    _trackingTimer?.cancel();
+    _trackingTimer = null;
+    final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
+    _trackingService.stopTracking(userId);
+
     if (mounted) {
       setState(() => _isFollowingRoute = false);
     }
@@ -293,6 +311,11 @@ class _MapRouteScreenState extends State<MapRouteScreen>
       if (!mounted) return;
       setState(() => _isFollowingRoute = true);
 
+      _trackingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        _updateTrackingData();
+      });
+      _updateTrackingData();
+
       if (_currentLocation != null) {
         _mapController.move(_currentLocation!, 17);
       }
@@ -345,6 +368,25 @@ class _MapRouteScreenState extends State<MapRouteScreen>
         _isFollowingRoute = false;
       });
     }
+  }
+
+  void _updateTrackingData() {
+    if (!_isFollowingRoute || _currentLocation == null) return;
+    
+    final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
+    
+    final routeCoordinates = _routePoints.map((p) => {
+      'lat': p.latitude,
+      'lng': p.longitude,
+    }).toList();
+
+    _trackingService.startTracking(userId, {
+      'latitude': _currentLocation!.latitude,
+      'longitude': _currentLocation!.longitude,
+      'type': widget.type,
+      'description': widget.description,
+      'route': routeCoordinates,
+    });
   }
 
   /// Elige el icono de vehículo según el tipo de emergencia.

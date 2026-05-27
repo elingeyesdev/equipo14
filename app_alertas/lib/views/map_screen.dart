@@ -10,11 +10,13 @@ import 'package:app_alertas/services/fcm_service.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/views/alert_card.dart';
+import 'package:app_alertas/services/tracking_service.dart';
+import 'dart:async';
 
 /// Raster tiles
 String _mapboxDarkTileUrl() =>
     'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
-    '??access_token=${ApiConstants.mapboxToken}';
+    '?access_token=${ApiConstants.mapboxToken}';
 
 class MapScreen extends StatefulWidget {
   final AlertModel? initialAlert;
@@ -33,12 +35,17 @@ class MapScreenState extends State<MapScreen> {
   bool _loadingAlerts = true;
   bool _isAuthority = false;
 
+  // Tracking
+  final _trackingService = TrackingService();
+  StreamSubscription? _trackingSub;
+  List<Map<String, dynamic>> _activeVehicles = [];
+  String? _selectedVehicleId;
+
   // Variables para la ubicación personalizada
   LatLng? customLocation;
   bool isCustomLocationActive = false;
   bool isEditingCustomLocation = false;
 
-  /// Radio de `/reports/nearby` en km (usuarios no autoridad). Por defecto 5 km.
   double _radiusKm = 5.0;
   bool _radiusPanelOpen = false;
 
@@ -58,6 +65,24 @@ class MapScreenState extends State<MapScreen> {
         _showAlertBottomSheet(widget.initialAlert!);
       });
     }
+
+    _trackingSub = _trackingService.streamTrackings().listen((vehicles) {
+      if (mounted) {
+        setState(() {
+          _activeVehicles = vehicles;
+          // Si el vehículo seleccionado ya no existe, borrar la selección
+          if (_selectedVehicleId != null && !vehicles.any((v) => v['id'] == _selectedVehicleId)) {
+            _selectedVehicleId = null;
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _trackingSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -281,6 +306,17 @@ class MapScreenState extends State<MapScreen> {
     return Icons.warning_amber_rounded;
   }
 
+  IconData _vehicleIconByType(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('ambulancia') || t.contains('medic') || t.contains('salud')) {
+      return Icons.local_hospital_rounded;
+    }
+    if (t.contains('bombero') || t.contains('incendio')) {
+      return Icons.local_fire_department_rounded;
+    }
+    return Icons.directions_car_rounded;
+  }
+
   Color _colorByType(String type) {
     final t = type.toLowerCase();
     if (t.contains('robo') || t.contains('hurto')) return const Color(0xFFEF4444);
@@ -308,6 +344,9 @@ class MapScreenState extends State<MapScreen> {
                     initialZoom: widget.initialAlert != null ? 18 : 13,
                     maxZoom: 22,
                     onTap: (tapPosition, point) {
+                      setState(() {
+                        _selectedVehicleId = null; // Ocultar ruta de movilidad
+                      });
                       if (isEditingCustomLocation) {
                         setState(() {
                           customLocation = point;
@@ -336,9 +375,74 @@ class MapScreenState extends State<MapScreen> {
                           ),
                         ],
                       ),
+                    
+                    // Polyline de la ruta del vehículo seleccionado
+                    if (_selectedVehicleId != null)
+                      ...() {
+                        final selectedVehicle = _activeVehicles.where((v) => v['id'] == _selectedVehicleId).firstOrNull;
+                        if (selectedVehicle != null && selectedVehicle['route'] != null) {
+                          final routeData = selectedVehicle['route'] as List;
+                          final points = routeData.map((p) => LatLng(p['lat'] as double, p['lng'] as double)).toList();
+                          return [
+                            PolylineLayer(
+                              polylines: [
+                                Polyline(
+                                  points: points,
+                                  strokeWidth: 6,
+                                  color: Colors.blueAccent,
+                                  strokeCap: StrokeCap.round,
+                                  strokeJoin: StrokeJoin.round,
+                                ),
+                              ],
+                            )
+                          ];
+                        }
+                        return [];
+                      }(),
+
                     MarkerLayer(
                       markers: [
                         ..._buildAlertMarkers(),
+                        
+                        // Marcadores de Vehículos en movimiento
+                        ..._activeVehicles.map((vehicle) {
+                          final lat = vehicle['latitude'] as double;
+                          final lng = vehicle['longitude'] as double;
+                          final type = vehicle['type'] as String? ?? 'Desconocido';
+                          final isSelected = vehicle['id'] == _selectedVehicleId;
+                          
+                          return Marker(
+                            point: LatLng(lat, lng),
+                            width: 50,
+                            height: 50,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedVehicleId = vehicle['id'] as String;
+                                });
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isSelected ? Colors.green : const Color(0xFF3B82F6),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (isSelected ? Colors.green : const Color(0xFF3B82F6)).withValues(alpha: 0.55),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: Icon(
+                                  _vehicleIconByType(type),
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
                         if (currentLocation != null)
                           Marker(
                             point: currentLocation!,
