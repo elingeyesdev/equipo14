@@ -173,7 +173,7 @@ export default function MapaPage() {
           <Suspense
             fallback={
               <div className="flex h-full min-h-[320px] items-center justify-center text-sm text-[var(--muted)]">
-                Cargando mapa Mapbox 3D…
+                Cargando mapa…
               </div>
             }
           >

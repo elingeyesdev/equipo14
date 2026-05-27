@@ -6,6 +6,7 @@ import PageContainer from '../components/ui/PageContainer'
 import InputWithIcon from '../components/ui/InputWithIcon'
 import PasswordInput from '../components/ui/PasswordInput'
 import { Shield, Phone, ArrowRight } from 'lucide-react'
+import { API_BASE_URL } from '../config/api'
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('')
@@ -17,8 +18,7 @@ export default function LoginPage() {
   const from = location.state?.from || '/mapa'
 
   useEffect(() => {
-    const base = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api'
-    fetch(`${base}/report-types`)
+    fetch(`${API_BASE_URL}/report-types`)
       .then((r) => setApiOnline(r.ok))
       .catch(() => setApiOnline(false))
   }, [])
