@@ -1,4 +1,4 @@
-import { ChevronDown, Crosshair, MapPin, Radar, RotateCcw } from 'lucide-react'
+import { ChevronDown, Crosshair, MapPin, Radar } from 'lucide-react'
 import { RADIUS_KM_MAX, RADIUS_KM_MIN } from '../../utils/geo'
 
 export default function MapRadiusControls({

@@ -113,7 +113,7 @@ class EmergencyServicesScreen extends StatelessWidget {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               itemCount: _services.length,
-              separatorBuilder: (_, __) => Divider(
+              separatorBuilder: (context, index) => Divider(
                 color: Colors.white.withValues(alpha: 0.08),
                 height: 24,
                 thickness: 0.5,

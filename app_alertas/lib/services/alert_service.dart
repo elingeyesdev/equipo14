@@ -52,7 +52,7 @@ class AlertService {
       'userId': userId,
       'latitude': latitude.toString(),
       'longitude': longitude.toString(),
-      if (zone != null) 'zone': zone,
+      'zone': ?zone,
     });
 
     if (imageFile != null) {

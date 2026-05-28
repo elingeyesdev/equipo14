@@ -71,7 +71,7 @@ export default function DownloadSection() {
             <div className="rounded-2xl bg-zinc-900/60 border border-zinc-700/60 p-8 lg:p-9 backdrop-blur-sm">
               <h3 className="text-xl font-semibold text-white mb-6">Incluye en la app</h3>
               <ul className="space-y-4">
-                {features.map((f, i) => (
+                {features.map((f) => (
                   <li key={f} className="flex items-center gap-3 text-base text-zinc-200">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15">
                       <Check className="w-4 h-4 text-emerald-400 shrink-0" strokeWidth={2.5} />
