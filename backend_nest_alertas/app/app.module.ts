@@ -16,9 +16,11 @@ import { NotificationsModule } from './providers/notifications.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtStrategy } from './guards/strategies/jwt.strategy';
 import { JwtGuard } from './guards/jwt.guard';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig, databaseConfig, jwtConfig]
