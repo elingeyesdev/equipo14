@@ -1,6 +1,6 @@
-import { API_BASE_URL } from '../config/api'
-
-const BASE_URL = API_BASE_URL
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? '/api' : 'http://127.0.0.1:3000/api')
 
 const USER_KEY = 'alertas_user'
 
@@ -23,7 +23,7 @@ export async function login(phone, password) {
       body: JSON.stringify({ phone: String(phone).trim(), password }),
     })
   } catch (err) {
-    throw new Error(formatAuthError(err) || err.message)
+    throw new Error(formatAuthError(err) || err.message, { cause: err })
   }
 
   if (!res.ok) {

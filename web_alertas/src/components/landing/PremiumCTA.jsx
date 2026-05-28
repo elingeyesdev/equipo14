@@ -100,7 +100,7 @@ export default function PremiumCTA() {
             </Link>
           </div>
 
-          <p className="mt-16 text-[11px] text-zinc-700">
+          <p className="mt-16 text-[12px] text-zinc-400 font-medium">
             © {new Date().getFullYear()} Alertas · Seguridad ciudadana en tiempo real
           </p>
         </motion.div>

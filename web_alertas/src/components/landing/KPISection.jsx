@@ -107,7 +107,7 @@ export default function KPISection() {
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5">
           {kpis.map((kpi, i) => {
             const Icon = kpi.icon
             return (
@@ -117,7 +117,7 @@ export default function KPISection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-40px' }}
                 transition={{ delay: i * 0.08, duration: 0.45, ease }}
-                className="group relative card-premium shimmer-overlay p-5 text-center cursor-default"
+                className="group relative card-premium shimmer-overlay p-6 text-center cursor-default min-h-[175px] flex flex-col justify-between"
               >
                 {/* Hover glow */}
                 <div
@@ -128,16 +128,18 @@ export default function KPISection() {
                 <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-[1rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                   style={{ background: kpi.gradient }} />
 
-                <div className="relative z-10">
-                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+                <div className="relative z-10 flex flex-col items-center justify-between h-full">
+                  <div className="mx-auto mb-3.5 flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                     style={{ background: kpi.gradient }}>
-                    <Icon className="h-5 w-5 text-white" strokeWidth={1.75} />
+                    <Icon className="h-5.5 w-5.5 text-white" strokeWidth={2} />
                   </div>
-                  <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--ink)]">
-                    <AnimatedValue target={kpi.value} suffix={kpi.suffix} />
-                  </p>
-                  <p className="mt-1.5 text-[13px] font-semibold text-[var(--ink)]">{kpi.label}</p>
-                  <p className="mt-1 text-[11px] text-[var(--muted)] leading-snug hidden sm:block">{kpi.desc}</p>
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--ink)]">
+                      <AnimatedValue target={kpi.value} suffix={kpi.suffix} />
+                    </p>
+                    <p className="mt-2 text-[13.5px] font-bold text-[var(--ink)]">{kpi.label}</p>
+                    <p className="mt-1.5 text-[11.5px] text-[var(--muted)] leading-relaxed block">{kpi.desc}</p>
+                  </div>
                 </div>
               </motion.div>
             )

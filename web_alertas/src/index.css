@@ -86,13 +86,16 @@
 .dashboard-page {
   width: 100%;
   min-height: calc(100vh - 4.5rem);
+  padding-top: 2.5rem !important;
   padding-bottom: 3rem;
 }
 
 .dashboard-inner {
   width: 100%;
-  max-width: 1280px;
-  padding-top: 0.5rem;
+  max-width: 1320px;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-top: 2.5rem !important;
   padding-bottom: 2rem;
 }
 

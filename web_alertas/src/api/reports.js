@@ -28,3 +28,7 @@ export async function deleteReport(id) {
 export async function getReportsByUser(userId) {
   return api.get(`/reports/user/${userId}`)
 }
+
+export async function createReport(formData) {
+  return api.post('/reports', formData)
+}

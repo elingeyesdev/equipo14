@@ -42,15 +42,15 @@ function FAQItem({ item, isOpen, onToggle }) {
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-start justify-between gap-4 py-5 text-left group"
+        className="w-full flex items-start justify-between gap-4 py-6.5 lg:py-8 text-left group"
       >
-        <span className={`text-[15px] font-semibold leading-snug transition-colors duration-200 ${isOpen ? 'text-[var(--accent)]' : 'text-[var(--ink)] group-hover:text-[var(--accent)]'}`}>
+        <span className={`text-[16.5px] lg:text-[18px] font-bold leading-snug transition-colors duration-200 ${isOpen ? 'text-[var(--accent)]' : 'text-[var(--ink)] group-hover:text-[var(--accent)]'}`}>
           {item.q}
         </span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.25, ease }}
-          className="shrink-0 mt-0.5"
+          className="shrink-0 mt-1.5"
         >
           <ChevronDown className={`h-5 w-5 transition-colors ${isOpen ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`} strokeWidth={2} />
         </motion.div>
@@ -66,7 +66,7 @@ function FAQItem({ item, isOpen, onToggle }) {
             transition={{ duration: 0.3, ease }}
             style={{ overflow: 'hidden' }}
           >
-            <p className="pb-5 text-[14px] text-[var(--body)] leading-[1.8] max-w-2xl">
+            <p className="pb-6.5 lg:pb-8 text-[14.5px] lg:text-[15.5px] text-[var(--body)] leading-[1.8] max-w-3xl">
               {item.a}
             </p>
           </motion.div>
@@ -81,7 +81,7 @@ export default function FAQ() {
 
   return (
     <section id="faq" className="bg-[var(--surface)] py-20 lg:py-24 relative overflow-hidden">
-      <div className="container-main max-w-3xl">
+      <div className="container-main max-w-4xl">
         <SectionHeader
           eyebrow="FAQ"
           title="Preguntas frecuentes."
@@ -94,7 +94,7 @@ export default function FAQ() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="admin-card px-6 lg:px-8"
+          className="admin-card px-8 py-4 lg:px-12 lg:py-6"
         >
           {faqs.map((item, i) => (
             <FAQItem

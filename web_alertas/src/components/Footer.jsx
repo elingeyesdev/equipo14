@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Shield, Code2, MessageCircle, Camera, Mail, ExternalLink } from 'lucide-react'
-import { NAV_ITEMS, CTA_PATH } from '../config/navigation'
+import { CTA_PATH } from '../config/navigation'
 
 const product = [
   { label: 'Mapa en vivo',     to: '/login'    },

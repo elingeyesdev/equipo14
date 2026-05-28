@@ -13,7 +13,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 export class AuthService{
     constructor(
         @InjectRepository(User)
-        private usersRepository: Repository<User>,
+        private userssRepository: Repository<User>,
         private usersService: UsersService,
         private jwtService: JwtService,
         private readonly configService: ConfigService
@@ -41,7 +41,7 @@ export class AuthService{
         const hashToken = await bcrypt.hash(refreshToken, 10);
 
         user.refresh_token = hashToken
-        const savedUser = await this.usersRepository.save(user)
+        const savedUser = await this.userssRepository.save(user)
 
         return { 
             access_token : access_token,
@@ -58,7 +58,7 @@ export class AuthService{
     async refreshToken(token: string){
         const payload = this.jwtService.verify(token)
 
-        const user = await this.usersRepository.findOneBy({ id: payload.id })
+        const user = await this.userssRepository.findOneBy({ id: payload.id })
         if (!user){
             throw new NotFoundException("Usuario no encontrado")
         }
@@ -74,21 +74,5 @@ export class AuthService{
             expiresIn: this.configService.get('ACCESS_TOKEN_VALIDITY_DURATION_IN_HOURS'),
         })
         return { access_token: newAccessToken }
-    }
-
-    async logout(id: string) {
-        const user = await this.usersRepository.findOneBy({ id });
-
-        if (!user) {
-            throw new NotFoundException('Usuario no encontrado');
-        }
-
-        user.refresh_token = '';
-
-        await this.usersRepository.save(user);
-
-        return {
-            message: 'Logout exitoso'
-        };
     }
 }

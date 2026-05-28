@@ -51,7 +51,7 @@ export default function PremiumTestimonials() {
           className="mb-14"
         />
 
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {testimonials.map((t, i) => (
             <motion.blockquote
               key={t.name}
@@ -59,7 +59,7 @@ export default function PremiumTestimonials() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: i * 0.1, duration: 0.5, ease }}
-              className="group relative card-premium shimmer-overlay flex flex-col p-7 overflow-hidden"
+              className="group relative card-premium shimmer-overlay flex flex-col p-8 lg:p-9 overflow-hidden min-h-[300px]"
             >
               {/* Top accent */}
               <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[1rem] opacity-70 group-hover:opacity-100 transition-opacity duration-500"
@@ -77,19 +77,19 @@ export default function PremiumTestimonials() {
                 ))}
               </div>
 
-              <p className="text-[14px] text-[var(--body)] leading-[1.85] flex-1 relative z-10">
+              <p className="text-[15.5px] text-[var(--body)] leading-relaxed flex-1 relative z-10">
                 &ldquo;{t.quote}&rdquo;
               </p>
 
               <footer className="mt-6 pt-5 border-t border-[var(--border)] flex items-center gap-3.5">
                 {/* Avatar */}
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white"
                   style={{ background: t.gradient }}>
                   {t.initials}
                 </div>
                 <div>
-                  <p className="text-[13px] font-bold text-[var(--ink)] tracking-tight">{t.name}</p>
-                  <p className="text-[11px] text-[var(--muted)] mt-0.5">{t.role} · <span className="font-semibold text-[var(--body)]">{t.org}</span></p>
+                  <p className="text-[14px] font-bold text-[var(--ink)] tracking-tight">{t.name}</p>
+                  <p className="text-[11.5px] text-[var(--muted)] mt-0.5">{t.role} · <span className="font-semibold text-[var(--body)]">{t.org}</span></p>
                 </div>
               </footer>
             </motion.blockquote>

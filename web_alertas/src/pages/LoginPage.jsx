@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useLocation, useNavigate, Navigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
@@ -6,22 +6,14 @@ import PageContainer from '../components/ui/PageContainer'
 import InputWithIcon from '../components/ui/InputWithIcon'
 import PasswordInput from '../components/ui/PasswordInput'
 import { Shield, Phone, ArrowRight } from 'lucide-react'
-import { API_BASE_URL } from '../config/api'
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
-  const [apiOnline, setApiOnline] = useState(null)
   const { login, loading, error, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from || '/mapa'
-
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/report-types`)
-      .then((r) => setApiOnline(r.ok))
-      .catch(() => setApiOnline(false))
-  }, [])
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />
@@ -65,29 +57,6 @@ export default function LoginPage() {
           <p className="login-card-subtitle">
             Accede con tu cuenta al mapa en vivo y herramientas según tu rol.
           </p>
-
-          {apiOnline === false && (
-            <motion.div
-              className="login-alert login-alert--warn"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-            >
-              El backend no responde. Ejecuta <code>npm run start:dev</code> en{' '}
-              <code>backend_nest_alertas</code> y reinicia la web.
-            </motion.div>
-          )}
-
-          {apiOnline === true && (
-            <motion.p
-              className="login-alert login-alert--ok"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <span className="login-status-dot" />
-              Servidor conectado
-            </motion.p>
-          )}
 
           <form onSubmit={handleSubmit} className="login-form">
             <InputWithIcon
