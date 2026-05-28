@@ -1,9 +1,11 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import type { Point } from 'geojson';
 import { User } from "app/models/user.entity";
 import { Image } from "./image.entity";
 import { ReportType } from "./report-types.entity";
 
+@Index(['deleted_at'])
+@Index(['expires_at'])
 @Entity()
 export class Report {
     @PrimaryGeneratedColumn()
@@ -21,8 +23,13 @@ export class Report {
     })
     location: Point;
 
-    @Column()
+    @CreateDateColumn()
     created_at: Date;
+
+    @DeleteDateColumn({
+        nullable: true
+    })
+    deleted_at?: Date;
 
     @Column()
     weight: number;

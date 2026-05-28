@@ -39,9 +39,9 @@ export class ReportsService {
         if(!type){
             throw new NotFoundException("Tipo no encontrado");
         }
-        const now = new Date();
+
         const expires = new Date();
-        expires.setHours(now.getHours() + 24);
+        expires.setHours(expires.getHours() + 24);
 
         const createReport = createReportRequest.toReport();
 
@@ -49,7 +49,6 @@ export class ReportsService {
         if (createReportRequest.description.length > 100) initialWeight += 2;
 
         createReport.weight = initialWeight;
-        createReport.created_at = now;
         createReport.expires_at = expires;
         createReport.creator = user;
         createReport.type = type
@@ -246,7 +245,7 @@ export class ReportsService {
     }
 
     async remove(id: string){
-        const result = await this.reportsRepository.delete(id);
+        const result = await this.reportsRepository.softDelete(id);
 
         if(result.affected === 0){
             throw new NotFoundException(`El reporte con ID ${id} no se encontro`)
