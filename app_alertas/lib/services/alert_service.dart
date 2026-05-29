@@ -101,4 +101,8 @@ class AlertService {
     final response = await _dio.patch('/reports/$reportId/verify');
     return AlertModel.fromJson(response.data);
   }
+
+  Future<void> deleteReport(int reportId) async {
+    await _dio.delete('/reports/$reportId');
+  }
 }

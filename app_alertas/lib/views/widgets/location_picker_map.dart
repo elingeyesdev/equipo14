@@ -127,25 +127,18 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                     // Marcador del usuario (fijo)
                     Marker(
                       point: widget.userLocation,
-                      width: 40,
-                      height: 40,
+                      width: 30,
+                      height: 30,
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFF3B82F6),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ],
+                          border: Border.all(color: Colors.white, width: 2),
                         ),
                         child: const Icon(
                           Icons.my_location_rounded,
                           color: Colors.white,
-                          size: 18,
+                          size: 14,
                         ),
                       ),
                     ),
@@ -210,14 +203,14 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.touch_app_rounded, color: Color(0xFF3B82F6), size: 16),
+                    Icon(Icons.touch_app_rounded, color: Color(0xFF3B82F6), size: 12),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Toca el mapa para ubicar el incidente (máx. 100 m)',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 11.5,
+                          fontSize: 10,
                         ),
                       ),
                     ),

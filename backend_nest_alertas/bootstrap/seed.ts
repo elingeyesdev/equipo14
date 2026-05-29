@@ -36,7 +36,8 @@ export async function seedRoles(app: INestApplication): Promise<void> {
     await repo.save([
         { id: 1, name: 'usuario' },
         { id: 2, name: 'autoridad' },
+        { id: 3, name: 'admin' },
     ]);
 
-    console.log('[Seed] Roles insertados: usuario normal (1), autoridad (2)');
+    console.log('[Seed] Roles insertados: usuario normal (1), autoridad (2), admin (3)');
 }

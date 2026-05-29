@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_alertas/views/map_screen.dart';
 import 'package:app_alertas/views/create_alert_screen.dart';
 import 'package:app_alertas/views/recent_activity_screen.dart';
-import 'package:app_alertas/views/home_page.dart';
+import 'package:app_alertas/views/profile_page.dart';
 import 'package:app_alertas/models/alert_model.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final GlobalKey<MapScreenState> _mapKey = GlobalKey<MapScreenState>();
   final GlobalKey<CreateAlertScreenState> _createAlertKey = GlobalKey<CreateAlertScreenState>();
   final GlobalKey<RecentActivityScreenState> _recentActivityKey = GlobalKey<RecentActivityScreenState>();
-  final GlobalKey<HomePageState> _homePageKey = GlobalKey<HomePageState>();
+  final GlobalKey<ProfilePageState> _profilePageKey = GlobalKey<ProfilePageState>();
 
   late PageController _pageController;
 
@@ -51,14 +51,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: SafeArea(
         child: PageView(
           controller: _pageController,
-          physics: currentIndex == 0
-              ? const NeverScrollableScrollPhysics() 
-              : const BouncingScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           onPageChanged: (index) {
             if (index == 0) _mapKey.currentState?.reload();
             if (index == 1) _createAlertKey.currentState?.resetFields();
             if (index == 2) _recentActivityKey.currentState?.reload();
-            if (index == 3) _homePageKey.currentState?.reload();
+            if (index == 3) _profilePageKey.currentState?.reload();
             setState(() => currentIndex = index);
           },
           children: [
@@ -66,14 +64,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             CreateAlertScreen(
               key: _createAlertKey,
               onCreated: () {
-                _homePageKey.currentState?.reload();
+                _profilePageKey.currentState?.reload();
                 setState(() => currentIndex = 3);
                 if (_pageController.hasClients) {
-                  _pageController.animateToPage(
-                    3,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
+                  _pageController.jumpToPage(3);
                 }
               },
               onShowMap: navigateToMap,
@@ -82,8 +76,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               key: _recentActivityKey,
               onAlertTap: navigateToMap,
             ),
-            HomePage(
-              key: _homePageKey,
+            ProfilePage(
+              key: _profilePageKey,
               onAlertTap: navigateToMap,
             ),
           ],
@@ -124,11 +118,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             onTap: (index) {
               if (_pageController.hasClients) {
-                _pageController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                );
+                _pageController.jumpToPage(index);
               }
             },
             items: [
@@ -151,7 +141,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               BottomNavigationBarItem(
                 icon: Icon(
-                  currentIndex == 2 ? Icons.notifications_rounded : Icons.notifications_none_rounded,
+                  currentIndex == 2 ? Icons.question_answer_rounded : Icons.question_answer_rounded,
                   size: currentIndex == 2 ? 23 : 22,
                 ),
                 label: 'Alertas',

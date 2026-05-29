@@ -54,7 +54,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  InkWell(
+                  GestureDetector(
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -62,17 +62,17 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10.0),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10.0),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.local_hospital_outlined,
                             color: Color(0xFF3B82F6),
                             size: 24,
                           ),
-                          const SizedBox(width: 16),
-                          const Text(
+                          SizedBox(width: 16),
+                          Text(
                             'Servicios de Emergencia',
                             style: TextStyle(
                               color: Color(0xFF3B82F6),
@@ -83,24 +83,27 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  InkWell(
+                  GestureDetector(
                     onTap: () async {
                       await auth.logout();
+
                       if (context.mounted) {
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
                       }
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10.0),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10.0),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.logout,
                             color: Color(0xFFEF4444),
                             size: 24,
                           ),
-                          const SizedBox(width: 16),
-                          const Text(
+                          SizedBox(width: 16),
+                          Text(
                             'Salir',
                             style: TextStyle(
                               color: Color(0xFFEF4444),

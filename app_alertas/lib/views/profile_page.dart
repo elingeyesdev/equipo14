@@ -4,16 +4,17 @@ import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:app_alertas/views/settings_screen.dart';
 import 'package:app_alertas/models/alert_model.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
-class HomePage extends StatefulWidget {
+class ProfilePage extends StatefulWidget {
   final Function(AlertModel)? onAlertTap;
-  const HomePage({super.key, this.onAlertTap});
+  const ProfilePage({super.key, this.onAlertTap});
 
   @override
-  State<HomePage> createState() => HomePageState();
+  State<ProfilePage> createState() => ProfilePageState();
 }
 
-class HomePageState extends State<HomePage> {
+class ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
@@ -37,14 +38,18 @@ class HomePageState extends State<HomePage> {
     final auth = context.watch<AuthViewModel>();
     final alertVM = context.watch<AlertViewModel>();
     final user = auth.user;
-    
+
     if (user == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final fullName = '${user.firstName} ${user.lastName}'.trim();
     final initials = _initials(user.firstName, user.lastName);
-    final myAlerts = alertVM.myAlerts;
+    
+    final loading = alertVM.isLoading;
+    final myAlerts = (loading && alertVM.myAlerts.isEmpty)
+        ? List.generate(6, (_) => AlertModel.mock())
+        : alertVM.myAlerts;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -57,7 +62,12 @@ class HomePageState extends State<HomePage> {
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    24,
+                    12,
+                    24,
+                    0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -75,7 +85,11 @@ class HomePageState extends State<HomePage> {
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                            icon: const Icon(
+                              Icons.menu,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onPressed: () {
@@ -88,7 +102,7 @@ class HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       // Horizontal Header Section
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -127,7 +141,8 @@ class HomePageState extends State<HomePage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     _StatItem(
                                       value: myAlerts.length.toString(),
@@ -137,7 +152,7 @@ class HomePageState extends State<HomePage> {
                                       value: user.phone,
                                       label: 'Teléfono',
                                     ),
-                                    if (user.roleName != null) 
+                                    if (user.roleName != null)
                                       _StatItem(
                                         value: user.roleName!,
                                         label: 'Rol',
@@ -149,11 +164,9 @@ class HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      
-                      const SizedBox(height: 32),
-                      const Divider(height: 1, color: Color(0xFF26292E)),
-                      const SizedBox(height: 24),
-                      
+
+                      const SizedBox(height: 56),
+
                       const Text(
                         "Mis Reportes",
                         style: TextStyle(
@@ -167,11 +180,7 @@ class HomePageState extends State<HomePage> {
                 ),
               ),
 
-              if (alertVM.isLoading)
-                const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (myAlerts.isEmpty)
+              if (myAlerts.isEmpty && !loading)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
@@ -195,64 +204,120 @@ class HomePageState extends State<HomePage> {
               else
                 SliverPadding(
                   padding: const EdgeInsets.only(bottom: 24),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 2,
-                      mainAxisSpacing: 2,
-                      childAspectRatio: 0.8,
+                  sliver: Skeletonizer.sliver(
+                    enabled: loading && alertVM.myAlerts.isEmpty,
+                    effect: const ShimmerEffect(
+                      baseColor: Color(0xFF1E2126),
+                      highlightColor: Color(0xFF26292E),
                     ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
+                    child: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 2,
+                            mainAxisSpacing: 2,
+                            childAspectRatio: 0.8,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
                         final alert = myAlerts[index];
                         return GestureDetector(
                           onTap: () => widget.onAlertTap?.call(alert),
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF26292E),
-                            ),
-                            clipBehavior: Clip.hardEdge,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: alert.images.isNotEmpty
-                                      ? Image.network(
-                                          alert.images.first,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (ctx, err, stack) =>
-                                              const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
-                                        )
-                                      : const Center(
-                                          child: Icon(
-                                            Icons.warning_amber_rounded,
-                                            color: Colors.white54,
-                                            size: 32,
-                                          ),
-                                        ),
+                          onLongPress: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: const Color(0xFF26292E),
+                                title: const Text(
+                                  'Eliminar reporte',
+                                  style: TextStyle(color: Colors.white),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-                                  color: const Color(0xFF1E2126),
-                                  child: Text(
-                                    alert.type.toUpperCase(),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
+                                content: const Text(
+                                  '¿Estás seguro de que quieres eliminar este reporte?',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text(
+                                      'Cancelar',
+                                      style: TextStyle(color: Colors.grey),
                                     ),
                                   ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text(
+                                      'Eliminar',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmed == true && context.mounted) {
+                              context.read<AlertViewModel>().deleteReport(
+                                alert.id,
+                              );
+                            }
+                          },
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Container(
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF26292E),
                                 ),
-                              ],
-                            ),
+                                clipBehavior: Clip.hardEdge,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: alert.images.isNotEmpty
+                                          ? Image.network(
+                                              alert.images.first,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (ctx, err, stack) =>
+                                                  const Center(
+                                                    child: Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                            )
+                                          : const Center(
+                                              child: Icon(
+                                                Icons.warning_amber_rounded,
+                                                color: Colors.white54,
+                                                size: 32,
+                                              ),
+                                            ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 6,
+                                        horizontal: 2,
+                                      ),
+                                      color: const Color(0xFF1E2126),
+                                      child: Text(
+                                        alert.type.toUpperCase(),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         );
-                      },
-                      childCount: myAlerts.length,
+                      }, childCount: myAlerts.length),
                     ),
                   ),
                 ),
@@ -273,7 +338,7 @@ class HomePageState extends State<HomePage> {
 class _StatItem extends StatelessWidget {
   final String value;
   final String label;
-  
+
   const _StatItem({required this.value, required this.label});
 
   @override
@@ -284,24 +349,19 @@ class _StatItem extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white, 
-            fontSize: 16, 
-            fontWeight: FontWeight.bold
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF64748B), 
-            fontSize: 12
-          ),
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
           textAlign: TextAlign.center,
         ),
       ],
     );
   }
 }
-
-

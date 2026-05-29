@@ -30,6 +30,7 @@ export class ReportsService {
     ){}
 
     async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
+        console.time('total');
         console.time('upload');
         const user = await this.usersRepository.findOne({where: {id: createReportRequest.userId}})
         if(!user){
@@ -64,9 +65,13 @@ export class ReportsService {
         }
         savedReport.images = [image];
 
+        console.time('notifications');
         await this.notificationsService.notifyNearbyUsers(savedReport);
+        console.timeEnd('notifications');
+        
         console.timeEnd('upload');
 
+        console.timeEnd('total');
         return ReportResponse.FromReportToResponse(savedReport);
     }
 
@@ -213,7 +218,7 @@ export class ReportsService {
     }
 
     async findCoincidences(verifyReportRequest: VerifyReportRequest){
-        const { latitude, longitude, type } = verifyReportRequest;
+        const { latitude, longitude, type, userId } = verifyReportRequest;
 
         const usersCoincidence =  await this.reportsRepository
             .createQueryBuilder('report')
@@ -238,6 +243,13 @@ export class ReportsService {
             .andWhere('type.id = :typeId', { typeId: type })
             .andWhere(
                 `report.created_at >= NOW() - INTERVAL '200 minutes'`
+            )
+            .andWhere(
+                `NOT EXISTS (
+                    SELECT 1
+                    FROM images img
+                    WHERE img.reportId = report.id
+                    AND img.uploadedById = userId)`
             )
             .orderBy('report.created_at', 'DESC')
             .getMany();

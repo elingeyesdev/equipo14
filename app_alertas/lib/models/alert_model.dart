@@ -27,6 +27,19 @@ class AlertModel {
     this.zone,
   });
 
+  factory AlertModel.mock() {
+    return AlertModel(
+      id: 0,
+      userId: 'mock_user',
+      type: 'Incendio',
+      description: 'Esta es una descripción falsa bastante larga para que el esqueleto tenga algo que mostrar en la pantalla de la app.',
+      coordinates: const [0.0, 0.0],
+      weight: 10,
+      createdAt: DateTime.now(),
+      zone: 'Zona de Prueba',
+    );
+  }
+
   factory AlertModel.fromJson(Map<String, dynamic> json) {
     // Extraer coordenadas
     final rawCoords = (json['coordinates'] as List<dynamic>? ?? [])

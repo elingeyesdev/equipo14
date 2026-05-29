@@ -186,4 +186,22 @@ class AlertViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> deleteReport(int reportId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _repository.deleteReport(reportId);
+      _alerts.removeWhere((a) => a.id == reportId);
+      _myAlerts.removeWhere((a) => a.id == reportId);
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

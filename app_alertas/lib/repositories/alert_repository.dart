@@ -75,4 +75,8 @@ class AlertRepository {
   Future<AlertModel> verifyReport(int reportId) async {
     return await _service.verifyReport(reportId);
   }
+
+  Future<void> deleteReport(int reportId) async {
+    await _service.deleteReport(reportId);
+  }
 }

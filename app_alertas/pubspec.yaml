@@ -50,6 +50,7 @@ dependencies:
   dio: ^5.9.2
   awesome_snackbar_content: ^0.1.8
   firebase_database: ^12.4.1
+  skeletonizer: ^2.1.3
 
 dev_dependencies:
   flutter_test:

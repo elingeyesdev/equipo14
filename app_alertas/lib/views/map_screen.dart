@@ -46,7 +46,7 @@ class MapScreenState extends State<MapScreen> {
   bool isCustomLocationActive = false;
   bool isEditingCustomLocation = false;
 
-  double _radiusKm = 5.0;
+  double _radiusKm = 2.0;
   bool _radiusPanelOpen = false;
 
   @override
@@ -55,7 +55,8 @@ class MapScreenState extends State<MapScreen> {
     // Detectar rol antes de cargar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthViewModel>().user;
-      _isAuthority = (user?.roleId == 2) ||
+      _isAuthority =
+          (user?.roleId == 2) ||
           (user?.roleName?.toLowerCase().contains('autoridad') == true);
     });
     getLocation();
@@ -71,7 +72,8 @@ class MapScreenState extends State<MapScreen> {
         setState(() {
           _activeVehicles = vehicles;
           // Si el vehículo seleccionado ya no existe, borrar la selección
-          if (_selectedVehicleId != null && !vehicles.any((v) => v['id'] == _selectedVehicleId)) {
+          if (_selectedVehicleId != null &&
+              !vehicles.any((v) => v['id'] == _selectedVehicleId)) {
             _selectedVehicleId = null;
           }
         });
@@ -107,7 +109,8 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     final user = context.read<AuthViewModel>().user;
     setState(() {
-      _isAuthority = (user?.roleId == 2) ||
+      _isAuthority =
+          (user?.roleId == 2) ||
           (user?.roleName?.toLowerCase().contains('autoridad') == true);
     });
     await getLocation();
@@ -116,7 +119,8 @@ class MapScreenState extends State<MapScreen> {
   Future<void> _initPushNotifications() async {
     final user = context.read<AuthViewModel>().user;
     if (user != null) {
-      _isAuthority = (user.roleId == 2) ||
+      _isAuthority =
+          (user.roleId == 2) ||
           (user.roleName?.toLowerCase().contains('autoridad') == true);
       await _fcmService.init(user.id);
       _fcmService.listenToForegroundMessages(() {
@@ -159,7 +163,9 @@ class MapScreenState extends State<MapScreen> {
       mapController.move(target, 16);
     } else {
       getLocation().then((_) {
-        final newTarget = isCustomLocationActive ? customLocation : currentLocation;
+        final newTarget = isCustomLocationActive
+            ? customLocation
+            : currentLocation;
         if (newTarget != null && mounted) {
           mapController.move(newTarget, 16);
         }
@@ -189,7 +195,9 @@ class MapScreenState extends State<MapScreen> {
         await alertVM.fetchAlerts();
       } else {
         // Usuarios normales ven reportes cercanos
-        final fetchLocation = isCustomLocationActive ? customLocation : currentLocation;
+        final fetchLocation = isCustomLocationActive
+            ? customLocation
+            : currentLocation;
         if (fetchLocation == null) {
           setState(() => _loadingAlerts = false);
           return;
@@ -224,7 +232,9 @@ class MapScreenState extends State<MapScreen> {
           final point = _toLatLng(alert.coordinates);
           if (point == null) return null;
 
-          Color color = alert.verified ? Colors.green : _colorByType(alert.type);
+          Color color = alert.verified
+              ? Colors.green
+              : _colorByType(alert.type);
 
           return Marker(
             point: point,
@@ -235,13 +245,12 @@ class MapScreenState extends State<MapScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    _iconByType(alert.type),
-                    color: color,
-                    size: 36,
-                  ),
+                  Icon(_iconByType(alert.type), color: color, size: 36),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0D1015),
                       borderRadius: BorderRadius.circular(10),
@@ -271,7 +280,9 @@ class MapScreenState extends State<MapScreen> {
   void _showAlertBottomSheet(AlertModel alert) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0D1015), // Premium extremely deep dark slate
+      backgroundColor: const Color(
+        0xFF0D1015,
+      ), // Premium extremely deep dark slate
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -280,10 +291,7 @@ class MapScreenState extends State<MapScreen> {
       builder: (context) {
         return SingleChildScrollView(
           child: SafeArea(
-            child: AlertCard(
-              alert: alert,
-              isInBottomSheet: true,
-            ),
+            child: AlertCard(alert: alert, isInBottomSheet: true),
           ),
         );
       },
@@ -301,14 +309,18 @@ class MapScreenState extends State<MapScreen> {
     if (t.contains('hurto')) return Icons.person_off_rounded;
     if (t.contains('incendio')) return Icons.local_fire_department_rounded;
     if (t.contains('accidente')) return Icons.car_crash_rounded;
-    if (t.contains('vial') || t.contains('obstrucción')) return Icons.traffic_rounded;
-    if (t.contains('médica') || t.contains('salud')) return Icons.medical_services_rounded;
+    if (t.contains('vial') || t.contains('obstrucción'))
+      return Icons.traffic_rounded;
+    if (t.contains('médica') || t.contains('salud'))
+      return Icons.medical_services_rounded;
     return Icons.warning_amber_rounded;
   }
 
   IconData _vehicleIconByType(String type) {
     final t = type.toLowerCase();
-    if (t.contains('ambulancia') || t.contains('medic') || t.contains('salud')) {
+    if (t.contains('ambulancia') ||
+        t.contains('medic') ||
+        t.contains('salud')) {
       return Icons.local_hospital_rounded;
     }
     if (t.contains('bombero') || t.contains('incendio')) {
@@ -319,10 +331,13 @@ class MapScreenState extends State<MapScreen> {
 
   Color _colorByType(String type) {
     final t = type.toLowerCase();
-    if (t.contains('robo') || t.contains('hurto')) return const Color(0xFFEF4444);
+    if (t.contains('robo') || t.contains('hurto'))
+      return const Color(0xFFEF4444);
     if (t.contains('incendio')) return const Color(0xFFF59E0B);
-    if (t.contains('accidente') || t.contains('vial')) return const Color(0xFF3B82F6);
-    if (t.contains('médica') || t.contains('salud')) return const Color(0xFF10B981);
+    if (t.contains('accidente') || t.contains('vial'))
+      return const Color(0xFF3B82F6);
+    if (t.contains('médica') || t.contains('salud'))
+      return const Color(0xFF10B981);
     return const Color(0xFF8B5CF6);
   }
 
@@ -336,10 +351,13 @@ class MapScreenState extends State<MapScreen> {
               : FlutterMap(
                   mapController: mapController,
                   options: MapOptions(
-                    initialCenter: widget.initialAlert != null &&
+                    initialCenter:
+                        widget.initialAlert != null &&
                             widget.initialAlert!.coordinates.length >= 2
-                        ? LatLng(widget.initialAlert!.coordinates[1],
-                            widget.initialAlert!.coordinates[0])
+                        ? LatLng(
+                            widget.initialAlert!.coordinates[1],
+                            widget.initialAlert!.coordinates[0],
+                          )
                         : currentLocation!,
                     initialZoom: widget.initialAlert != null ? 18 : 13,
                     maxZoom: 22,
@@ -362,27 +380,46 @@ class MapScreenState extends State<MapScreen> {
                       maxNativeZoom: 22,
                       maxZoom: 22,
                     ),
-                    if (!_isAuthority && (isCustomLocationActive ? customLocation != null : currentLocation != null))
+                    if (!_isAuthority &&
+                        (isCustomLocationActive
+                            ? customLocation != null
+                            : currentLocation != null))
                       CircleLayer(
                         circles: [
                           CircleMarker(
-                            point: isCustomLocationActive ? customLocation! : currentLocation!,
+                            point: isCustomLocationActive
+                                ? customLocation!
+                                : currentLocation!,
                             radius: (_radiusKm * 1000),
                             useRadiusInMeter: true,
-                            color: const Color(0xFF3B82F6).withValues(alpha: 0.14),
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.14),
                             borderStrokeWidth: 2,
-                            borderColor: const Color(0xFF3B82F6).withValues(alpha: 0.55),
+                            borderColor: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.55),
                           ),
                         ],
                       ),
-                    
+
                     // Polyline de la ruta del vehículo seleccionado
                     if (_selectedVehicleId != null)
                       ...() {
-                        final selectedVehicle = _activeVehicles.where((v) => v['id'] == _selectedVehicleId).firstOrNull;
-                        if (selectedVehicle != null && selectedVehicle['route'] != null) {
+                        final selectedVehicle = _activeVehicles
+                            .where((v) => v['id'] == _selectedVehicleId)
+                            .firstOrNull;
+                        if (selectedVehicle != null &&
+                            selectedVehicle['route'] != null) {
                           final routeData = selectedVehicle['route'] as List;
-                          final points = routeData.map((p) => LatLng(p['lat'] as double, p['lng'] as double)).toList();
+                          final points = routeData
+                              .map(
+                                (p) => LatLng(
+                                  p['lat'] as double,
+                                  p['lng'] as double,
+                                ),
+                              )
+                              .toList();
                           return [
                             PolylineLayer(
                               polylines: [
@@ -394,7 +431,7 @@ class MapScreenState extends State<MapScreen> {
                                   strokeJoin: StrokeJoin.round,
                                 ),
                               ],
-                            )
+                            ),
                           ];
                         }
                         return [];
@@ -403,14 +440,16 @@ class MapScreenState extends State<MapScreen> {
                     MarkerLayer(
                       markers: [
                         ..._buildAlertMarkers(),
-                        
+
                         // Marcadores de Vehículos en movimiento
                         ..._activeVehicles.map((vehicle) {
                           final lat = vehicle['latitude'] as double;
                           final lng = vehicle['longitude'] as double;
-                          final type = vehicle['type'] as String? ?? 'Desconocido';
-                          final isSelected = vehicle['id'] == _selectedVehicleId;
-                          
+                          final type =
+                              vehicle['type'] as String? ?? 'Desconocido';
+                          final isSelected =
+                              vehicle['id'] == _selectedVehicleId;
+
                           return Marker(
                             point: LatLng(lat, lng),
                             width: 50,
@@ -423,16 +462,25 @@ class MapScreenState extends State<MapScreen> {
                               },
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: isSelected ? Colors.green : const Color(0xFF3B82F6),
+                                  color: isSelected
+                                      ? Colors.green
+                                      : const Color(0xFF3B82F6),
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (isSelected ? Colors.green : const Color(0xFF3B82F6)).withValues(alpha: 0.55),
+                                      color:
+                                          (isSelected
+                                                  ? Colors.green
+                                                  : const Color(0xFF3B82F6))
+                                              .withValues(alpha: 0.55),
                                       blurRadius: 10,
                                       spreadRadius: 2,
                                     ),
                                   ],
-                                  border: Border.all(color: Colors.white, width: 2),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
                                 ),
                                 child: Icon(
                                   _vehicleIconByType(type),
@@ -446,15 +494,25 @@ class MapScreenState extends State<MapScreen> {
                         if (currentLocation != null)
                           Marker(
                             point: currentLocation!,
-                            width: 40,
-                            height: 40,
-                            child: Icon(
-                              Icons.my_location,
-                              color: isCustomLocationActive ? Colors.grey : Colors.blue,
-                              size: 28,
+                            width: 30,
+                            height: 30,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isCustomLocationActive
+                                    ? Colors.grey
+                                    : const Color(0xFF3B82F6),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(
+                                Icons.my_location_rounded,
+                                color: Colors.white,
+                                size: 14,
+                              ),
                             ),
                           ),
-                        if (customLocation != null && (isCustomLocationActive || isEditingCustomLocation))
+                        if (customLocation != null &&
+                            (isCustomLocationActive || isEditingCustomLocation))
                           Marker(
                             point: customLocation!,
                             width: 40,
@@ -478,17 +536,25 @@ class MapScreenState extends State<MapScreen> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF26292E).withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.shield_rounded,
-                          color: Color(0xFF3B82F6), size: 15),
+                      const Icon(
+                        Icons.shield_rounded,
+                        color: Color(0xFF3B82F6),
+                        size: 15,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Vista autoridad · ${_alerts.length} reportes',
@@ -516,11 +582,7 @@ class MapScreenState extends State<MapScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF26292E).withValues(alpha: 0.96),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _radiusPanelOpen
-                          ? const Color(0xFF3B82F6).withValues(alpha: 0.35)
-                          : Colors.white.withValues(alpha: 0.08),
-                    ),
+                    border: Border.all(color: Colors.transparent),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.35),
@@ -535,18 +597,27 @@ class MapScreenState extends State<MapScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         InkWell(
-                          onTap: () =>
-                              setState(() => _radiusPanelOpen = !_radiusPanelOpen),
+                          overlayColor: WidgetStateProperty.all(
+                            Colors.transparent,
+                          ),
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          onTap: () => setState(
+                            () => _radiusPanelOpen = !_radiusPanelOpen,
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 12),
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             child: Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF3B82F6)
-                                        .withValues(alpha: 0.18),
+                                    color: const Color(
+                                      0xFF3B82F6,
+                                    ).withValues(alpha: 0.18),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
@@ -564,8 +635,9 @@ class MapScreenState extends State<MapScreen> {
                                       Text(
                                         'Reportes a tu alrededor',
                                         style: TextStyle(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.45),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.45,
+                                          ),
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -587,10 +659,13 @@ class MapScreenState extends State<MapScreen> {
                                           const SizedBox(width: 8),
                                           Container(
                                             padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 3),
+                                              horizontal: 8,
+                                              vertical: 3,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF3B82F6)
-                                                  .withValues(alpha: 0.22),
+                                              color: const Color(
+                                                0xFF3B82F6,
+                                              ).withValues(alpha: 0.22),
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
@@ -600,16 +675,19 @@ class MapScreenState extends State<MapScreen> {
                                                     height: 14,
                                                     child:
                                                         CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Color(0xFF93C5FD),
-                                                    ),
+                                                          strokeWidth: 2,
+                                                          color: Color(
+                                                            0xFF93C5FD,
+                                                          ),
+                                                        ),
                                                   )
                                                 : Text(
                                                     '${_alerts.length}',
                                                     style: const TextStyle(
                                                       color: Color(0xFFBFDBFE),
                                                       fontSize: 12,
-                                                      fontWeight: FontWeight.w800,
+                                                      fontWeight:
+                                                          FontWeight.w800,
                                                     ),
                                                   ),
                                           ),
@@ -643,11 +721,17 @@ class MapScreenState extends State<MapScreen> {
                                     Divider(
                                       height: 1,
                                       thickness: 1,
-                                      color: Colors.white.withValues(alpha: 0.08),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.08,
+                                      ),
                                     ),
                                     Padding(
                                       padding: const EdgeInsets.fromLTRB(
-                                          14, 10, 14, 14),
+                                        14,
+                                        10,
+                                        14,
+                                        14,
+                                      ),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -655,8 +739,9 @@ class MapScreenState extends State<MapScreen> {
                                           Text(
                                             'El círculo en el mapa coincide con el radio enviado al servidor.',
                                             style: TextStyle(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.42),
+                                              color: Colors.white.withValues(
+                                                alpha: 0.42,
+                                              ),
                                               fontSize: 11,
                                               height: 1.35,
                                             ),
@@ -665,23 +750,26 @@ class MapScreenState extends State<MapScreen> {
                                           SliderTheme(
                                             data: SliderTheme.of(context)
                                                 .copyWith(
-                                              activeTrackColor:
-                                                  const Color(0xFF3B82F6),
-                                              inactiveTrackColor: Colors.white
-                                                  .withValues(alpha: 0.12),
-                                              thumbColor:
-                                                  const Color(0xFF60A5FA),
-                                              overlayColor: const Color(0xFF3B82F6)
-                                                  .withValues(alpha: 0.18),
-                                              trackHeight: 3,
-                                              valueIndicatorColor:
-                                                  const Color(0xFF3B82F6),
-                                            ),
+                                                  activeTrackColor: const Color(
+                                                    0xFF3B82F6,
+                                                  ),
+                                                  inactiveTrackColor: Colors
+                                                      .white
+                                                      .withValues(alpha: 0.12),
+                                                  thumbColor: const Color(
+                                                    0xFF60A5FA,
+                                                  ),
+                                                  overlayColor: const Color(
+                                                    0xFF3B82F6,
+                                                  ).withValues(alpha: 0.18),
+                                                  trackHeight: 3,
+                                                  valueIndicatorColor:
+                                                      const Color(0xFF3B82F6),
+                                                ),
                                             child: Slider(
-                                              value: _radiusKm.clamp(0.5, 20.0),
+                                              value: _radiusKm.clamp(0.5, 10.0),
                                               min: 0.5,
-                                              max: 20,
-                                              divisions: 39,
+                                              max: 10.0,
                                               label: _radiusKm % 1 == 0
                                                   ? '${_radiusKm.toStringAsFixed(0)} km'
                                                   : '${_radiusKm.toStringAsFixed(1)} km',
@@ -703,7 +791,7 @@ class MapScreenState extends State<MapScreen> {
                                                 ),
                                               ),
                                               Text(
-                                                '20 km',
+                                                '10 km',
                                                 style: TextStyle(
                                                   color: Colors.white
                                                       .withValues(alpha: 0.35),
@@ -716,17 +804,13 @@ class MapScreenState extends State<MapScreen> {
                                           Divider(
                                             height: 1,
                                             thickness: 1,
-                                            color: Colors.white.withValues(alpha: 0.08),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.08,
+                                            ),
                                           ),
                                           const SizedBox(height: 12),
                                           Row(
                                             children: [
-                                              const Icon(
-                                                Icons.my_location,
-                                                color: Color(0xFF3B82F6),
-                                                size: 16,
-                                              ),
-                                              const SizedBox(width: 8),
                                               const Text(
                                                 'Ubicación Personalizada',
                                                 style: TextStyle(
@@ -740,7 +824,8 @@ class MapScreenState extends State<MapScreen> {
                                                 GestureDetector(
                                                   onTap: () {
                                                     setState(() {
-                                                      isCustomLocationActive = false;
+                                                      isCustomLocationActive =
+                                                          false;
                                                       customLocation = null;
                                                     });
                                                     _loadAlerts();
@@ -748,9 +833,12 @@ class MapScreenState extends State<MapScreen> {
                                                   child: Text(
                                                     'RESTABLECER',
                                                     style: TextStyle(
-                                                      color: Colors.redAccent.shade100,
+                                                      color: Colors
+                                                          .redAccent
+                                                          .shade100,
                                                       fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       letterSpacing: 0.5,
                                                     ),
                                                   ),
@@ -762,7 +850,9 @@ class MapScreenState extends State<MapScreen> {
                                             Text(
                                               'Toque en cualquier parte del mapa',
                                               style: TextStyle(
-                                                color: Colors.white.withValues(alpha: 0.5),
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.5,
+                                                ),
                                                 fontSize: 11,
                                                 height: 1.35,
                                               ),
@@ -773,42 +863,89 @@ class MapScreenState extends State<MapScreen> {
                                                 Expanded(
                                                   child: ElevatedButton(
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: Colors.transparent,
-                                                      foregroundColor: Colors.white,
+                                                      backgroundColor:
+                                                          Colors.transparent,
+                                                      foregroundColor:
+                                                          Colors.white,
                                                       elevation: 0,
-                                                      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                      side: BorderSide(
+                                                        color: Colors.white
+                                                            .withValues(
+                                                              alpha: 0.2,
+                                                            ),
+                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 8,
+                                                          ),
+                                                      shape:
+                                                          const RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .zero,
+                                                          ),
                                                     ),
                                                     onPressed: () {
                                                       setState(() {
-                                                        isEditingCustomLocation = false;
+                                                        isEditingCustomLocation =
+                                                            false;
                                                         if (!isCustomLocationActive) {
                                                           customLocation = null;
                                                         }
                                                       });
                                                     },
-                                                    child: const Text('CANCELAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                                    child: const Text(
+                                                      'CANCELAR',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Expanded(
                                                   child: ElevatedButton(
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: const Color(0xFF3B82F6),
-                                                      foregroundColor: Colors.black,
+                                                      backgroundColor:
+                                                          const Color(
+                                                            0xFF3B82F6,
+                                                          ),
+                                                      foregroundColor:
+                                                          Colors.black,
                                                       elevation: 0,
-                                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 8,
+                                                          ),
+                                                      shape:
+                                                          const RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .zero,
+                                                          ),
                                                     ),
-                                                    onPressed: customLocation == null ? null : () {
-                                                      setState(() {
-                                                        isEditingCustomLocation = false;
-                                                        isCustomLocationActive = true;
-                                                      });
-                                                      _loadAlerts();
-                                                    },
-                                                    child: const Text('CONFIRMAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                                    onPressed:
+                                                        customLocation == null
+                                                        ? null
+                                                        : () {
+                                                            setState(() {
+                                                              isEditingCustomLocation =
+                                                                  false;
+                                                              isCustomLocationActive =
+                                                                  true;
+                                                            });
+                                                            _loadAlerts();
+                                                          },
+                                                    child: const Text(
+                                                      'CONFIRMAR',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -819,7 +956,9 @@ class MapScreenState extends State<MapScreen> {
                                                   ? 'Ubicación virtual activa. Todos los reportes cercanos se calcularán desde este punto.'
                                                   : 'Establece un punto virtual para explorar incidentes fuera de tu posición física.',
                                               style: TextStyle(
-                                                color: Colors.white.withValues(alpha: 0.42),
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.42,
+                                                ),
                                                 fontSize: 11,
                                                 height: 1.35,
                                               ),
@@ -829,40 +968,72 @@ class MapScreenState extends State<MapScreen> {
                                               width: double.infinity,
                                               child: ElevatedButton.icon(
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: isCustomLocationActive
-                                                      ? const Color(0xFF3B82F6).withValues(alpha: 0.1)
-                                                      : Colors.white.withValues(alpha: 0.05),
-                                                  foregroundColor: isCustomLocationActive ? const Color(0xFF3B82F6) : Colors.white,
+                                                  backgroundColor:
+                                                      isCustomLocationActive
+                                                      ? const Color(
+                                                          0xFF3B82F6,
+                                                        ).withValues(alpha: 0.1)
+                                                      : Colors.white.withValues(
+                                                          alpha: 0.05,
+                                                        ),
+                                                  foregroundColor:
+                                                      isCustomLocationActive
+                                                      ? const Color(0xFF3B82F6)
+                                                      : Colors.white,
                                                   elevation: 0,
                                                   side: BorderSide(
-                                                    color: isCustomLocationActive
-                                                        ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
-                                                        : Colors.white.withValues(alpha: 0.1),
+                                                    color:
+                                                        isCustomLocationActive
+                                                        ? const Color(
+                                                            0xFF3B82F6,
+                                                          ).withValues(
+                                                            alpha: 0.3,
+                                                          )
+                                                        : Colors.white
+                                                              .withValues(
+                                                                alpha: 0.1,
+                                                              ),
                                                   ),
-                                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 10,
+                                                      ),
+                                                  shape:
+                                                      const RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.zero,
+                                                      ),
                                                 ),
                                                 onPressed: () {
                                                   setState(() {
-                                                    isEditingCustomLocation = true;
-                                                    customLocation ??= mapController.camera.center;
+                                                    isEditingCustomLocation =
+                                                        true;
+                                                    customLocation ??=
+                                                        mapController
+                                                            .camera
+                                                            .center;
                                                   });
                                                 },
                                                 icon: Icon(
                                                   isCustomLocationActive
-                                                      ? Icons.edit_location_alt_rounded
-                                                      : Icons.add_location_alt_rounded,
+                                                      ? Icons
+                                                            .edit_location_alt_rounded
+                                                      : Icons
+                                                            .add_location_alt_rounded,
                                                   size: 16,
                                                 ),
                                                 label: Text(
                                                   isCustomLocationActive
                                                       ? 'MODIFICAR UBICACIÓN PERSONALIZADA'
                                                       : 'ESTABLECER UBICACIÓN PERSONALIZADA',
-                                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ]
+                                          ],
                                         ],
                                       ),
                                     ),
@@ -910,6 +1081,3 @@ class MapScreenState extends State<MapScreen> {
     );
   }
 }
-
-
-

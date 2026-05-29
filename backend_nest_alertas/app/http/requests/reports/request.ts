@@ -44,6 +44,10 @@ export class CreateReportRequest {
 
 export class VerifyReportRequest{
     @ApiProperty()
+    @IsString()
+    userId: string
+
+    @ApiProperty()
     @Type(() => Number)
     @IsNumber()
     type: number

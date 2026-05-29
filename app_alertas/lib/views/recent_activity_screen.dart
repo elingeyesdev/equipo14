@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import 'package:app_alertas/models/alert_model.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
@@ -245,6 +246,10 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       return true;
     }).toList();
 
+    final displayAlerts = (loading && alerts.isEmpty)
+        ? List.generate(5, (_) => AlertModel.mock())
+        : filteredAlerts;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -264,79 +269,84 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: _loadAlerts,
-                      displacement: 20,
-                      color: const Color(0xFF3B82F6),
-                      child: alerts.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.notifications_none_rounded, size: 64, color: Colors.white.withValues(alpha: 0.1)),
-                                  const SizedBox(height: 16),
-                                  const Text('No hay actividad reciente', style: TextStyle(color: Colors.grey)),
-                                ],
-                              ),
-                            )
-                          : CustomScrollView(
-                              slivers: [
-                                SliverToBoxAdapter(
-                                  child: GestureDetector(
-                                    onTap: () => _openFilterBottomSheet(alerts),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                                      child: Row(
-                                        children: [
-                                          Text(
-                                            'Filtrar Reportes',
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(alpha: 0.6),
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.normal,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Icon(Icons.filter_list, color: Colors.white.withValues(alpha: 0.6), size: 16),
-                                        ],
+              child: RefreshIndicator(
+                onRefresh: _loadAlerts,
+                displacement: 20,
+                color: const Color(0xFF3B82F6),
+                child: Skeletonizer(
+                  enabled: loading && alerts.isEmpty,
+                  effect: const ShimmerEffect(
+                    baseColor: Color(0xFF1E2126),
+                    highlightColor: Color(0xFF26292E),
+                  ),
+                  child: alerts.isEmpty && !loading
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.notifications_none_rounded, size: 64, color: Colors.white.withValues(alpha: 0.1)),
+                              const SizedBox(height: 16),
+                              const Text('No hay actividad reciente', style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        )
+                      : CustomScrollView(
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: GestureDetector(
+                                onTap: () => _openFilterBottomSheet(alerts),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'Filtrar Reportes',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.6),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.normal,
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(width: 8),
+                                      Icon(Icons.filter_list, color: Colors.white.withValues(alpha: 0.6), size: 16),
+                                    ],
                                   ),
                                 ),
-                                SliverPadding(
-                                  padding: EdgeInsets.zero,
-                                  sliver: filteredAlerts.isEmpty
-                                      ? SliverFillRemaining(
-                                          hasScrollBody: false,
-                                          child: Center(
-                                            child: Text(
-                                              'No se hallaron coincidencias',
-                                              style: TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : SliverList(
-                                          delegate: SliverChildBuilderDelegate(
-                                            (context, index) {
-                                              final alert = filteredAlerts[index];
-                                              return AlertCard(
-                                                alert: alert,
-                                                onTap: () => widget.onAlertTap?.call(alert),
-                                                onVerify: () => _verifyAlert(alert),
-                                              );
-                                            },
-                                            childCount: filteredAlerts.length,
+                              ),
+                            ),
+                            SliverPadding(
+                              padding: EdgeInsets.zero,
+                              sliver: displayAlerts.isEmpty
+                                  ? SliverFillRemaining(
+                                      hasScrollBody: false,
+                                      child: Center(
+                                        child: Text(
+                                          'No se hallaron coincidencias',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 16,
                                           ),
                                         ),
-                                ),
-                              ],
+                                      ),
+                                    )
+                                  : SliverList(
+                                      delegate: SliverChildBuilderDelegate(
+                                        (context, index) {
+                                          final alert = displayAlerts[index];
+                                          return AlertCard(
+                                            alert: alert,
+                                            onTap: () => widget.onAlertTap?.call(alert),
+                                            onVerify: () => _verifyAlert(alert),
+                                          );
+                                        },
+                                        childCount: displayAlerts.length,
+                                      ),
+                                    ),
                             ),
-                    ),
+                          ],
+                        ),
+                ),
+              ),
             ),
           ],
         ),

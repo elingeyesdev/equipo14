@@ -13,7 +13,7 @@ export class ReportsCleanup {
         private reportsRepository: Repository<Report>,
     ) {}
 
-    @Cron('')
+    @Cron('0 * * * *')
     async removeExpiredReports(){
         const result = await this.reportsRepository
             .createQueryBuilder()
