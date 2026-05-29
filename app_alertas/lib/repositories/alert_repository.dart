@@ -52,11 +52,13 @@ class AlertRepository {
     required int typeId,
     required double latitude,
     required double longitude,
+    required String userId,
   }) async {
     return await _service.findSimilarAlerts(
       typeId: typeId,
       latitude: latitude,
       longitude: longitude,
+      userId: userId,
     );
   }
 

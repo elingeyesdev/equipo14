@@ -245,11 +245,17 @@ export class ReportsService {
                 `report.created_at >= NOW() - INTERVAL '200 minutes'`
             )
             .andWhere(
-                `NOT EXISTS (
+                `
+                NOT EXISTS (
                     SELECT 1
-                    FROM images img
-                    WHERE img.reportId = report.id
-                    AND img.uploadedById = userId)`
+                    FROM image img
+                    WHERE img."reportId" = report.id
+                    AND img."uploadedById" = :userId
+                )
+                `,
+                {
+                    userId,
+                }
             )
             .orderBy('report.created_at', 'DESC')
             .getMany();

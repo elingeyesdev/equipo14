@@ -452,10 +452,13 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       final alertLat = _selectedAlertLocation?.latitude ?? _position!.latitude;
       final alertLon =
           _selectedAlertLocation?.longitude ?? _position!.longitude;
+      final userId = context.read<AuthViewModel>().user!.id;
+      
       final similars = await alertVM.findSimilarAlerts(
         typeId: _selectedType!.id,
         latitude: alertLat,
         longitude: alertLon,
+        userId: userId,
       );
 
       if (similars.isNotEmpty) {

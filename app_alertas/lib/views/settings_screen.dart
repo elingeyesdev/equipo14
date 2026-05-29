@@ -85,7 +85,9 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () async {
+                      final alertVM = context.read<AlertViewModel>();
                       await auth.logout();
+                      alertVM.clear();
 
                       if (context.mounted) {
                         Navigator.of(

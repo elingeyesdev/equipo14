@@ -21,6 +21,13 @@ class AlertViewModel extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
+  void clear() {
+    _alerts = [];
+    _myAlerts = [];
+    _error = null;
+    notifyListeners();
+  }
+
   Future<void> fetchAlerts() async {
     _isLoading = true;
     _error = null;
@@ -129,12 +136,14 @@ class AlertViewModel extends ChangeNotifier {
     required int typeId,
     required double latitude,
     required double longitude,
+    required String userId,
   }) async {
     try {
       return await _repository.findSimilarAlerts(
         typeId: typeId,
         latitude: latitude,
         longitude: longitude,
+        userId: userId,
       );
     } catch (e) {
       _error = e.toString();

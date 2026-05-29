@@ -70,6 +70,7 @@ class AlertService {
     required int typeId,
     required double latitude,
     required double longitude,
+    required String userId,
   }) async {
     final response = await _dio.get(
       '/reports/similars',
@@ -77,6 +78,7 @@ class AlertService {
         'type': typeId.toString(),
         'latitude': latitude.toString(),
         'longitude': longitude.toString(),
+        'userId': userId,
       },
     );
     final List<dynamic> data = response.data;
