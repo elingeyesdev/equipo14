@@ -24,11 +24,9 @@ double _distanceInMeters(LatLng a, LatLng b) {
   final lat2 = b.latitudeInRad;
   final dLat = (b.latitude - a.latitude) * math.pi / 180;
   final dLon = (b.longitude - a.longitude) * math.pi / 180;
-  final x = math.sin(dLat / 2) * math.sin(dLat / 2) +
-      math.cos(lat1) *
-          math.cos(lat2) *
-          math.sin(dLon / 2) *
-          math.sin(dLon / 2);
+  final x =
+      math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(lat1) * math.cos(lat2) * math.sin(dLon / 2) * math.sin(dLon / 2);
   final c = 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x));
   return earthRadius * c;
 }
@@ -64,7 +62,7 @@ class _MapRouteScreenState extends State<MapRouteScreen>
   List<LatLng> _routePoints = [];
   bool _isLoadingRoute = false;
   DateTime? _lastRouteUpdate;
-  
+
   // Tracking
   final _trackingService = TrackingService();
   Timer? _trackingTimer;
@@ -88,11 +86,15 @@ class _MapRouteScreenState extends State<MapRouteScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _bearingAnimation = Tween<double>(begin: 0, end: 0).animate(
-      CurvedAnimation(parent: _vehicleAnimController, curve: Curves.easeOut),
-    )..addListener(() {
-        setState(() => _animatedBearing = _bearingAnimation.value);
-      });
+    _bearingAnimation =
+        Tween<double>(begin: 0, end: 0).animate(
+          CurvedAnimation(
+            parent: _vehicleAnimController,
+            curve: Curves.easeOut,
+          ),
+        )..addListener(() {
+          setState(() => _animatedBearing = _bearingAnimation.value);
+        });
 
     _loadCurrentLocation();
   }
@@ -132,8 +134,7 @@ class _MapRouteScreenState extends State<MapRouteScreen>
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['routes'] != null && data['routes'].isNotEmpty) {
-          final geometry =
-              data['routes'][0]['geometry']['coordinates'] as List;
+          final geometry = data['routes'][0]['geometry']['coordinates'] as List;
           setState(() {
             _routePoints = geometry
                 .map((coord) => LatLng(coord[1] as double, coord[0] as double))
@@ -184,14 +185,17 @@ class _MapRouteScreenState extends State<MapRouteScreen>
 
   /// Anima suavemente la rotación del icono del vehículo.
   void _animateBearing(double newBearing) {
-    _bearingAnimation = Tween<double>(
-      begin: _animatedBearing,
-      end: newBearing,
-    ).animate(
-      CurvedAnimation(parent: _vehicleAnimController, curve: Curves.easeOut),
-    )..addListener(() {
-        if (mounted) setState(() => _animatedBearing = _bearingAnimation.value);
-      });
+    _bearingAnimation =
+        Tween<double>(begin: _animatedBearing, end: newBearing).animate(
+          CurvedAnimation(
+            parent: _vehicleAnimController,
+            curve: Curves.easeOut,
+          ),
+        )..addListener(() {
+          if (mounted) {
+            setState(() => _animatedBearing = _bearingAnimation.value);
+          }
+        });
     _vehicleAnimController.forward(from: 0);
   }
 
@@ -209,7 +213,7 @@ class _MapRouteScreenState extends State<MapRouteScreen>
   void _stopNavigation() {
     _positionSubscription?.cancel();
     _positionSubscription = null;
-    
+
     _trackingTimer?.cancel();
     _trackingTimer = null;
     final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
@@ -227,8 +231,9 @@ class _MapRouteScreenState extends State<MapRouteScreen>
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           backgroundColor: const Color(0xFF1A1E27),
           child: Padding(
             padding: const EdgeInsets.all(28),
@@ -341,7 +346,8 @@ class _MapRouteScreenState extends State<MapRouteScreen>
             _mapController.move(position, 17);
 
             final now = DateTime.now();
-            final shouldRefreshRoute = _lastRouteUpdate == null ||
+            final shouldRefreshRoute =
+                _lastRouteUpdate == null ||
                 now.difference(_lastRouteUpdate!).inSeconds >= 5;
 
             if (shouldRefreshRoute && !_isLoadingRoute) {
@@ -372,13 +378,12 @@ class _MapRouteScreenState extends State<MapRouteScreen>
 
   void _updateTrackingData() {
     if (!_isFollowingRoute || _currentLocation == null) return;
-    
+
     final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
-    
-    final routeCoordinates = _routePoints.map((p) => {
-      'lat': p.latitude,
-      'lng': p.longitude,
-    }).toList();
+
+    final routeCoordinates = _routePoints
+        .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+        .toList();
 
     _trackingService.startTracking(userId, {
       'latitude': _currentLocation!.latitude,
@@ -392,7 +397,9 @@ class _MapRouteScreenState extends State<MapRouteScreen>
   /// Elige el icono de vehículo según el tipo de emergencia.
   IconData _vehicleIcon() {
     final t = widget.type.toLowerCase();
-    if (t.contains('ambulancia') || t.contains('medic') || t.contains('salud')) {
+    if (t.contains('ambulancia') ||
+        t.contains('medic') ||
+        t.contains('salud')) {
       return Icons.local_hospital_rounded;
     }
     if (t.contains('bombero') || t.contains('incendio')) {
@@ -404,8 +411,9 @@ class _MapRouteScreenState extends State<MapRouteScreen>
   @override
   Widget build(BuildContext context) {
     final hasCurrentLocation = _currentLocation != null;
-    final initialCenter =
-        hasCurrentLocation ? _currentLocation! : _incidentLocation;
+    final initialCenter = hasCurrentLocation
+        ? _currentLocation!
+        : _incidentLocation;
     final points = _routePoints;
 
     return Scaffold(
@@ -437,8 +445,7 @@ class _MapRouteScreenState extends State<MapRouteScreen>
               children: [
                 TileLayer(
                   urlTemplate: _mapboxDarkTileUrl(),
-                  userAgentPackageName:
-                      'com.tuempresa.appalertas.app_alertas',
+                  userAgentPackageName: 'com.tuempresa.appalertas.app_alertas',
                   maxNativeZoom: 22,
                   maxZoom: 22,
                 ),
@@ -447,21 +454,12 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                 if (points.isNotEmpty)
                   PolylineLayer(
                     polylines: [
-                      // Sombra de la ruta
-                      Polyline(
-                        points: points,
-                        strokeWidth: 12,
-                        color: Colors.blueAccent.withValues(alpha: 0.25),
-                        strokeCap: StrokeCap.round,
-                        strokeJoin: StrokeJoin.round,
-                      ),
-                      // Ruta principal
                       Polyline(
                         points: points,
                         strokeWidth: 6,
                         color: _isLoadingRoute
                             ? Colors.grey
-                            : const Color(0xFF3B82F6),
+                            : const Color(0xFFAF6D58),
                         strokeCap: StrokeCap.round,
                         strokeJoin: StrokeJoin.round,
                       ),
@@ -482,15 +480,8 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: Colors.redAccent,
+                              color: Color(0xFFAF3C32),
                               shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.redAccent.withValues(alpha: 0.5),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                ),
-                              ],
                             ),
                             child: const Icon(
                               Icons.flag_rounded,
@@ -523,16 +514,8 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6),
+                              color: const Color(0xFFAF6D58),
                               shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF3B82F6)
-                                      .withValues(alpha: 0.55),
-                                  blurRadius: 16,
-                                  spreadRadius: 3,
-                                ),
-                              ],
                             ),
                             child: Icon(
                               _isFollowingRoute
@@ -555,7 +538,7 @@ class _MapRouteScreenState extends State<MapRouteScreen>
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
             decoration: const BoxDecoration(
-              color: Color(0xFF0D1015),
+              color: Color(0xFF262624),
               border: Border(
                 top: BorderSide(color: Color(0xFF1E2330), width: 1),
               ),
@@ -567,12 +550,15 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.redAccent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Colors.redAccent.withValues(alpha: 0.4)),
+                          color: Colors.redAccent.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: Text(
                         widget.type,
@@ -597,14 +583,19 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          color: Colors.orangeAccent, size: 16),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.orangeAccent,
+                        size: 16,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           _locationError!,
                           style: const TextStyle(
-                              color: Colors.orangeAccent, fontSize: 13),
+                            color: Colors.orangeAccent,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -617,8 +608,8 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       backgroundColor: _isFollowingRoute
-                          ? Colors.redAccent
-                          : const Color(0xFF3B82F6),
+                          ? Color(0xFFAF3C32)
+                          : const Color(0xFFAF6D58),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -633,8 +624,8 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                       _hasArrived
                           ? 'LLEGÓ AL DESTINO'
                           : _isFollowingRoute
-                              ? 'DETENER SEGUIMIENTO'
-                              : 'INICIAR NAVEGACIÓN',
+                          ? 'DETENER SEGUIMIENTO'
+                          : 'INICIAR NAVEGACIÓN',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.8,

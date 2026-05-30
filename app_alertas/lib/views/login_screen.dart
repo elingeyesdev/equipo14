@@ -52,21 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthViewModel>().isLoading;
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background Gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0D1015), Color(0xFF26292E)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ),
-          SafeArea(
+      body: SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(32),
@@ -82,10 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                              color: const Color(0xFFAF6D58).withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.shield_rounded, size: 64, color: Color(0xFF3B82F6)),
+                            child: const Icon(Icons.shield_rounded, size: 64, color: Color(0xFFAF6D58)),
                           ),
                         ),
                         const SizedBox(height: 32),
@@ -196,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: const Text(
                                 'Regístrate',
                                 style: TextStyle(
-                                  color: Color(0xFF3B82F6),
+                                  color: Color(0xFFAF6D58),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -210,8 +196,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-        ],
-      ),
     );
   }
 }

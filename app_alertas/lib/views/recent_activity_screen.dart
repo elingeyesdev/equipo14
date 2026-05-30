@@ -84,9 +84,15 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF26292E),
-        title: const Text('Confirmar verificación', style: TextStyle(color: Colors.white)),
-        content: const Text('¿Estás seguro de que deseas verificar este reporte como autoridad?', style: TextStyle(color: Colors.white70)),
+        backgroundColor: const Color(0xFF30302E),
+        title: const Text(
+          'Confirmar verificación',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          '¿Estás seguro de que deseas verificar este reporte como autoridad?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -94,7 +100,10 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Verificar', style: TextStyle(color: Colors.green)),
+            child: const Text(
+              'Verificar',
+              style: TextStyle(color: Colors.green),
+            ),
           ),
         ],
       ),
@@ -126,7 +135,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       await _loadAlerts();
     } catch (e) {
       if (mounted) Navigator.pop(context); // cerrar loading
-      
+
       String errorMsg = e.toString();
       if (errorMsg.contains('Exception:')) {
         final parts = errorMsg.split(' — ');
@@ -153,7 +162,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: const Color(0xFF26292E),
+        backgroundColor: const Color(0xFF30302E),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -165,7 +174,11 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                   color: Colors.red.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                child: const Icon(
+                  Icons.error_outline,
+                  color: Colors.red,
+                  size: 40,
+                ),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -195,7 +208,10 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Entendido',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
@@ -209,7 +225,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E2126),
+      backgroundColor: const Color(0xFF2C2C2A),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -237,7 +253,8 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     final loading = alertVM.isLoading;
 
     final filteredAlerts = alerts.where((alert) {
-      if (_selectedZone != null && (alert.zone ?? 'Desconocida') != _selectedZone) {
+      if (_selectedZone != null &&
+          (alert.zone ?? 'Desconocida') != _selectedZone) {
         return false;
       }
       if (!_priorityFilter.matches(alert)) {
@@ -272,21 +289,28 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
               child: RefreshIndicator(
                 onRefresh: _loadAlerts,
                 displacement: 20,
-                color: const Color(0xFF3B82F6),
+                color: const Color(0xFFAF6D58),
                 child: Skeletonizer(
                   enabled: loading && alerts.isEmpty,
                   effect: const ShimmerEffect(
-                    baseColor: Color(0xFF1E2126),
-                    highlightColor: Color(0xFF26292E),
+                    baseColor: Color(0xFF2C2C2A),
+                    highlightColor: Color(0xFF30302E),
                   ),
                   child: alerts.isEmpty && !loading
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.notifications_none_rounded, size: 64, color: Colors.white.withValues(alpha: 0.1)),
+                              Icon(
+                                Icons.notifications_none_rounded,
+                                size: 64,
+                                color: Colors.white.withValues(alpha: 0.1),
+                              ),
                               const SizedBox(height: 16),
-                              const Text('No hay actividad reciente', style: TextStyle(color: Colors.grey)),
+                              const Text(
+                                'No hay actividad reciente',
+                                style: TextStyle(color: Colors.grey),
+                              ),
                             ],
                           ),
                         )
@@ -296,19 +320,30 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                               child: GestureDetector(
                                 onTap: () => _openFilterBottomSheet(alerts),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 8,
+                                  ),
                                   child: Row(
                                     children: [
                                       Text(
                                         'Filtrar Reportes',
                                         style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.6),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.6,
+                                          ),
                                           fontSize: 14,
                                           fontWeight: FontWeight.normal,
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Icon(Icons.filter_list, color: Colors.white.withValues(alpha: 0.6), size: 16),
+                                      Icon(
+                                        Icons.filter_list,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.6,
+                                        ),
+                                        size: 16,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -330,17 +365,18 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                                       ),
                                     )
                                   : SliverList(
-                                      delegate: SliverChildBuilderDelegate(
-                                        (context, index) {
-                                          final alert = displayAlerts[index];
-                                          return AlertCard(
-                                            alert: alert,
-                                            onTap: () => widget.onAlertTap?.call(alert),
-                                            onVerify: () => _verifyAlert(alert),
-                                          );
-                                        },
-                                        childCount: displayAlerts.length,
-                                      ),
+                                      delegate: SliverChildBuilderDelegate((
+                                        context,
+                                        index,
+                                      ) {
+                                        final alert = displayAlerts[index];
+                                        return AlertCard(
+                                          alert: alert,
+                                          onTap: () =>
+                                              widget.onAlertTap?.call(alert),
+                                          onVerify: () => _verifyAlert(alert),
+                                        );
+                                      }, childCount: displayAlerts.length),
                                     ),
                             ),
                           ],
@@ -402,24 +438,36 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
             padding: const EdgeInsets.fromLTRB(12, 16, 24, 16),
             child: Row(
               children: [
-                 IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                 ),
-                 const SizedBox(width: 8),
-                 const Text("Filtrar por", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.normal)),
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  "Filtrar por",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
               ],
             ),
           ),
-          const Divider(height: 1, color: Color(0xFF26292E)),
-          
+          const Divider(height: 1, color: Color(0xFF30302E)),
+
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               children: [
                 const Text(
                   'INCIDENTES POR ZONA',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _FilterRowItem(
@@ -427,16 +475,23 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   isSelected: _selectedZone == null,
                   onTap: () => setState(() => _selectedZone = null),
                 ),
-                ...sortedZones.map((z) => _FilterRowItem(
-                  label: z.key,
-                  isSelected: _selectedZone == z.key,
-                  onTap: () => setState(() => _selectedZone = z.key),
-                )),
-                
+                ...sortedZones.map(
+                  (z) => _FilterRowItem(
+                    label: z.key,
+                    isSelected: _selectedZone == z.key,
+                    onTap: () => setState(() => _selectedZone = z.key),
+                  ),
+                ),
+
                 const SizedBox(height: 32),
                 const Text(
                   'PRIORIDAD Y CREDIBILIDAD',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 for (final f in _PriorityFilter.values)
@@ -446,24 +501,30 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     onTap: () => setState(() => _priorityFilter = f),
                   ),
               ],
-            )
+            ),
           ),
-          
+
           Padding(
-             padding: const EdgeInsets.all(24),
-             child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                   style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                   ),
-                   onPressed: () => widget.onConfirm(_selectedZone, _priorityFilter),
-                   child: const Text('Confirmar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            padding: const EdgeInsets.all(24),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFAF6D58),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-             ),
+                onPressed: () =>
+                    widget.onConfirm(_selectedZone, _priorityFilter),
+                child: const Text(
+                  'Confirmar',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -477,7 +538,9 @@ class _FilterRowItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const _FilterRowItem({
-    required this.label, required this.isSelected, required this.onTap,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
   });
 
   @override
@@ -490,20 +553,32 @@ class _FilterRowItem extends StatelessWidget {
           children: [
             // Check on the far left
             Container(
-              width: 22, height: 22,
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.withValues(alpha: 0.5), width: 2),
-                color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFFAF6D58)
+                      : Colors.grey.withValues(alpha: 0.5),
+                  width: 2,
+                ),
+                color: isSelected
+                    ? const Color(0xFFAF6D58)
+                    : Colors.transparent,
               ),
-              child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+              child: isSelected
+                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  : null,
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8), 
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),

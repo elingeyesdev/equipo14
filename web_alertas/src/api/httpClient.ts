@@ -1,6 +1,6 @@
 import { type Session } from "../domain/types";
 
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = "https://srbd68d5-3000.brs.devtunnels.ms/api";
 
 export const getSession = (): Session | null => {
   if (typeof window === "undefined") return null;

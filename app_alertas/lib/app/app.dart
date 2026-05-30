@@ -4,6 +4,7 @@ import 'package:app_alertas/views/theme/app_theme.dart';
 import 'package:app_alertas/views/main_navigation_screen.dart';
 import 'package:app_alertas/views/login_screen.dart';
 import 'package:app_alertas/views/register_screen.dart';
+import 'package:app_alertas/views/splash_screen.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/viewmodels/alert_type_viewmodel.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
@@ -18,6 +19,7 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   final AuthViewModel _authProvider = AuthViewModel();
+  bool _splashFinished = false;
 
   @override
   void initState() {
@@ -29,6 +31,14 @@ class _AppState extends State<App> {
   void dispose() {
     _authProvider.dispose();
     super.dispose();
+  }
+
+  void _onSplashFinish() {
+    if (mounted) {
+      setState(() {
+        _splashFinished = true;
+      });
+    }
   }
 
   @override
@@ -53,18 +63,17 @@ class _AppState extends State<App> {
                     body: Center(child: CircularProgressIndicator()),
                   )
                 : auth.isAuthenticated
-                ? const MainNavigationScreen()
-                : LoginScreen(
-                    onGoToRegister: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                    ),
-                  ),
+                    ? const MainNavigationScreen()
+                    : !_splashFinished
+                        ? SplashScreen(onFinish: _onSplashFinish)
+                        : LoginScreen(
+                            onGoToRegister: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            ),
+                          ),
           );
         },
       ),
     );
   }
 }
-
-
-

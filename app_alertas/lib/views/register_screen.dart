@@ -60,20 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthViewModel>().isLoading;
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0D1015), Color(0xFF26292E)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ),
-          SafeArea(
+      body: SafeArea(
             child: Column(
               children: [
                 AppBar(
@@ -228,8 +215,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
           ),
-        ],
-      ),
     );
   }
 }

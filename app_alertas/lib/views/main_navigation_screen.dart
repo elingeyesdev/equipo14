@@ -85,7 +85,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF0D1015),
+          color: const Color(0xFF262624),
           border: Border(
             top: BorderSide(
               color: Colors.white.withValues(alpha: 0.12),
@@ -134,8 +134,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   currentIndex == 1 ? Icons.add_circle_rounded : Icons.add_circle_outline_rounded,
                   size: currentIndex == 1 ? 23 : 22,
                   color: currentIndex == 1
-                      ? const Color(0xFFEF4444)
-                      : const Color(0xFFEF4444).withValues(alpha: 0.65),
+                      ? const Color(0xFFB45F4B)
+                      : const Color(0xFFB45F4B).withValues(alpha: 0.65),
                 ),
                 label: 'Crear',
               ),

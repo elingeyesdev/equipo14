@@ -63,10 +63,10 @@ class _AlertCardState extends State<AlertCard> {
 
   Color _alertColor(String type) {
     final t = type.toUpperCase();
-    if (t.contains('ROBO') || t.contains('HURTO')) return const Color(0xFFEF4444);
-    if (t.contains('INCENDIO')) return const Color(0xFFF59E0B);
-    if (t.contains('ACCIDENTE') || t.contains('VIAL')) return const Color(0xFF3B82F6);
-    if (t.contains('MÉDICA') || t.contains('SALUD')) return const Color(0xFF10B981);
+    if (t.contains('ROBO') || t.contains('HURTO')) return const Color(0xFFB64D4C);
+    if (t.contains('INCENDIO')) return const Color(0xFFAA5F3C);
+    if (t.contains('ACCIDENTE') || t.contains('VIAL')) return const Color(0xFF506E96);
+    if (t.contains('MÉDICA') || t.contains('SALUD')) return const Color(0xFF3C8C6E);
     return const Color(0xFF8B5CF6);
   }
 
@@ -175,19 +175,18 @@ class _AlertCardState extends State<AlertCard> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    color: color,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(_alertIcon(widget.alert.type), color: color, size: 13),
+                      Icon(_alertIcon(widget.alert.type), color: Colors.white, size: 12),
                       const SizedBox(width: 6),
                       Text(
                         widget.alert.type.toUpperCase(),
-                        style: TextStyle(
-                          color: color,
+                        style: const TextStyle(
+                          color: Colors.white,
                           fontWeight: FontWeight.w800,
                           fontSize: 10,
                           letterSpacing: 0.5,
@@ -201,17 +200,17 @@ class _AlertCardState extends State<AlertCard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
+                      color: Color(0xFF3C8C6E),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.verified, color: Colors.green, size: 13),
+                        Icon(Icons.verified, color: Color.fromARGB(255, 255, 255, 255), size: 13),
                         SizedBox(width: 4),
                         Text(
                           'VERIFICADO',
                           style: TextStyle(
-                            color: Colors.green,
+                            color: Color.fromARGB(255, 255, 255, 255),
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
@@ -321,7 +320,7 @@ class _AlertCardState extends State<AlertCard> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: Color(0xFFAF6D58),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -355,13 +354,12 @@ class _AlertCardState extends State<AlertCard> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.withValues(alpha: 0.1),
-                    foregroundColor: Colors.green,
+                    backgroundColor: const Color(0xFF6D8566),
+                    foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.green.withValues(alpha: 0.2)),
                     ),
                   ),
                   onPressed: widget.onVerify,

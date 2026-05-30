@@ -79,7 +79,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
   @override
   Widget build(BuildContext context) {
     final inside = _isInsideRadius;
-    final markerColor = inside ? const Color(0xFF3B82F6) : Colors.redAccent;
+    final markerColor = inside ? const Color(0xFFAF6D58) : Color(0xFFB64D4C);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -114,8 +114,8 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                       point: widget.userLocation,
                       radius: kMaxAlertRadiusMeters,
                       useRadiusInMeter: true,
-                      color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
-                      borderColor: const Color(0xFF3B82F6).withValues(alpha: 0.55),
+                      color: const Color(0xFFAF6D58).withValues(alpha: 0.12),
+                      borderColor: const Color(0xFFAF6D58).withValues(alpha: 0.55),
                       borderStrokeWidth: 2,
                     ),
                   ],
@@ -131,7 +131,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                       height: 30,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6),
+                          color: const Color(0xFFAF6D58),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
@@ -198,12 +198,12 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0D1015).withValues(alpha: 0.88),
+                  color: const Color(0xFF262624).withValues(alpha: 0.88),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.touch_app_rounded, color: Color(0xFF3B82F6), size: 12),
+                    Icon(Icons.touch_app_rounded, color: Color(0xFFAF6D58), size: 12),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -228,14 +228,9 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: inside
-                      ? Colors.greenAccent.withValues(alpha: 0.18)
-                      : Colors.redAccent.withValues(alpha: 0.18),
+                      ? Color(0xFF3C8C6E)
+                      : Color(0xFFB64D4C),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: inside
-                        ? Colors.greenAccent.withValues(alpha: 0.6)
-                        : Colors.redAccent.withValues(alpha: 0.6),
-                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -244,14 +239,14 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                       inside
                           ? Icons.check_circle_rounded
                           : Icons.cancel_rounded,
-                      color: inside ? Colors.greenAccent : Colors.redAccent,
+                      color: const Color.fromARGB(255, 255, 255, 255),
                       size: 14,
                     ),
                     const SizedBox(width: 5),
                     Text(
                       inside ? 'Dentro del área' : 'Fuera del área',
                       style: TextStyle(
-                        color: inside ? Colors.greenAccent : Colors.redAccent,
+                        color: const Color.fromARGB(255, 255, 255, 255),
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),

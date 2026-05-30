@@ -112,7 +112,7 @@ class ProfilePageState extends State<ProfilePage> {
                             height: 80,
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Color(0xFF26292E),
+                              color: Color(0xFF30302E),
                             ),
                             child: Center(
                               child: Text(
@@ -179,6 +179,9 @@ class ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
+              SliverToBoxAdapter(
+                child: const SizedBox(height: 20),
+              ),
 
               if (myAlerts.isEmpty && !loading)
                 SliverFillRemaining(
@@ -207,8 +210,8 @@ class ProfilePageState extends State<ProfilePage> {
                   sliver: Skeletonizer.sliver(
                     enabled: loading && alertVM.myAlerts.isEmpty,
                     effect: const ShimmerEffect(
-                      baseColor: Color(0xFF1E2126),
-                      highlightColor: Color(0xFF26292E),
+                      baseColor: Color(0xFF2C2C2A),
+                      highlightColor: Color(0xFF30302E),
                     ),
                     child: SliverGrid(
                       gridDelegate:
@@ -226,7 +229,7 @@ class ProfilePageState extends State<ProfilePage> {
                             final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (ctx) => AlertDialog(
-                                backgroundColor: const Color(0xFF26292E),
+                                backgroundColor: const Color(0xFF30302E),
                                 title: const Text(
                                   'Eliminar reporte',
                                   style: TextStyle(color: Colors.white),
@@ -265,7 +268,7 @@ class ProfilePageState extends State<ProfilePage> {
                             children: [
                               Container(
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF26292E),
+                                  color: Color(0xFF30302E),
                                 ),
                                 clipBehavior: Clip.hardEdge,
                                 child: Column(
@@ -297,7 +300,7 @@ class ProfilePageState extends State<ProfilePage> {
                                         vertical: 6,
                                         horizontal: 2,
                                       ),
-                                      color: const Color(0xFF1E2126),
+                                      color: const Color(0xFF2C2C2A),
                                       child: Text(
                                         alert.type.toUpperCase(),
                                         textAlign: TextAlign.center,

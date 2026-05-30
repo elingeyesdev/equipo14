@@ -252,7 +252,7 @@ class MapScreenState extends State<MapScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0D1015),
+                      color: const Color(0xFF262624),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: color.withValues(alpha: 0.3)),
                     ),
@@ -281,7 +281,7 @@ class MapScreenState extends State<MapScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(
-        0xFF0D1015,
+        0xFF262624,
       ), // Premium extremely deep dark slate
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -309,10 +309,12 @@ class MapScreenState extends State<MapScreen> {
     if (t.contains('hurto')) return Icons.person_off_rounded;
     if (t.contains('incendio')) return Icons.local_fire_department_rounded;
     if (t.contains('accidente')) return Icons.car_crash_rounded;
-    if (t.contains('vial') || t.contains('obstrucción'))
+    if (t.contains('vial') || t.contains('obstrucción')) {
       return Icons.traffic_rounded;
-    if (t.contains('médica') || t.contains('salud'))
+    }
+    if (t.contains('médica') || t.contains('salud')) {
       return Icons.medical_services_rounded;
+    }
     return Icons.warning_amber_rounded;
   }
 
@@ -331,13 +333,16 @@ class MapScreenState extends State<MapScreen> {
 
   Color _colorByType(String type) {
     final t = type.toLowerCase();
-    if (t.contains('robo') || t.contains('hurto'))
-      return const Color(0xFFEF4444);
-    if (t.contains('incendio')) return const Color(0xFFF59E0B);
-    if (t.contains('accidente') || t.contains('vial'))
-      return const Color(0xFF3B82F6);
-    if (t.contains('médica') || t.contains('salud'))
-      return const Color(0xFF10B981);
+    if (t.contains('robo') || t.contains('hurto')) {
+      return const Color(0xFFB64D4C);
+    }
+    if (t.contains('incendio')) return const Color(0xFFAA5F3C);
+    if (t.contains('accidente') || t.contains('vial')) {
+      return const Color(0xFF506E96);
+    }
+    if (t.contains('médica') || t.contains('salud')) {
+      return const Color(0xFF3C8C6E);
+    }
     return const Color(0xFF8B5CF6);
   }
 
@@ -393,11 +398,11 @@ class MapScreenState extends State<MapScreen> {
                             radius: (_radiusKm * 1000),
                             useRadiusInMeter: true,
                             color: const Color(
-                              0xFF3B82F6,
+                              0xFFAF6D58,
                             ).withValues(alpha: 0.14),
                             borderStrokeWidth: 2,
                             borderColor: const Color(
-                              0xFF3B82F6,
+                              0xFFAF6D58,
                             ).withValues(alpha: 0.55),
                           ),
                         ],
@@ -500,7 +505,7 @@ class MapScreenState extends State<MapScreen> {
                               decoration: BoxDecoration(
                                 color: isCustomLocationActive
                                     ? Colors.grey
-                                    : const Color(0xFF3B82F6),
+                                    : const Color(0xFFAF6D58),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white, width: 2),
                               ),
@@ -515,12 +520,19 @@ class MapScreenState extends State<MapScreen> {
                             (isCustomLocationActive || isEditingCustomLocation))
                           Marker(
                             point: customLocation!,
-                            width: 40,
-                            height: 40,
-                            child: const Icon(
-                              Icons.my_location,
-                              color: Colors.blue,
-                              size: 30,
+                            width: 30,
+                            height: 30,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFAF6D58),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(
+                                Icons.my_location_rounded,
+                                color: Colors.white,
+                                size: 14,
+                              ),
                             ),
                           ),
                       ],
@@ -541,10 +553,10 @@ class MapScreenState extends State<MapScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF26292E).withValues(alpha: 0.92),
+                    color: const Color(0xFF30302E).withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
+                      color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
                     ),
                   ),
                   child: Row(
@@ -552,7 +564,7 @@ class MapScreenState extends State<MapScreen> {
                     children: [
                       const Icon(
                         Icons.shield_rounded,
-                        color: Color(0xFF3B82F6),
+                        color: Color(0xFFAF6D58),
                         size: 15,
                       ),
                       const SizedBox(width: 6),
@@ -580,7 +592,7 @@ class MapScreenState extends State<MapScreen> {
                 color: Colors.transparent,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF26292E).withValues(alpha: 0.96),
+                    color: const Color(0xFF30302E).withValues(alpha: 0.96),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.transparent),
                     boxShadow: [
@@ -616,13 +628,13 @@ class MapScreenState extends State<MapScreen> {
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: const Color(
-                                      0xFF3B82F6,
+                                      0xFFAF6D58,
                                     ).withValues(alpha: 0.18),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
                                     Icons.radar_rounded,
-                                    color: Color(0xFF3B82F6),
+                                    color: Color(0xFFAF6D58),
                                     size: 20,
                                   ),
                                 ),
@@ -664,7 +676,7 @@ class MapScreenState extends State<MapScreen> {
                                             ),
                                             decoration: BoxDecoration(
                                               color: const Color(
-                                                0xFF3B82F6,
+                                                0xFFAF6D58,
                                               ).withValues(alpha: 0.22),
                                               borderRadius:
                                                   BorderRadius.circular(8),
@@ -676,15 +688,13 @@ class MapScreenState extends State<MapScreen> {
                                                     child:
                                                         CircularProgressIndicator(
                                                           strokeWidth: 2,
-                                                          color: Color(
-                                                            0xFF93C5FD,
-                                                          ),
+                                                          color: Colors.white,
                                                         ),
                                                   )
                                                 : Text(
                                                     '${_alerts.length}',
                                                     style: const TextStyle(
-                                                      color: Color(0xFFBFDBFE),
+                                                      color: Colors.white,
                                                       fontSize: 12,
                                                       fontWeight:
                                                           FontWeight.w800,
@@ -751,20 +761,20 @@ class MapScreenState extends State<MapScreen> {
                                             data: SliderTheme.of(context)
                                                 .copyWith(
                                                   activeTrackColor: const Color(
-                                                    0xFF3B82F6,
+                                                    0xFFAF6D58,
                                                   ),
                                                   inactiveTrackColor: Colors
                                                       .white
                                                       .withValues(alpha: 0.12),
                                                   thumbColor: const Color(
-                                                    0xFF60A5FA,
+                                                    0xFFAF6D58,
                                                   ),
                                                   overlayColor: const Color(
-                                                    0xFF3B82F6,
+                                                    0xFFAF6D58,
                                                   ).withValues(alpha: 0.18),
                                                   trackHeight: 3,
                                                   valueIndicatorColor:
-                                                      const Color(0xFF3B82F6),
+                                                      const Color(0xFFAF6D58),
                                                 ),
                                             child: Slider(
                                               value: _radiusKm.clamp(0.5, 10.0),
@@ -910,7 +920,7 @@ class MapScreenState extends State<MapScreen> {
                                                     style: ElevatedButton.styleFrom(
                                                       backgroundColor:
                                                           const Color(
-                                                            0xFF3B82F6,
+                                                            0xFFAF6D58,
                                                           ),
                                                       foregroundColor:
                                                           Colors.black,
@@ -971,21 +981,21 @@ class MapScreenState extends State<MapScreen> {
                                                   backgroundColor:
                                                       isCustomLocationActive
                                                       ? const Color(
-                                                          0xFF3B82F6,
+                                                          0xFFAF6D58,
                                                         ).withValues(alpha: 0.1)
                                                       : Colors.white.withValues(
                                                           alpha: 0.05,
                                                         ),
                                                   foregroundColor:
                                                       isCustomLocationActive
-                                                      ? const Color(0xFF3B82F6)
+                                                      ? const Color(0xFFAF6D58)
                                                       : Colors.white,
                                                   elevation: 0,
                                                   side: BorderSide(
                                                     color:
                                                         isCustomLocationActive
                                                         ? const Color(
-                                                            0xFF3B82F6,
+                                                            0xFFAF6D58,
                                                           ).withValues(
                                                             alpha: 0.3,
                                                           )
@@ -1054,15 +1064,15 @@ class MapScreenState extends State<MapScreen> {
         children: [
           FloatingActionButton(
             heroTag: 'center_location_btn',
-            backgroundColor: const Color(0xFF26292E),
-            foregroundColor: const Color(0xFF3B82F6),
+            backgroundColor: const Color(0xFF30302E),
+            foregroundColor: const Color(0xFFAF6D58),
             onPressed: _centerOnUser,
             child: const Icon(Icons.my_location_rounded),
           ),
           const SizedBox(height: 12),
           FloatingActionButton(
             heroTag: 'refresh_alerts_btn',
-            backgroundColor: const Color(0xFF26292E),
+            backgroundColor: const Color(0xFF30302E),
             foregroundColor: Colors.white,
             onPressed: _refreshRealLocation,
             child: _loadingAlerts

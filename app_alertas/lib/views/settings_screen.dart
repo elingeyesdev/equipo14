@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:app_alertas/views/emergency_services_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -46,7 +47,7 @@ class SettingsScreen extends StatelessWidget {
                   const Text(
                     'EMERGENCIAS Y SEGURIDAD',
                     style: TextStyle(
-                      color: Color(0xFF64748B),
+                      color: Color.fromARGB(255, 255, 255, 255),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
@@ -68,14 +69,14 @@ class SettingsScreen extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.local_hospital_outlined,
-                            color: Color(0xFF3B82F6),
+                            color: Color(0xFF3084D7),
                             size: 24,
                           ),
                           SizedBox(width: 16),
                           Text(
                             'Servicios de Emergencia',
                             style: TextStyle(
-                              color: Color(0xFF3B82F6),
+                              color: Color(0xFF3084D7),
                               fontSize: 16,
                             ),
                           ),
@@ -101,14 +102,14 @@ class SettingsScreen extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.logout,
-                            color: Color(0xFFEF4444),
+                            color: Color(0xFFB64D4C),
                             size: 24,
                           ),
                           SizedBox(width: 16),
                           Text(
                             'Salir',
                             style: TextStyle(
-                              color: Color(0xFFEF4444),
+                              color: Color(0xFFB64D4C),
                               fontSize: 16,
                             ),
                           ),

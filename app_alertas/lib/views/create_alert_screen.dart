@@ -35,8 +35,6 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
 
   File? image;
 
-  /// URL devuelta por el backend (Cloudinary) tras crear el reporte con foto.
-  String? _lastUploadedImageUrl;
   final picker = ImagePicker();
   final _descriptionController = TextEditingController();
 
@@ -58,7 +56,6 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
     setState(() {
       _selectedType = null;
       image = null;
-      _lastUploadedImageUrl = null;
       _isSubmitting = false;
       _isLoadingLocation = true;
       _locationTitle = 'Detectando ubicación...';
@@ -89,10 +86,6 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
   void dispose() {
     _descriptionController.dispose();
     super.dispose();
-  }
-
-  void _discardImage() {
-    Navigator.of(context).pop();
   }
 
   // ---------------------------------------------------------------
@@ -374,7 +367,6 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
     if (pickedFile != null) {
       setState(() {
         image = File(pickedFile.path);
-        _lastUploadedImageUrl = null;
       });
     }
   }
@@ -502,7 +494,6 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       _descriptionController.clear();
       setState(() {
         image = null;
-        _lastUploadedImageUrl = url;
       });
       widget.onCreated?.call();
       if (!mounted) return;
@@ -541,7 +532,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
           builder: (ctx, setModalState) {
             return Container(
               decoration: const BoxDecoration(
-                color: Color(0xFF0D1015),
+                color: Color(0xFF262624),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -593,7 +584,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                             Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF26292E),
+                                color: const Color(0xFF30302E),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: Colors.white.withValues(alpha: 0.05),
@@ -728,7 +719,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
               height: 30,
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6),
+                  color: const Color(0xFFAF6D58),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
@@ -787,7 +778,6 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       _descriptionController.clear();
       setState(() {
         image = null;
-        _lastUploadedImageUrl = null;
       });
       widget.onCreated?.call();
       if (!mounted) return;
@@ -826,7 +816,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
     final typesError = alertTypeVM.error;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1015),
+      backgroundColor: const Color(0xFF262624),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -861,7 +851,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                   child: Container(
                     width: double.infinity,
                     height: MediaQuery.of(context).size.width,
-                    color: const Color(0xFF1E2126),
+                    color: const Color(0xFF2C2C2A),
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -907,20 +897,20 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                         child: Skeletonizer(
                           enabled: isLoadingTypes,
                           effect: const ShimmerEffect(
-                            baseColor: Color(0xFF1E2126),
-                            highlightColor: Color(0xFF26292E),
+                            baseColor: Color(0xFF2C2C2A),
+                            highlightColor: Color(0xFF30302E),
                           ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             decoration: BoxDecoration(
-                              border: Border.all(color: Colors.white24),
+                              border: Border.all(color: Color(0xFFAF6D58)),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<AlertTypeModel>(
                                 isExpanded: true,
                                 hint: Text(isLoadingTypes ? 'Cargando tipos...' : 'Tipo de incidente', style: const TextStyle(color: Colors.white54)),
-                                dropdownColor: const Color(0xFF26292E),
+                                dropdownColor: const Color(0xFF30302E),
                                 value: _selectedType,
                                 icon: const Icon(
                                   Icons.keyboard_arrow_down,
@@ -957,20 +947,20 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                     Skeletonizer(
                       enabled: _isLoadingLocation,
                       effect: const ShimmerEffect(
-                        baseColor: Color(0xFF1E2126),
-                        highlightColor: Color(0xFF26292E),
+                        baseColor: Color(0xFF2C2C2A),
+                        highlightColor: Color(0xFF30302E),
                       ),
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF26292E),
+                          color: const Color(0xFF30302E),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
                             const Icon(
                               Icons.my_location_rounded,
-                              color: Color(0xFF3B82F6),
+                              color: Color(0xFFAF6D58),
                               size: 20,
                             ),
                             const SizedBox(width: 10),
@@ -1020,13 +1010,13 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                       Skeletonizer(
                         enabled: true,
                         effect: const ShimmerEffect(
-                          baseColor: Color(0xFF1E2126),
-                          highlightColor: Color(0xFF26292E),
+                          baseColor: Color(0xFF2C2C2A),
+                          highlightColor: Color(0xFF30302E),
                         ),
                         child: Container(
                           height: 240,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF26292E),
+                            color: const Color(0xFF30302E),
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
@@ -1035,7 +1025,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                       Container(
                         height: 80,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF26292E),
+                          color: const Color(0xFF30302E),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Center(
@@ -1065,18 +1055,15 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.1),
+                          color: Color(0xFFB64D4C),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.redAccent.withValues(alpha: 0.4),
-                          ),
                         ),
                         child: const Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
                               Icons.warning_rounded,
-                              color: Colors.redAccent,
+                              color: Color.fromARGB(255, 255, 255, 255),
                               size: 18,
                             ),
                             SizedBox(width: 8),
@@ -1084,7 +1071,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                               child: Text(
                                 'La ubicación de la alerta debe encontrarse dentro de un radio máximo de 100 metros de su posición actual.',
                                 style: TextStyle(
-                                  color: Colors.redAccent,
+                                  color: Color.fromARGB(255, 255, 255, 255),
                                   fontSize: 12.5,
                                   height: 1.4,
                                 ),
@@ -1101,7 +1088,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
+                          backgroundColor: const Color(0xFFAF6D58),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           shape: RoundedRectangleBorder(

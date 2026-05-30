@@ -10,49 +10,49 @@ class EmergencyServicesScreen extends StatelessWidget {
       title: 'Policía Nacional',
       subtitle: 'Coordinación de incidentes de seguridad',
       phone: '110',
-      color: Color(0xFF3B82F6),
+      color: Color(0xFF506E96),
     ),
     _EmergencyService(
       icon: Icons.local_hospital_rounded,
       title: 'Ambulancias (SEDES)',
       subtitle: 'Atención médica prehospitalaria',
-      phone: '165',
-      color: Color(0xFF10B981),
+      phone: '160',
+      color: Color(0xFF3C8C6E),
     ),
     _EmergencyService(
       icon: Icons.local_fire_department_rounded,
       title: 'Bomberos',
       subtitle: 'Control y respuesta ante incendios',
       phone: '119',
-      color: Color(0xFFF97316),
+      color: Color(0xFFAA5F3C),
     ),
     _EmergencyService(
       icon: Icons.security_rounded,
       title: 'Defensa Civil',
       subtitle: 'Gestión de desastres y catástrofes',
-      phone: '800100123',
-      color: Color(0xFFEAB308),
+      phone: '800148139',
+      color: Color(0xFFAA8C3C),
     ),
     _EmergencyService(
       icon: Icons.health_and_safety_rounded,
-      title: 'Hospital San Juan de Dios',
-      subtitle: 'Emergencias hospitalarias Santa Cruz',
-      phone: '3362272',
-      color: Color(0xFFEC4899),
+      title: 'COEM',
+      subtitle: 'Emergencias municipales',
+      phone: '800125700',
+      color: Color(0xFFAA5F82),
     ),
     _EmergencyService(
       icon: Icons.directions_car_rounded,
       title: 'Tránsito',
       subtitle: 'Accidentes viales y control de tráfico',
-      phone: '1450',
-      color: Color(0xFF8B5CF6),
+      phone: '110',
+      color: Color(0xFF785FAA),
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1015),
+      backgroundColor: const Color(0xFF262624),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,11 +84,8 @@ class EmergencyServicesScreen extends StatelessWidget {
               margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+              color: const Color(0xFFB64D4C).withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFFEF4444).withValues(alpha: 0.3),
-              ),
             ),
             child: Row(
               children: [
