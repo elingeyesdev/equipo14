@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ReportType } from "app/models/report-types.entity";
-import { log } from "console";
 import { Repository } from 'typeorm';
 
 @Injectable()

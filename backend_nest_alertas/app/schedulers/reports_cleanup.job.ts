@@ -13,7 +13,19 @@ export class ReportsCleanup {
         private reportsRepository: Repository<Report>,
     ) {}
 
-    @Cron('0 * * * *')
+    // guia rapida por si te pierdes para esa mmda del cron
+    // asi no tenes q consultar la documentacion a cada rato :P
+    // CRON
+    // * * * * *
+    // │ │ │ │ │
+    // │ │ │ │ └─ dia semana (0-7)
+    // │ │ │ └─── mes
+    // │ │ └───── dia mes
+    // │ └─────── hora
+    // └───────── minuto
+
+    // en nuestro caso es cada media hora
+    @Cron('*/30 * * * *')
     async removeExpiredReports(){
         const result = await this.reportsRepository
             .createQueryBuilder()

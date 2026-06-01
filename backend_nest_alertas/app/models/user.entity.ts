@@ -3,6 +3,7 @@ import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "ty
 import type { Point } from 'geojson';
 import { Role } from "./role.entity";
 import { Image } from "./image.entity";
+import { Comment } from "./comment.entity";
 
 @Entity()
 export class User {
@@ -35,11 +36,14 @@ export class User {
     })
     last_location: Point;
 
-    @OneToMany(() => Report, (report: Report) => report.creator)
+    @OneToMany(() => Report, report => report.creator)
     reports: Report[];
 
-    @OneToMany(() => Image, (image: Image) => image.uploadedBy)
+    @OneToMany(() => Image, image => image.uploadedBy)
     images: Image[];
+
+    @OneToMany(() => Comment, comment => comment.creator)
+    commnets: Comment
 
     @ManyToOne(() => Role, role => role.users)
     role: Role;

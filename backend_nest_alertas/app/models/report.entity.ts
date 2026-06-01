@@ -3,6 +3,7 @@ import type { Point } from 'geojson';
 import { User } from "app/models/user.entity";
 import { Image } from "./image.entity";
 import { ReportType } from "./report-types.entity";
+import { Comment } from "./comment.entity";
 
 @Index(['deleted_at'])
 @Index(['expires_at'])
@@ -43,12 +44,15 @@ export class Report {
     @Column()
     expires_at: Date;
 
-    @ManyToOne(() => User, (user) => user.reports)
+    @ManyToOne(() => User, user => user.reports)
     creator: User;
 
-    @ManyToOne(() => ReportType, (report_type) =>  report_type.reports)
+    @ManyToOne(() => ReportType, report_type =>  report_type.reports)
     type: ReportType
 
     @OneToMany(() => Image, image => image.report)
     images: Image[];
+
+    @OneToMany(() => Comment, comment => comment.report)
+    comments: Comment[];
 }

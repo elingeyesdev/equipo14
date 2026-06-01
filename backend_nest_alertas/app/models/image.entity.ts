@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
 import { Report } from "./report.entity";
 import { User } from "./user.entity";
 
@@ -16,9 +16,9 @@ export class Image{
     @Column()
     uploaded_at: Date;
 
-    @ManyToOne(() => Report, (report) => report.images)
+    @ManyToOne(() => Report, report => report.images)
     report: Report;
 
-    @ManyToOne(() => User, (user) => user.images)
+    @ManyToOne(() => User, user => user.images)
     uploadedBy: User;
 }
