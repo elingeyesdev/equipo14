@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { ShieldCheck, ArrowRight, Lock, Phone, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
+import { authService } from "@/services/auth.service";
+import { getRememberLogin, setRememberLogin } from "@/lib/auth-session";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -20,12 +23,20 @@ function LoginPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(getRememberLogin);
   const { login, isLoggingIn } = useAuth();
+
+  useEffect(() => {
+    authService.restoreSession().then((session) => {
+      if (session) navigate({ to: "/admin/mapa" });
+    });
+  }, [navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setRememberLogin(rememberMe);
     try {
-      const session = await login({ phone, password });
+      const session = await login({ phone, password, remember: rememberMe });
       toast.success(`Bienvenido de vuelta, ${session.user.first_name}!`);
       navigate({ to: "/admin/mapa" });
     } catch (err: any) {
@@ -133,6 +144,16 @@ function LoginPage() {
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer">
+              <Checkbox
+                checked={rememberMe}
+                onCheckedChange={(v) => setRememberMe(v === true)}
+              />
+              <span className="text-sm text-muted-foreground">
+                Mantener sesión iniciada
+              </span>
             </label>
 
             <Button type="submit" size="lg" disabled={isLoggingIn} className="w-full rounded-xl h-12 font-bold gap-2">

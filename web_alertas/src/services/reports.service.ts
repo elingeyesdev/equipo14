@@ -14,7 +14,31 @@ export interface ActivityDistribution {
   count: number;
 }
 
+export interface CreateReportPayload {
+  typeId: number;
+  description: string;
+  userId: string;
+  latitude: number;
+  longitude: number;
+  zone?: string;
+  image: File;
+}
+
 export const reportsService = {
+  buildCreateFormData: (data: CreateReportPayload): FormData => {
+    const formData = new FormData();
+    formData.append("type", String(data.typeId));
+    formData.append("description", data.description);
+    formData.append("userId", data.userId);
+    formData.append("latitude", String(data.latitude));
+    formData.append("longitude", String(data.longitude));
+    if (data.zone?.trim()) {
+      formData.append("zone", data.zone.trim());
+    }
+    formData.append("image", data.image);
+    return formData;
+  },
+
   // Translate GPS coordinates to map percentages
   getMapPosition: (coordinates: number[]) => {
     const [lng, lat] = coordinates || [0, 0];

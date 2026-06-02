@@ -41,3 +41,12 @@ export interface Session {
   refresh_token: string;
   user: User;
 }
+
+export interface Zone {
+  id: number;
+  name: string;
+  color: string;
+  /** Anillo exterior [lng, lat][] */
+  coordinates: number[][];
+  created_at: string;
+}

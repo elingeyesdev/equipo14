@@ -4,7 +4,8 @@ export interface Filters {
   search: string;
   category: string; // "Todos" | "Accidente" | "Robo" | "Incendio" | "Emergencia"
   status: string; // "Todos" | "Verificado" | "Pendiente"
-  zone: string; // "Todas" | specific zone
+  zone: string; // "Todas" | nombre de zona (texto en reporte)
+  zoneId: string; // "" | ID de zona demarcada (polígono)
   from: string; // YYYY-MM-DD
   to: string; // YYYY-MM-DD
   typeId: string; // Specific type ID

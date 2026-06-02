@@ -12,4 +12,15 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      proxy: {
+        // Misma origen en el navegador → sin CORS; reenvía al Nest local
+        "/api": {
+          target: process.env.VITE_API_PROXY_TARGET || "http://localhost:3000",
+          changeOrigin: true,
+        },
+      },
+    },
+  },
 });

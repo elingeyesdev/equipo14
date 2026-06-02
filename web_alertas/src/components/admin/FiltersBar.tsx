@@ -2,9 +2,14 @@ import { Search, SlidersHorizontal, Calendar, X } from "lucide-react";
 import { useFilters, type Filters } from "@/context/FilterContext";
 import { useReports } from "@/hooks/useReports";
 import { useReportTypes } from "@/hooks/useReportTypes";
+import { useZones } from "@/hooks/useZones";
 import { categories } from "@/lib/admin-mock";
 
-export function FiltersBar() {
+interface FiltersBarProps {
+  onClose?: () => void;
+}
+
+export function FiltersBar({ onClose }: FiltersBarProps) {
   const { filters, setFilters, clearFilters } = useFilters();
 
   // Fetch all reports to extract unique zones dynamically
@@ -12,6 +17,7 @@ export function FiltersBar() {
 
   // Fetch report types for specific type selector
   const { reportTypes = [] } = useReportTypes();
+  const { zones = [] } = useZones();
 
   // Fetch active filtered reports to show correct total count
   const { reports: filteredReports = [] } = useReports(filters);
@@ -51,9 +57,10 @@ export function FiltersBar() {
           </div>
         </div>
         <button
-          onClick={clearFilters}
-          title="Limpiar filtros"
-          className="size-8 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground grid place-items-center transition-colors"
+          type="button"
+          onClick={() => onClose?.()}
+          title="Cerrar filtros"
+          className="size-8 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground grid place-items-center transition-colors cursor-pointer"
         >
           <X className="size-3.5" />
         </button>
@@ -127,11 +134,41 @@ export function FiltersBar() {
 
         <label className="block">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Zona
+            Zona demarcada
+          </span>
+          <select
+            value={filters.zoneId}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                zoneId: e.target.value,
+                zone: "Todas",
+              }))
+            }
+            className="mt-1.5 w-full h-10 px-3 rounded-lg bg-background border border-border text-sm text-foreground focus:outline-none focus:border-primary appearance-none cursor-pointer"
+          >
+            <option value="">Todas (mapa)</option>
+            {zones.map((z) => (
+              <option key={z.id} value={String(z.id)}>
+                {z.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Zona (texto en reporte)
           </span>
           <select
             value={filters.zone}
-            onChange={(e) => handleFilterChange("zone", e.target.value)}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                zone: e.target.value,
+                zoneId: "",
+              }))
+            }
             className="mt-1.5 w-full h-10 px-3 rounded-lg bg-background border border-border text-sm text-foreground focus:outline-none focus:border-primary appearance-none cursor-pointer"
           >
             <option value="Todas">Todas las zonas</option>
@@ -171,6 +208,14 @@ export function FiltersBar() {
           </label>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={clearFilters}
+        className="mt-4 w-full h-9 rounded-xl border border-dashed border-border text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+      >
+        Limpiar filtros
+      </button>
     </aside>
   );
 }

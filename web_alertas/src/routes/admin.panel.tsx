@@ -1,12 +1,25 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, RefreshCw, Check, Trash2, FileText, Users, Tag, Plus, Loader2 } from "lucide-react";
+import {
+  Download,
+  RefreshCw,
+  Check,
+  Trash2,
+  FileText,
+  Users,
+  Tag,
+  Plus,
+  Loader2,
+  PlusCircle,
+  Map,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFilters } from "@/context/FilterContext";
 import { useReports } from "@/hooks/useReports";
 import { useReportTypes } from "@/hooks/useReportTypes";
 import { useUsers } from "@/hooks/useUsers";
 import { toast } from "sonner";
+import { CreateAlertSheet } from "@/components/admin/CreateAlertSheet";
 
 export const Route = createFileRoute("/admin/panel")({
   component: PanelPage,
@@ -16,6 +29,7 @@ function PanelPage() {
   const { filters } = useFilters();
   const [activeTab, setActiveTab] = useState<"incidentes" | "tipos" | "usuarios">("incidentes");
   const [newTypeName, setNewTypeName] = useState("");
+  const [createAlertOpen, setCreateAlertOpen] = useState(false);
 
   // Loading/pending state wrappers
   const [isVerifying, setIsVerifying] = useState(false);
@@ -142,7 +156,20 @@ function PanelPage() {
             Acceso Autoridad — control total de incidentes, catálogo de tipos y usuarios.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => setCreateAlertOpen(true)}
+            className="rounded-xl gap-2 font-bold cursor-pointer"
+          >
+            <PlusCircle className="size-4" />
+            Nueva alerta
+          </Button>
+          <Button asChild variant="secondary" className="rounded-xl gap-2 border border-border cursor-pointer">
+            <Link to="/admin/mapa">
+              <Map className="size-4" />
+              Abrir mapa
+            </Link>
+          </Button>
           <Button
             onClick={handleRefresh}
             variant="secondary"
@@ -404,6 +431,12 @@ function PanelPage() {
           </div>
         )}
       </div>
+
+      <CreateAlertSheet
+        open={createAlertOpen}
+        onOpenChange={setCreateAlertOpen}
+        onCreated={() => refetchReports()}
+      />
     </div>
   );
 }

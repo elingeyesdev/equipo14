@@ -18,6 +18,7 @@ import { JwtStrategy } from './guards/strategies/jwt.strategy';
 import { JwtGuard } from './guards/jwt.guard';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CommentsModule } from './providers/comments.module';
+import { ZonesModule } from './providers/zones.module';
 
 @Module({
   imports: [
@@ -42,7 +43,8 @@ import { CommentsModule } from './providers/comments.module';
     CommentsModule,
     ImagesModule,
     ReportTypesModule,
-    NotificationsModule
+    NotificationsModule,
+    ZonesModule,
   ],
   controllers: [AppController],
   providers: [AppService,{

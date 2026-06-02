@@ -168,7 +168,15 @@ export class ReportsService {
             qb.andWhere('report.verified = false');
         }
 
-        if (filters?.zone && filters.zone !== 'all') {
+        if (filters?.zoneId) {
+            qb.andWhere(
+                `ST_Contains(
+                    (SELECT z.boundary FROM zone z WHERE z.id = :zoneId),
+                    report.location
+                )`,
+                { zoneId: Number(filters.zoneId) },
+            );
+        } else if (filters?.zone && filters.zone !== 'all') {
             qb.andWhere('TRIM(report.zone) = :zone', { zone: filters.zone.trim() });
         }
 

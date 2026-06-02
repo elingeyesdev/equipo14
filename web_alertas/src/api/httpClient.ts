@@ -1,27 +1,21 @@
 import { type Session } from "../domain/types";
+import {
+  getStoredSession,
+  persistSession,
+  clearStoredSession,
+} from "@/lib/auth-session";
 
-const API_BASE_URL = "https://srbd68d5-3000.brs.devtunnels.ms/api";
+/** En dev usa `/api` (proxy Vite → localhost). Para móvil/túnel: VITE_API_URL en .env */
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "/api";
 
-export const getSession = (): Session | null => {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem("alertas:session");
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-};
+export const getSession = getStoredSession;
 
 export const setSession = (session: Session) => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("alertas:session", JSON.stringify(session));
+  persistSession(session);
 };
 
-export const clearSession = () => {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem("alertas:session");
-};
+export const clearSession = clearStoredSession;
 
 export const httpClient = {
   request: async <T>(path: string, options: RequestInit = {}): Promise<T> => {
@@ -41,7 +35,12 @@ export const httpClient = {
       headers,
     });
 
-    if (response.status === 401 && session?.refresh_token && path !== "/auth/login" && path !== "/auth/refresh") {
+    if (
+      response.status === 401 &&
+      session?.refresh_token &&
+      path !== "/auth/login" &&
+      path !== "/auth/refresh"
+    ) {
       try {
         const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: "POST",
@@ -50,10 +49,11 @@ export const httpClient = {
         });
         if (refreshResponse.ok) {
           const { access_token } = await refreshResponse.json();
-          setSession({
+          const nextSession = {
             ...session,
             access_token,
-          });
+          };
+          setSession(nextSession);
           headers.set("Authorization", `Bearer ${access_token}`);
           const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
             ...options,
@@ -68,7 +68,7 @@ export const httpClient = {
       }
 
       clearSession();
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }
       throw new Error("Sesión expirada");
@@ -91,7 +91,7 @@ export const httpClient = {
     return httpClient.request<T>(path, { ...options, method: "GET" });
   },
 
-  post: async <T>(path: string, body?: any, options?: RequestInit): Promise<T> => {
+  post: async <T>(path: string, body?: unknown, options?: RequestInit): Promise<T> => {
     return httpClient.request<T>(path, {
       ...options,
       method: "POST",
@@ -99,7 +99,7 @@ export const httpClient = {
     });
   },
 
-  patch: async <T>(path: string, body?: any, options?: RequestInit): Promise<T> => {
+  patch: async <T>(path: string, body?: unknown, options?: RequestInit): Promise<T> => {
     return httpClient.request<T>(path, {
       ...options,
       method: "PATCH",

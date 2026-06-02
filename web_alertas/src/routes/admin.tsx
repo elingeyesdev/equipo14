@@ -6,7 +6,8 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, useState, createContext, useContext } from "react";
-import { ShieldCheck, LogOut, Map, BarChart3, LayoutGrid, FileText } from "lucide-react";
+import { ShieldCheck, LogOut, Map, BarChart3, LayoutGrid, FileText, SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { FiltersBar } from "@/components/admin/FiltersBar";
-import { getSession, clearSession } from "@/api/httpClient";
+import { clearSession } from "@/api/httpClient";
 import { authService } from "@/services/auth.service";
 import { type Session } from "@/domain/types";
 
@@ -49,11 +50,13 @@ const navItems = [
 function AdminLayout() {
   const navigate = useNavigate();
   const [sessionState, setSessionState] = useState<Session | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [filters, setFilters] = useState<Filters>({
     search: "",
     category: "Todos",
     status: "Todos",
     zone: "Todas",
+    zoneId: "",
     from: "",
     to: "",
     typeId: "",
@@ -65,6 +68,7 @@ function AdminLayout() {
       category: "Todos",
       status: "Todos",
       zone: "Todas",
+    zoneId: "",
       from: "",
       to: "",
       typeId: "",
@@ -72,22 +76,20 @@ function AdminLayout() {
   };
 
   useEffect(() => {
-    const current = getSession();
-    if (!current) {
-      navigate({ to: "/login" });
-      return;
-    }
-    setSessionState(current);
+    let cancelled = false;
 
-    authService.validateSession()
-      .then((updated) => {
-        setSessionState(updated);
-      })
-      .catch((err) => {
-        console.error("Verification error, logging out...", err);
-        clearSession();
+    authService.restoreSession().then((session) => {
+      if (cancelled) return;
+      if (!session) {
         navigate({ to: "/login" });
-      });
+        return;
+      }
+      setSessionState(session);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   const logout = async () => {
@@ -120,8 +122,21 @@ function AdminLayout() {
                 Panel administrativo
               </span>
             </div>
-            <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-              <FiltersBar />
+            {!filtersOpen && (
+              <div className="mb-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setFiltersOpen(true)}
+                  className="rounded-xl gap-2 border border-border cursor-pointer"
+                >
+                  <SlidersHorizontal className="size-4" />
+                  Mostrar filtros
+                </Button>
+              </div>
+            )}
+            <div className={filtersOpen ? "grid lg:grid-cols-[300px_1fr] gap-8" : ""}>
+              {filtersOpen && <FiltersBar onClose={() => setFiltersOpen(false)} />}
               <div className="min-w-0">
                 <Outlet />
               </div>

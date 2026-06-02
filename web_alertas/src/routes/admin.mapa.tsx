@@ -1,9 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
-import { Layers, Radio, MapPin, Plus as ZoomIn, Minus, Maximize2, Check, X } from "lucide-react";
+import {
+  Layers,
+  Radio,
+  MapPin,
+  Plus as ZoomIn,
+  Minus,
+  Maximize2,
+  Check,
+  X,
+  PlusCircle,
+  Crosshair,
+  Circle,
+  Trash2,
+} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useFilters } from "@/context/FilterContext";
 import { useReports } from "@/hooks/useReports";
+import { CreateAlertSheet } from "@/components/admin/CreateAlertSheet";
+import { SaveZoneDialog } from "@/components/admin/SaveZoneDialog";
+import type { MapLocation } from "@/components/admin/LocationPickerMap";
+import {
+  loadMapboxGl,
+  MAPBOX_STYLE,
+  SANTA_CRUZ_CENTER,
+  attachMapResizeObserver,
+  burstMapResize,
+} from "@/lib/mapbox";
+import { useZones } from "@/hooks/useZones";
+import { useMapboxZoneLayers } from "@/hooks/useMapboxZoneLayers";
+import { circlePolygon, ZONE_RADIUS_KM, normalizeReportCoordinates } from "@/lib/geo";
+import { syncReportMarkersLayer, bringReportMarkersToFront } from "@/lib/mapbox-reports";
+import { getZoneColorMap } from "@/lib/mapbox-zones";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/mapa")({
@@ -13,13 +42,84 @@ export const Route = createFileRoute("/admin/mapa")({
 function MapaPage() {
   const { filters, setFilters } = useFilters();
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [pickOnMainMap, setPickOnMainMap] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<MapLocation | null>(null);
+  const [demarcateActive, setDemarcateActive] = useState(false);
+  const [saveZoneOpen, setSaveZoneOpen] = useState(false);
+  const [pendingRing, setPendingRing] = useState<number[][] | null>(null);
+  /** Zonas por nombre con área de 2 km visible (un círculo por zona) */
+  const [activeRadiusZones, setActiveRadiusZones] = useState<Set<string>>(new Set());
+  /** Zonas guardadas en BD con su área visible */
+  const [visibleDemarcatedIds, setVisibleDemarcatedIds] = useState<Set<number>>(new Set());
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const draftMarkerRef = useRef<any>(null);
+  const pickOnMainMapRef = useRef(pickOnMainMap);
+  const demarcateActiveRef = useRef(demarcateActive);
 
-  // Fetch reports based on active filters
-  const { reports = [], isLoading, verifyReport, isVerifying } = useReports(filters);
+  pickOnMainMapRef.current = pickOnMainMap;
+  demarcateActiveRef.current = demarcateActive;
+
+  const { reports = [], isLoading, verifyReport, isVerifying, refetch } = useReports(filters);
+  const { reports: allReports = [] } = useReports({});
+  const { zones, createZone, deleteZone, isDeleting, refetch: refetchZones } = useZones();
+
+  useMapboxZoneLayers(mapRef, zones, visibleDemarcatedIds, activeRadiusZones, allReports);
+
+  const toggleRadiusZone = (zoneName: string, enabled: boolean) => {
+    setActiveRadiusZones((prev) => {
+      const next = new Set(prev);
+      if (enabled) next.add(zoneName);
+      else next.delete(zoneName);
+      return next;
+    });
+  };
+
+  const toggleDemarcatedZone = (zoneId: number, enabled: boolean) => {
+    setVisibleDemarcatedIds((prev) => {
+      const next = new Set(prev);
+      if (enabled) next.add(zoneId);
+      else next.delete(zoneId);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.getLayer?.("zone-radius-fill")) return;
+
+    const onZoneClick = (e: { features?: { properties?: { id?: number; name?: string } }[] }) => {
+      const id = e.features?.[0]?.properties?.id;
+      const name = e.features?.[0]?.properties?.name;
+      if (id != null) {
+        setFilters((prev) => ({
+          ...prev,
+          zoneId: String(id),
+          zone: "Todas",
+        }));
+        toast.info(`Filtro: zona demarcada «${name}»`);
+      }
+    };
+    const onEnter = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+    const onLeave = () => {
+      map.getCanvas().style.cursor = "";
+    };
+
+    map.on("click", "zone-radius-fill", onZoneClick);
+    map.on("mouseenter", "zone-radius-fill", onEnter);
+    map.on("mouseleave", "zone-radius-fill", onLeave);
+
+    return () => {
+      map.off("click", "zone-radius-fill", onZoneClick);
+      map.off("mouseenter", "zone-radius-fill", onEnter);
+      map.off("mouseleave", "zone-radius-fill", onLeave);
+    };
+  }, [zones, setFilters]);
 
   // Hex color codes for the categories
   const getCategoryColorHex = (type?: string) => {
@@ -35,18 +135,16 @@ function MapaPage() {
     if (typeof window === "undefined" || !mapContainerRef.current) return;
 
     let mapInstance: any;
+    let detachResize: (() => void) | null = null;
 
     const initMap = async () => {
       try {
-        const mapboxgl = (await import("mapbox-gl")).default;
-        await import("mapbox-gl/dist/mapbox-gl.css");
-        
-        mapboxgl.accessToken = "pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA";
+        const mapboxgl = await loadMapboxGl();
 
         mapInstance = new mapboxgl.Map({
           container: mapContainerRef.current!,
-          style: "mapbox://styles/mapbox/dark-v11",
-          center: [-63.1812, -17.7833], // Center on Santa Cruz de la Sierra
+          style: MAPBOX_STYLE,
+          center: [SANTA_CRUZ_CENTER.lng, SANTA_CRUZ_CENTER.lat],
           zoom: 12.5,
           pitch: 55, // 3D tilt
           bearing: -15,
@@ -54,6 +152,10 @@ function MapaPage() {
         });
 
         mapRef.current = mapInstance;
+
+        if (mapContainerRef.current) {
+          detachResize = attachMapResizeObserver(mapInstance, mapContainerRef.current);
+        }
 
         mapInstance.on("style.load", () => {
           const layers = mapInstance.getStyle().layers;
@@ -96,9 +198,45 @@ function MapaPage() {
           );
         });
 
-        // Add markers once the map is fully loaded
         mapInstance.on("load", () => {
+          burstMapResize(mapInstance);
           updateMarkers(mapboxgl);
+        });
+
+        mapInstance.on("error", (e: { error?: Error }) => {
+          console.error("Mapbox:", e.error?.message ?? e);
+          toast.error(
+            "No se pudo cargar el mapa. Revisa VITE_MAPBOX_TOKEN en .env (token pk.* válido de mapbox.com)",
+          );
+        });
+
+        mapInstance.on("click", (e: any) => {
+          if (demarcateActiveRef.current) {
+            const { lng, lat } = e.lngLat;
+            setPendingRing(circlePolygon(lng, lat, ZONE_RADIUS_KM));
+            setSaveZoneOpen(true);
+            setDemarcateActive(false);
+            toast.success(`Área de ${ZONE_RADIUS_KM} km definida. Asigna un nombre.`);
+            return;
+          }
+          if (!pickOnMainMapRef.current) return;
+          const { lng, lat } = e.lngLat;
+          const loc = { latitude: lat, longitude: lng };
+          setPendingLocation(loc);
+          setPickOnMainMap(false);
+          setCreateOpen(true);
+
+          if (draftMarkerRef.current) {
+            draftMarkerRef.current.setLngLat([lng, lat]);
+          } else {
+            const el = document.createElement("div");
+            el.innerHTML = `
+              <div class="size-4 rounded-full bg-primary border-2 border-white shadow-lg animate-pulse"></div>
+            `;
+            draftMarkerRef.current = new mapboxgl.Marker({ element: el })
+              .setLngLat([lng, lat])
+              .addTo(mapInstance);
+          }
         });
       } catch (err) {
         console.error("Error initializing Mapbox", err);
@@ -108,9 +246,11 @@ function MapaPage() {
     initMap();
 
     return () => {
+      detachResize?.();
       if (mapInstance) {
         mapInstance.remove();
       }
+      mapRef.current = null;
     };
   }, []);
 
@@ -126,9 +266,12 @@ function MapaPage() {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
 
-      reports.forEach((report) => {
-        const [lng, lat] = report.coordinates || [0, 0];
-        if (!lng || !lat) return;
+      const reportsToShow = allReports.length > 0 ? allReports : reports;
+
+      reportsToShow.forEach((report) => {
+        const pos = normalizeReportCoordinates(report.coordinates);
+        if (!pos) return;
+        const [lng, lat] = pos;
 
         // Custom Google Maps-style Marker Element
         const el = document.createElement("button");
@@ -149,7 +292,11 @@ function MapaPage() {
           </div>
         `;
 
-        el.addEventListener("click", () => {
+        el.addEventListener("click", (ev) => {
+          if (pickOnMainMapRef.current) {
+            ev.stopPropagation();
+            return;
+          }
           setSelectedReportId(report.id);
           map.flyTo({
             center: [lng, lat],
@@ -166,15 +313,97 @@ function MapaPage() {
 
         markersRef.current.push(marker);
       });
+
+      syncReportMarkersLayer(map, reportsToShow);
+      bringReportMarkersToFront(map);
     } catch (e) {
       console.error("Error drawing markers", e);
     }
   };
 
-  // Re-run whenever reports list updates
   useEffect(() => {
-    updateMarkers();
-  }, [reports]);
+    const map = mapRef.current;
+    if (!map) return;
+
+    const layerIds = ["report-markers-circles", "report-markers-pin"];
+
+    const onReportClick = (e: { features?: { properties?: { id?: number } }[] }) => {
+      const id = e.features?.[0]?.properties?.id;
+      if (id != null) {
+        setSelectedReportId(Number(id));
+        const feature = e.features?.[0];
+        const geom = feature?.geometry as { coordinates?: number[] } | undefined;
+        if (geom?.coordinates && mapRef.current) {
+          mapRef.current.flyTo({
+            center: geom.coordinates as [number, number],
+            zoom: 15.5,
+            pitch: 50,
+            speed: 1.2,
+          });
+        }
+      }
+    };
+
+    const onEnter = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+    const onLeave = () => {
+      map.getCanvas().style.cursor = "";
+    };
+
+    const bindLayerEvents = () => {
+      for (const layerId of layerIds) {
+        if (!map.getLayer(layerId)) continue;
+        map.on("click", layerId, onReportClick);
+        map.on("mouseenter", layerId, onEnter);
+        map.on("mouseleave", layerId, onLeave);
+      }
+    };
+
+    const unbindLayerEvents = () => {
+      for (const layerId of layerIds) {
+        map.off("click", layerId, onReportClick);
+        map.off("mouseenter", layerId, onEnter);
+        map.off("mouseleave", layerId, onLeave);
+      }
+    };
+
+    const setup = () => {
+      unbindLayerEvents();
+      bindLayerEvents();
+    };
+
+    if (map.loaded?.()) {
+      setup();
+    } else {
+      map.once("load", setup);
+    }
+
+    return () => {
+      map.off("load", setup);
+      unbindLayerEvents();
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.loaded?.()) return;
+    bringReportMarkersToFront(map);
+  }, [activeRadiusZones, visibleDemarcatedIds, zones]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (mapRef.current.loaded?.()) {
+      updateMarkers();
+      return;
+    }
+    const map = mapRef.current;
+    const onLoad = () => updateMarkers();
+    map.once("load", onLoad);
+    return () => {
+      map.off("load", onLoad);
+    };
+  }, [reports, allReports]);
 
   // Verify report handler calling service/hook layer
   const handleVerify = async (id: number) => {
@@ -205,27 +434,20 @@ function MapaPage() {
     });
   };
 
-  // Calculate dynamic zones from current reports
-  const zonesMap: Record<string, { alerts: number; verified: number; color: string }> = {};
-  const colors = [
-    "bg-sky-400",
-    "bg-amber-400",
-    "bg-violet-400",
-    "bg-rose-400",
-    "bg-orange-300",
-    "bg-emerald-400",
-  ];
+  const zoneColorMap = getZoneColorMap(allReports);
+  const zonesMap: Record<string, { alerts: number; verified: number; colorHex: string }> = {};
 
-  reports.forEach((r) => {
-    const zoneName = r.zone || "Zona desconocida";
+  allReports.forEach((r) => {
+    const zoneName = r.zone?.trim() || "Zona desconocida";
     if (!zonesMap[zoneName]) {
-      const colorIndex = Object.keys(zonesMap).length % colors.length;
-      zonesMap[zoneName] = { alerts: 0, verified: 0, color: colors[colorIndex] };
+      zonesMap[zoneName] = {
+        alerts: 0,
+        verified: 0,
+        colorHex: zoneColorMap[zoneName] ?? "#3b82f6",
+      };
     }
     zonesMap[zoneName].alerts += 1;
-    if (r.verified) {
-      zonesMap[zoneName].verified += 1;
-    }
+    if (r.verified) zonesMap[zoneName].verified += 1;
   });
 
   const activeZones = Object.entries(zonesMap).map(([name, data]) => ({
@@ -250,10 +472,52 @@ function MapaPage() {
             Filtra en la barra lateral para acotar baches, accidentes, o robos en tiempo real.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => {
+              setPendingLocation(null);
+              setCreateOpen(true);
+            }}
+            className="rounded-xl gap-2 font-bold cursor-pointer"
+          >
+            <PlusCircle className="size-4" />
+            Nueva alerta
+          </Button>
+          <Button
+            variant={pickOnMainMap ? "default" : "secondary"}
+            onClick={() => {
+              setPickOnMainMap((v) => !v);
+              if (!pickOnMainMap) {
+                setDemarcateActive(false);
+                toast.info("Haz clic en el mapa principal para fijar la ubicación");
+              }
+            }}
+            className="rounded-xl gap-2 border border-border cursor-pointer"
+          >
+            <Crosshair className="size-4" />
+            {pickOnMainMap ? "Cancelar selección" : "Elegir en este mapa"}
+          </Button>
+          <Button
+            variant={demarcateActive ? "default" : "secondary"}
+            onClick={() => {
+              setDemarcateActive((v) => !v);
+              if (!demarcateActive) {
+                setPickOnMainMap(false);
+                toast.info(
+                  `Clic en el mapa: se crea un área de ${ZONE_RADIUS_KM} km alrededor del punto`,
+                );
+              }
+            }}
+            className="rounded-xl gap-2 border border-border cursor-pointer"
+          >
+            <Circle className="size-4" />
+            {demarcateActive ? "Cancelar demarcación" : "Demarcar zona (2 km)"}
+          </Button>
           <Button
             variant="secondary"
-            onClick={() => setFilters((prev) => ({ ...prev, zone: "Todas" }))}
+            onClick={() =>
+              setFilters((prev) => ({ ...prev, zone: "Todas", zoneId: "" }))
+            }
             className="rounded-xl gap-2 border border-border cursor-pointer"
           >
             <Layers className="size-4" />
@@ -262,18 +526,92 @@ function MapaPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[280px_1fr] gap-6">
+      <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6 min-w-0">
         {/* Sidebar de Zonas */}
-        <aside className="bg-card border border-border rounded-2xl p-5 self-start">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-bold text-sm">Zonas activas</h3>
+        <aside className="bg-card border border-border rounded-2xl p-5 self-start max-h-[calc(100vh-12rem)] overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display font-bold text-sm">Zonas demarcadas</h3>
+            <span className="text-xs text-muted-foreground">{zones.length}</span>
+          </div>
+
+          {zones.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
+              «Demarcar zona (2 km)»: clic en el mapa para definir el centro de una zona de{" "}
+              {ZONE_RADIUS_KM} km.
+            </p>
+          ) : (
+            <ul className="space-y-1 mb-4">
+              {zones.map((z) => (
+                <li key={z.id} className="flex items-center gap-2 p-2 rounded-xl border border-border/60">
+                  <Switch
+                    checked={visibleDemarcatedIds.has(z.id)}
+                    onCheckedChange={(on) => toggleDemarcatedZone(z.id, on)}
+                    aria-label={`Mostrar área de zona ${z.name}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        zoneId: String(z.id),
+                        zone: "Todas",
+                      }))
+                    }
+                    className={`flex-1 text-left min-w-0 transition-colors cursor-pointer ${
+                      filters.zoneId === String(z.id) ? "text-primary" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: z.color }}
+                      />
+                      <span className="text-sm font-medium truncate">{z.name}</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">Radio {ZONE_RADIUS_KM} km</span>
+                  </button>
+                  <button
+                    type="button"
+                    title="Eliminar zona"
+                    disabled={isDeleting}
+                    onClick={async () => {
+                      try {
+                        await deleteZone(z.id);
+                        if (filters.zoneId === String(z.id)) {
+                          setFilters((prev) => ({ ...prev, zoneId: "" }));
+                        }
+                        toast.success(`Zona «${z.name}» eliminada`);
+                        refetchZones();
+                      } catch (err: unknown) {
+                        toast.error(
+                          err instanceof Error ? err.message : "No se pudo eliminar",
+                        );
+                      }
+                    }}
+                    className="size-8 shrink-0 rounded-lg border border-border hover:border-destructive hover:text-destructive grid place-items-center cursor-pointer"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex items-center justify-between mb-2 pt-3 border-t border-border">
+            <h3 className="font-display font-bold text-sm">Por nombre en reportes</h3>
             <span className="text-xs text-muted-foreground">{activeZones.length}</span>
           </div>
+          <p className="text-[10px] text-muted-foreground mb-3 leading-relaxed">
+            Activa el interruptor para ver el área de la zona ({ZONE_RADIUS_KM} km desde su centro,
+            según las alertas agrupadas). Los pines siguen siendo cada incidente.
+          </p>
           
           <button
-            onClick={() => setFilters((prev) => ({ ...prev, zone: "Todas" }))}
+            onClick={() =>
+              setFilters((prev) => ({ ...prev, zone: "Todas", zoneId: "" }))
+            }
             className={`w-full text-left p-3 rounded-xl border mb-2 transition-colors cursor-pointer ${
-              filters.zone === "Todas"
+              filters.zone === "Todas" && !filters.zoneId
                 ? "bg-primary/10 border-primary/30 text-primary"
                 : "border-transparent hover:bg-muted"
             }`}
@@ -291,17 +629,35 @@ function MapaPage() {
           ) : (
             <ul className="space-y-1 max-h-[360px] overflow-y-auto pr-1">
               {activeZones.map((z) => (
-                <li key={z.name}>
+                <li
+                  key={z.name}
+                  className={`flex items-center gap-2 p-2.5 rounded-xl border transition-colors ${
+                    filters.zone === z.name && !filters.zoneId
+                      ? "bg-primary/10 border-primary/30"
+                      : "border-transparent hover:bg-muted"
+                  }`}
+                >
+                  <Switch
+                    checked={activeRadiusZones.has(z.name)}
+                    onCheckedChange={(on) => toggleRadiusZone(z.name, on)}
+                    aria-label={`Mostrar área de zona ${z.name}`}
+                  />
                   <button
-                    onClick={() => setFilters((prev) => ({ ...prev, zone: z.name }))}
-                    className={`w-full text-left p-3 rounded-xl border transition-colors cursor-pointer ${
-                      filters.zone === z.name
-                        ? "bg-primary/10 border-primary/30"
-                        : "border-transparent hover:bg-muted"
-                    }`}
+                    type="button"
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        zone: z.name,
+                        zoneId: "",
+                      }))
+                    }
+                    className="flex-1 text-left min-w-0 cursor-pointer"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className={`size-2.5 rounded-full ${z.color}`} />
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: z.colorHex }}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{z.name}</div>
                         <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -316,10 +672,21 @@ function MapaPage() {
           )}
         </aside>
 
+        <div className="min-w-0">
         {/* Mapa Real Mapbox 3D */}
-        <div className="relative bg-card border border-border rounded-2xl overflow-hidden min-h-[520px] flex flex-col justify-end">
-          {/* Mapbox container ref */}
-          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
+        <div
+          className={`relative w-full h-[min(72vh,720px)] min-h-[520px] bg-card border rounded-2xl overflow-hidden transition-colors ${
+            pickOnMainMap || demarcateActive
+              ? "border-primary ring-2 ring-primary/30"
+              : "border-border"
+          }`}
+        >
+          <div
+            ref={mapContainerRef}
+            className={`absolute inset-0 w-full h-full min-w-0 ${
+              pickOnMainMap || demarcateActive ? "cursor-crosshair" : ""
+            }`}
+          />
 
           {isLoading && (
             <div className="absolute inset-0 grid place-items-center bg-background/50 backdrop-blur-sm z-10">
@@ -387,9 +754,26 @@ function MapaPage() {
           )}
 
           {/* Overlay top info */}
-          <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border text-[10px] font-bold uppercase tracking-widest z-10">
-            <Radio className="size-3 text-primary animate-pulse" />
-            Vista activa · {reports.length} reportes
+          <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border text-[10px] font-bold uppercase tracking-widest">
+              <Radio className="size-3 text-primary animate-pulse" />
+              Vista activa · {reports.length} reportes
+            </div>
+            {pickOnMainMap && (
+              <div className="px-3 py-1.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
+                Clic en el mapa para ubicar la alerta
+              </div>
+            )}
+            {demarcateActive && (
+              <div className="px-3 py-1.5 rounded-full bg-violet-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
+                Clic en el mapa · área de {ZONE_RADIUS_KM} km
+              </div>
+            )}
+            {activeRadiusZones.size > 0 && (
+              <div className="px-3 py-1.5 rounded-full bg-sky-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
+                {activeRadiusZones.size + visibleDemarcatedIds.size} zona(s) visibles · {ZONE_RADIUS_KM} km
+              </div>
+            )}
           </div>
 
           <div className="absolute top-4 right-4 flex flex-col gap-1.5 z-10">
@@ -421,7 +805,40 @@ function MapaPage() {
             Santa Cruz de la Sierra · Bolivia
           </div>
         </div>
+        </div>
       </div>
+
+      <SaveZoneDialog
+        open={saveZoneOpen}
+        onOpenChange={setSaveZoneOpen}
+        coordinates={pendingRing}
+        onSave={async (name, color, coordinates) => {
+          await createZone({ name, color, coordinates });
+          toast.success(`Zona «${name}» guardada`);
+          setPendingRing(null);
+          refetchZones();
+        }}
+      />
+
+      <CreateAlertSheet
+        open={createOpen}
+        demarcatedZones={zones}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) {
+            setPendingLocation(null);
+            draftMarkerRef.current?.remove();
+            draftMarkerRef.current = null;
+          }
+        }}
+        initialLocation={pendingLocation}
+        onCreated={() => {
+          refetch();
+          draftMarkerRef.current?.remove();
+          draftMarkerRef.current = null;
+          setPendingLocation(null);
+        }}
+      />
     </div>
   );
 }

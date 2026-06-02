@@ -40,7 +40,26 @@ export async function bootstrap() {
         })
     )
 
-    app.enableCors();
+    const corsOrigins = configService.get<string[]>('app.corsOrigins');
+    app.enableCors({
+        origin: corsOrigins?.length
+            ? corsOrigins
+            : [
+                /^http:\/\/localhost(:\d+)?$/,
+                /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+                /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/,
+                /^https:\/\/[\w-]+-\d+\.[\w.]+\.devtunnels\.ms$/,
+            ],
+        credentials: true,
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'Accept',
+            'x-tunnel-skip-warning',
+            'ngrok-skip-browser-warning',
+        ],
+    });
     app.setGlobalPrefix(configService.get('app.apiPrefix')!);
     
     const port = configService.get('app.port');
