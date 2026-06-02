@@ -17,6 +17,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtStrategy } from './guards/strategies/jwt.strategy';
 import { JwtGuard } from './guards/jwt.guard';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CommentsModule } from './providers/comments.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     UsersModule,
     RolesModule,
     ReportsModule,
+    CommentsModule,
     ImagesModule,
     ReportTypesModule,
     NotificationsModule
