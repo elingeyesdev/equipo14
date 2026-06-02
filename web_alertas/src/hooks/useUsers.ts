@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersRepository } from "../repositories/users.repository";
+import {
+  usersRepository,
+  type CreateUserPayload,
+} from "../repositories/users.repository";
 import { type User } from "../domain/types";
 
 export function useUsers(options: { enabled?: boolean } = {}) {
@@ -9,6 +12,13 @@ export function useUsers(options: { enabled?: boolean } = {}) {
     queryKey: ["users"],
     queryFn: () => usersRepository.findAll(),
     enabled: options.enabled !== false,
+  });
+
+  const createUserMutation = useMutation<User, Error, CreateUserPayload>({
+    mutationFn: (payload) => usersRepository.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
   });
 
   const deleteUserMutation = useMutation<{ message: string }, Error, string>({
@@ -23,6 +33,9 @@ export function useUsers(options: { enabled?: boolean } = {}) {
     isLoading: usersQuery.isLoading,
     isError: usersQuery.isError,
     error: usersQuery.error,
+
+    createUser: createUserMutation.mutateAsync,
+    isCreating: createUserMutation.isPending,
 
     deleteUser: deleteUserMutation.mutateAsync,
     isDeleting: deleteUserMutation.isPending,

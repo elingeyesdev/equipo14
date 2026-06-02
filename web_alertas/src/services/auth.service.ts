@@ -2,6 +2,7 @@ import { authRepository } from "../repositories/auth.repository";
 import { getSession, setSession, clearSession } from "../api/httpClient";
 import { getRememberLogin, persistSession } from "@/lib/auth-session";
 import { type Session, type User } from "../domain/types";
+import { canAccessAdminPanel } from "@/lib/roles";
 
 export const authService = {
   login: async (
@@ -11,13 +12,9 @@ export const authService = {
   ): Promise<Session> => {
     const session = await authRepository.login(phone, password);
 
-    const roleName = session.user.role?.name || "";
-    const roleId = session.user.role?.id;
-    const isAuth = roleId === 2 || roleName.toLowerCase().includes("autoridad");
-
-    if (!isAuth) {
+    if (!canAccessAdminPanel(session.user.role)) {
       throw new Error(
-        "Acceso denegado: solo las autoridades pueden ingresar al panel administrativo.",
+        "Acceso denegado: solo usuarios administrativos pueden ingresar al panel.",
       );
     }
 

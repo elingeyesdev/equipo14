@@ -1,7 +1,20 @@
 import { httpClient } from "../api/httpClient";
 import { type User } from "../domain/types";
+import type { CreatableRoleId } from "@/lib/roles";
+
+export interface CreateUserPayload {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  password: string;
+  roleId: CreatableRoleId;
+}
 
 export const usersRepository = {
+  create: async (payload: CreateUserPayload): Promise<User> => {
+    return httpClient.post<User>("/users", payload);
+  },
+
   findAll: async (): Promise<User[]> => {
     return httpClient.get<User[]>("/users");
   },

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:app_alertas/services/location_service.dart';
+import 'package:app_alertas/core/config/mapbox_config.dart';
 import 'package:app_alertas/core/constants/api_constants.dart';
 
 import 'package:flutter/material.dart';
@@ -12,10 +13,6 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/services/tracking_service.dart';
-
-String _mapboxDarkTileUrl() =>
-    'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
-    '?access_token=${ApiConstants.mapboxToken}';
 
 /// Calcula la distancia en metros entre dos coordenadas (fórmula Haversine).
 double _distanceInMeters(LatLng a, LatLng b) {
@@ -443,12 +440,7 @@ class _MapRouteScreenState extends State<MapRouteScreen>
                 initialZoom: 14,
               ),
               children: [
-                TileLayer(
-                  urlTemplate: _mapboxDarkTileUrl(),
-                  userAgentPackageName: 'com.tuempresa.appalertas.app_alertas',
-                  maxNativeZoom: 22,
-                  maxZoom: 22,
-                ),
+                MapboxConfig.darkTileLayer(),
 
                 // Polilínea de la ruta
                 if (points.isNotEmpty)

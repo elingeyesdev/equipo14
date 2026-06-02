@@ -50,9 +50,13 @@ export class AuthService{
         }
     }
 
-    async register(CreateUserRequest: CreateUserRequest){
-        const existingUser = await this.usersService.create(CreateUserRequest)
-        return this.login(existingUser)
+    async register(CreateUserRequest: CreateUserRequest) {
+        const created = await this.usersService.create(CreateUserRequest);
+        const user = await this.usersService.findByPhone(created.phone);
+        if (!user) {
+            throw new NotFoundException('Error al registrar usuario');
+        }
+        return this.login(user);
     }
 
     async refreshToken(token: string){

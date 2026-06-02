@@ -4,12 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-const _kMapboxAccessToken =
-    'pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA';
-
-String _mapboxDarkTileUrl() =>
-    'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
-    '?access_token=$_kMapboxAccessToken';
+import 'package:app_alertas/core/config/mapbox_config.dart';
 
 /// Radio máximo permitido en metros para seleccionar la ubicación del incidente.
 const double kMaxAlertRadiusMeters = 100.0;
@@ -100,12 +95,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
               ),
               children: [
                 // Capa de tiles Mapbox dark
-                TileLayer(
-                  urlTemplate: _mapboxDarkTileUrl(),
-                  userAgentPackageName: 'com.tuempresa.appalertas.app_alertas',
-                  maxNativeZoom: 22,
-                  maxZoom: 22,
-                ),
+                MapboxConfig.darkTileLayer(),
 
                 // Círculo del área permitida (100 m)
                 CircleLayer(

@@ -6,7 +6,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // .env opcional: Mapbox y API usan valores por defecto en código
+  }
   runApp(const App());
 }
 

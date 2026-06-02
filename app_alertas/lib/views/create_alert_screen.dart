@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
-
+import 'package:app_alertas/core/config/mapbox_config.dart';
 import 'package:app_alertas/models/alert_type_model.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:app_alertas/models/alert_model.dart';
@@ -705,12 +705,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
         ),
       ),
       children: [
-        TileLayer(
-          urlTemplate:
-              'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
-              '?access_token=pk.eyJ1IjoiZWxvam9zZGVhcnJveiIsImEiOiJjbW5lbjNoZm4wMTRoMnNxM2RuZG1jdm9uIn0.nErIU6_OLUsQyg77y6geKA',
-          userAgentPackageName: 'com.tuempresa.appalertas.app_alertas',
-        ),
+        MapboxConfig.darkTileLayer(),
         MarkerLayer(
           markers: [
             Marker(

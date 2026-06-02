@@ -20,6 +20,8 @@ import { useReportTypes } from "@/hooks/useReportTypes";
 import { useUsers } from "@/hooks/useUsers";
 import { toast } from "sonner";
 import { CreateAlertSheet } from "@/components/admin/CreateAlertSheet";
+import { CreateUserSheet } from "@/components/admin/CreateUserSheet";
+import { roleBadgeClass, roleLabel } from "@/lib/roles";
 
 export const Route = createFileRoute("/admin/panel")({
   component: PanelPage,
@@ -30,6 +32,7 @@ function PanelPage() {
   const [activeTab, setActiveTab] = useState<"incidentes" | "tipos" | "usuarios">("incidentes");
   const [newTypeName, setNewTypeName] = useState("");
   const [createAlertOpen, setCreateAlertOpen] = useState(false);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
 
   // Loading/pending state wrappers
   const [isVerifying, setIsVerifying] = useState(false);
@@ -374,6 +377,21 @@ function PanelPage() {
 
         {/* Tab 3: USUARIOS */}
         {activeTab === "usuarios" && (
+          <div>
+            <div className="p-6 border-b border-border flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground max-w-md">
+                Usuario <strong>normal</strong>: app móvil. Usuario{" "}
+                <strong>administrativo</strong>: acceso al panel (autoridad o admin).
+              </p>
+              <Button
+                type="button"
+                onClick={() => setCreateUserOpen(true)}
+                className="rounded-xl font-bold gap-2 cursor-pointer"
+              >
+                <Plus className="size-4" />
+                Nuevo usuario
+              </Button>
+            </div>
           <div className="overflow-x-auto">
             {loadingUsers ? (
               <div className="py-20 flex items-center justify-center text-xs text-muted-foreground gap-2">
@@ -404,10 +422,10 @@ function PanelPage() {
                         <td className="px-3 py-4 font-medium">{fullName}</td>
                         <td className="px-3 py-4 font-mono text-xs">{u.phone}</td>
                         <td className="px-3 py-4">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            u.role?.id === 2 ? "bg-primary/20 text-primary border border-primary/30" : "bg-muted text-muted-foreground border border-border"
-                          }`}>
-                            {u.role?.name || "Ciudadano"}
+                          <span
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${roleBadgeClass(u.role)}`}
+                          >
+                            {roleLabel(u.role?.name)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -429,6 +447,7 @@ function PanelPage() {
               {users.length} usuarios registrados en base de datos
             </div>
           </div>
+          </div>
         )}
       </div>
 
@@ -436,6 +455,11 @@ function PanelPage() {
         open={createAlertOpen}
         onOpenChange={setCreateAlertOpen}
         onCreated={() => refetchReports()}
+      />
+
+      <CreateUserSheet
+        open={createUserOpen}
+        onOpenChange={setCreateUserOpen}
       />
     </div>
   );

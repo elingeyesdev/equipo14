@@ -1,4 +1,4 @@
-import 'package:app_alertas/core/constants/api_constants.dart';
+import 'package:app_alertas/core/config/mapbox_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -12,11 +12,6 @@ import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/views/alert_card.dart';
 import 'package:app_alertas/services/tracking_service.dart';
 import 'dart:async';
-
-/// Raster tiles
-String _mapboxDarkTileUrl() =>
-    'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}'
-    '?access_token=${ApiConstants.mapboxToken}';
 
 class MapScreen extends StatefulWidget {
   final AlertModel? initialAlert;
@@ -33,6 +28,8 @@ class MapScreenState extends State<MapScreen> {
   final _fcmService = FcmService();
   List<AlertModel> _alerts = const [];
   bool _loadingAlerts = true;
+  bool _loadingLocation = true;
+  bool _locationFromGps = false;
   bool _isAuthority = false;
 
   // Tracking
@@ -55,9 +52,7 @@ class MapScreenState extends State<MapScreen> {
     // Detectar rol antes de cargar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthViewModel>().user;
-      _isAuthority =
-          (user?.roleId == 2) ||
-          (user?.roleName?.toLowerCase().contains('autoridad') == true);
+      _isAuthority = _userIsAuthority(user?.roleId, user?.roleName);
     });
     getLocation();
     _initPushNotifications();
@@ -109,9 +104,7 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     final user = context.read<AuthViewModel>().user;
     setState(() {
-      _isAuthority =
-          (user?.roleId == 2) ||
-          (user?.roleName?.toLowerCase().contains('autoridad') == true);
+      _isAuthority = _userIsAuthority(user?.roleId, user?.roleName);
     });
     await getLocation();
   }
@@ -119,9 +112,7 @@ class MapScreenState extends State<MapScreen> {
   Future<void> _initPushNotifications() async {
     final user = context.read<AuthViewModel>().user;
     if (user != null) {
-      _isAuthority =
-          (user.roleId == 2) ||
-          (user.roleName?.toLowerCase().contains('autoridad') == true);
+      _isAuthority = _userIsAuthority(user.roleId, user.roleName);
       await _fcmService.init(user.id);
       _fcmService.listenToForegroundMessages(() {
         _loadAlerts();
@@ -129,30 +120,61 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
+  bool _userIsAuthority(int? roleId, String? roleName) {
+    final name = roleName?.toLowerCase() ?? '';
+    return roleId == 2 ||
+        roleId == 3 ||
+        name.contains('autoridad') ||
+        name.contains('admin');
+  }
+
   Future getLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+    if (!mounted) return;
+    setState(() => _loadingLocation = true);
 
-    LocationPermission permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied) return;
+    LatLng center = MapboxConfig.defaultCenter;
+    var fromGps = false;
 
-    Position position = await Geolocator.getCurrentPosition();
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        var permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always) {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 12),
+          );
+          center = LatLng(position.latitude, position.longitude);
+          fromGps = true;
+
+          if (mounted) {
+            try {
+              final user = context.read<AuthViewModel>().user;
+              if (user != null) {
+                await _userRepository.updateLocation(
+                  user.id,
+                  latitude: position.latitude,
+                  longitude: position.longitude,
+                );
+              }
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('GPS no disponible, usando centro por defecto: $e');
+    }
 
     if (!mounted) return;
     setState(() {
-      currentLocation = LatLng(position.latitude, position.longitude);
+      currentLocation = center;
+      _locationFromGps = fromGps;
+      _loadingLocation = false;
     });
-
-    try {
-      final user = context.read<AuthViewModel>().user;
-      if (user != null) {
-        await _userRepository.updateLocation(
-          user.id,
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
-      }
-    } catch (_) {}
 
     await _loadAlerts();
   }
@@ -351,7 +373,7 @@ class MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          currentLocation == null
+          _loadingLocation && currentLocation == null
               ? const Center(child: CircularProgressIndicator())
               : FlutterMap(
                   mapController: mapController,
@@ -363,7 +385,7 @@ class MapScreenState extends State<MapScreen> {
                             widget.initialAlert!.coordinates[1],
                             widget.initialAlert!.coordinates[0],
                           )
-                        : currentLocation!,
+                        : (currentLocation ?? MapboxConfig.defaultCenter),
                     initialZoom: widget.initialAlert != null ? 18 : 13,
                     maxZoom: 22,
                     onTap: (tapPosition, point) {
@@ -379,12 +401,7 @@ class MapScreenState extends State<MapScreen> {
                     },
                   ),
                   children: [
-                    TileLayer(
-                      urlTemplate: _mapboxDarkTileUrl(),
-                      userAgentPackageName: 'com.tuempresa.appalertas',
-                      maxNativeZoom: 22,
-                      maxZoom: 22,
-                    ),
+                    MapboxConfig.darkTileLayer(),
                     if (!_isAuthority &&
                         (isCustomLocationActive
                             ? customLocation != null
@@ -539,6 +556,33 @@ class MapScreenState extends State<MapScreen> {
                     ),
                   ],
                 ),
+
+          if (!_locationFromGps && currentLocation != null)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + (_isAuthority ? 48 : 8),
+              left: 12,
+              right: 12,
+              child: Center(
+                child: Material(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      'Sin GPS: mapa centrado en Santa Cruz. Activa ubicación para ver tu zona.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Badge de modo autoridad
           if (_isAuthority)
