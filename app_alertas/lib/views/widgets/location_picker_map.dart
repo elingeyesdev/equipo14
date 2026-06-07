@@ -38,11 +38,15 @@ class LocationPickerMap extends StatefulWidget {
   const LocationPickerMap({
     super.key,
     required this.userLocation,
+    this.alertType,
     required this.onLocationChanged,
   });
 
   /// Ubicación GPS actual del usuario (centro del círculo permitido).
   final LatLng userLocation;
+
+  /// El tipo de alerta seleccionado (opcional) para cambiar el ícono y color.
+  final String? alertType;
 
   /// Callback disparado cada vez que el marcador cambia de posición.
   final void Function(LatLng selected, bool isInsideRadius) onLocationChanged;
@@ -59,6 +63,28 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
       haversineDistanceMeters(_selectedPoint, widget.userLocation) <=
       kMaxAlertRadiusMeters;
 
+  Color _colorByType(String? type) {
+    if (type == null) return const Color(0xFFAF6D58);
+    final t = type.toLowerCase();
+    if (t.contains('robo') || t.contains('hurto')) return const Color(0xFFB64D4C);
+    if (t.contains('incendio')) return const Color(0xFFAA5F3C);
+    if (t.contains('accidente') || t.contains('vial')) return const Color(0xFF506E96);
+    if (t.contains('médica') || t.contains('salud')) return const Color(0xFF3C8C6E);
+    return const Color(0xFFAF6D58);
+  }
+
+  IconData _iconByType(String? type) {
+    if (type == null) return Icons.warning_rounded;
+    final t = type.toLowerCase();
+    if (t.contains('robo')) return Icons.local_police_rounded;
+    if (t.contains('hurto')) return Icons.directions_run_rounded;
+    if (t.contains('incendio')) return Icons.local_fire_department_rounded;
+    if (t.contains('accidente')) return Icons.car_crash_rounded;
+    if (t.contains('vial') || t.contains('obstrucción')) return Icons.construction_rounded;
+    if (t.contains('médica') || t.contains('salud')) return Icons.medical_services_rounded;
+    return Icons.warning_rounded;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +100,8 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
   @override
   Widget build(BuildContext context) {
     final inside = _isInsideRadius;
-    final markerColor = inside ? const Color(0xFFAF6D58) : Color(0xFFB64D4C);
+    final typeColor = _colorByType(widget.alertType);
+    final markerColor = inside ? typeColor : const Color(0xFFB64D4C);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -148,17 +175,10 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                             decoration: BoxDecoration(
                               color: markerColor,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: markerColor.withValues(alpha: 0.55),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
-                                ),
-                              ],
+                              border: Border.all(color: Colors.white, width: 2), 
                             ),
-                            child: const Icon(
-                              Icons.warning_rounded,
+                            child: Icon(
+                              _iconByType(widget.alertType),
                               color: Colors.white,
                               size: 20,
                             ),

@@ -67,26 +67,33 @@ export class CommentsService{
         return CommentResponse.FromCommentToResponse(savedComment)
     }
 
-    async findByReport(reportId: number){
+    async findByReport(reportId: number) {
         const report = await this.reportsRepository.findOne({
             where: { id: reportId }
         })
 
-        if(!report){
-            throw new NotFoundException(`El reporte con ID ${reportId} no se encontro`)
+        if (!report) {
+            throw new NotFoundException(
+                `El reporte con ID ${reportId} no se encontro`
+            )
         }
 
-        const comments = await this.commentsRepository.find({
-            where: {
-                report: { id: reportId },
-                parent_comment: IsNull()
-            },
-            relations: ['creator'],
-            order: {
-                created_at: 'DESC'
-                }
-            })
-        return CommentResponse.FromCommentListToResponse(comments)
+        const comments = await this.commentsRepository
+            .createQueryBuilder('comment')
+            .leftJoinAndSelect('comment.creator', 'creator')
+            .loadRelationCountAndMap(
+                'comment.responsesCount',
+                'comment.responses'
+            )
+            .where('comment.reportId = :reportId', { reportId })
+            .andWhere('comment.parentCommentId IS NULL')
+            .orderBy('comment.created_at', 'DESC')
+            .getMany()
+
+        return comments.map(comment => ({
+            ...CommentResponse.FromCommentToResponse(comment),
+            replies_count: comment['responsesCount']
+        }))
     }
 
     async findReplies(commentId: number){
@@ -107,7 +114,7 @@ export class CommentsService{
                 },
                 relations: ['creator'],
                 order: {
-                    created_at: 'ASC'
+                    created_at: 'DESC'
                 }
         })
         return CommentResponse.FromCommentListToResponse(replies)

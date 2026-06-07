@@ -4,6 +4,7 @@ import 'package:app_alertas/views/map_route_screen.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/views/comments_screen.dart';
 
 class AlertCard extends StatefulWidget {
   final AlertModel alert;
@@ -72,12 +73,16 @@ class _AlertCardState extends State<AlertCard> {
 
   IconData _alertIcon(String type) {
     final t = type.toUpperCase();
-    if (t.contains('ROBO')) return Icons.security_rounded;
-    if (t.contains('HURTO')) return Icons.person_off_rounded;
+    if (t.contains('ROBO')) return Icons.local_police_rounded;
+    if (t.contains('HURTO')) return Icons.directions_run_rounded;
     if (t.contains('INCENDIO')) return Icons.local_fire_department_rounded;
     if (t.contains('ACCIDENTE')) return Icons.car_crash_rounded;
-    if (t.contains('VIAL')) return Icons.traffic_rounded;
-    if (t.contains('MÉDICA')) return Icons.medical_services_rounded;
+    if (t.contains('VIAL') || t.contains('OBSTRUCCIÓN')) {
+      return Icons.construction_rounded;
+    }
+    if (t.contains('MÉDICA') || t.contains('SALUD')) {
+      return Icons.medical_services_rounded;
+    }
     return Icons.warning_amber_rounded;
   }
 
@@ -196,6 +201,34 @@ class _AlertCardState extends State<AlertCard> {
                   ),
                 ),
                 const Spacer(),
+                if (widget.isInBottomSheet) ...[
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context, rootNavigator: true).push(
+                        PageRouteBuilder(
+                          pageBuilder: (context, animation, secondaryAnimation) => CommentsScreen(alertId: widget.alert.id),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0);
+                            const end = Offset.zero;
+                            const curve = Curves.ease;
+                            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                            return SlideTransition(position: animation.drive(tween), child: child);
+                          },
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 14),
+                    label: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  if (widget.alert.verified) const SizedBox(width: 8),
+                ],
                 if (widget.alert.verified)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -253,17 +286,54 @@ class _AlertCardState extends State<AlertCard> {
 
           // Action bar style Instagram
           if (!widget.isInBottomSheet)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  onPressed: widget.onTap,
-                  icon: const Icon(Icons.map_rounded, color: Colors.white, size: 26),
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 12),
-              ],
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context, rootNavigator: true).push(
+                        PageRouteBuilder(
+                          pageBuilder: (context, animation, secondaryAnimation) => CommentsScreen(alertId: widget.alert.id),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0);
+                            const end = Offset.zero;
+                            const curve = Curves.ease;
+                            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                            return SlideTransition(position: animation.drive(tween), child: child);
+                          },
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: const BorderSide(color: Colors.white),
+                      ),
+                    ),
+                    child: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                  TextButton(
+                    onPressed: widget.onTap,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: const BorderSide(color: Colors.white),
+                      ),
+                    ),
+                    child: const Text('NAVEGAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ],
+              ),
             ),
           if (!widget.isInBottomSheet)
             const SizedBox(height: 4),

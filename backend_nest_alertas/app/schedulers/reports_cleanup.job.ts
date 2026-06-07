@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Report } from "app/models/report.entity";
+import { log } from "console";
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -25,8 +26,9 @@ export class ReportsCleanup {
     // └───────── minuto
 
     // en nuestro caso es cada media hora
-    @Cron('*/30 * * * *')
+    @Cron('* * * * *')
     async removeExpiredReports(){
+        console.log("Se ejectuo del trabajo")
         const result = await this.reportsRepository
             .createQueryBuilder()
             .softDelete()

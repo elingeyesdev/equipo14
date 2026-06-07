@@ -8,6 +8,7 @@ import 'package:app_alertas/views/splash_screen.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/viewmodels/alert_type_viewmodel.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
+import 'package:app_alertas/viewmodels/comment_viewmodel.dart';
 
 /// Raíz de la app (MaterialApp + tema + pantalla inicial).
 class App extends StatefulWidget {
@@ -51,6 +52,9 @@ class _AppState extends State<App> {
         ),
         ChangeNotifierProvider<AlertViewModel>(
           create: (_) => AlertViewModel()..fetchAlerts(),
+        ),
+        ChangeNotifierProvider<CommentViewModel>(
+          create: (_) => CommentViewModel(),
         ),
       ],
       child: Consumer<AuthViewModel>(

@@ -994,6 +994,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                           _position!.latitude,
                           _position!.longitude,
                         ),
+                        alertType: _selectedType?.name,
                         onLocationChanged: (selected, isInside) {
                           setState(() {
                             _selectedAlertLocation = selected;

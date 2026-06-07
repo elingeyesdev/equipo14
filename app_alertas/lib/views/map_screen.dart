@@ -21,7 +21,10 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> {
+class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   LatLng? currentLocation;
   MapController mapController = MapController();
   final _userRepository = UserRepository();
@@ -106,7 +109,7 @@ class MapScreenState extends State<MapScreen> {
     setState(() {
       _isAuthority = _userIsAuthority(user?.roleId, user?.roleName);
     });
-    await getLocation();
+    await _loadAlerts();
   }
 
   Future<void> _initPushNotifications() async {
@@ -132,7 +135,7 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     setState(() => _loadingLocation = true);
 
-    LatLng center = MapboxConfig.defaultCenter;
+    LatLng center = currentLocation ?? MapboxConfig.defaultCenter;
     var fromGps = false;
 
     try {
@@ -260,35 +263,18 @@ class MapScreenState extends State<MapScreen> {
 
           return Marker(
             point: point,
-            width: 120,
-            height: 80,
+            width: 48,
+            height: 48,
+            alignment: Alignment.topCenter, // The point of the pin is at the bottom
             child: GestureDetector(
               onTap: () => _showAlertBottomSheet(alert),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  Icon(_iconByType(alert.type), color: color, size: 36),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF262624),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: color.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      alert.type.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  Icon(Icons.location_on, color: color, size: 48),
+                  Positioned(
+                    top: 8,
+                    child: Icon(_iconByType(alert.type), color: Colors.white, size: 20),
                   ),
                 ],
               ),
@@ -327,12 +313,12 @@ class MapScreenState extends State<MapScreen> {
 
   IconData _iconByType(String type) {
     final t = type.toLowerCase();
-    if (t.contains('robo')) return Icons.security_rounded;
-    if (t.contains('hurto')) return Icons.person_off_rounded;
+    if (t.contains('robo')) return Icons.local_police_rounded;
+    if (t.contains('hurto')) return Icons.directions_run_rounded;
     if (t.contains('incendio')) return Icons.local_fire_department_rounded;
     if (t.contains('accidente')) return Icons.car_crash_rounded;
     if (t.contains('vial') || t.contains('obstrucción')) {
-      return Icons.traffic_rounded;
+      return Icons.construction_rounded;
     }
     if (t.contains('médica') || t.contains('salud')) {
       return Icons.medical_services_rounded;
@@ -365,11 +351,12 @@ class MapScreenState extends State<MapScreen> {
     if (t.contains('médica') || t.contains('salud')) {
       return const Color(0xFF3C8C6E);
     }
-    return const Color(0xFF8B5CF6);
+    return const Color(0xFFAF6D58);
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       body: Stack(
         children: [
