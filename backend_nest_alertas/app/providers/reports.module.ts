@@ -8,10 +8,11 @@ import { User } from 'app/models/user.entity';
 import { Image } from 'app/models/image.entity';
 import { ReportType } from 'app/models/report-types.entity';
 import { CommentsModule } from './comments.module';
+import { ReportsCleanup } from 'app/schedulers/reports_cleanup.job';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Report, User, Image, ReportType]), ImagesModule, CommentsModule],
-  providers: [ReportsService],
+  providers: [ReportsService, ReportsCleanup],
   controllers: [ReportsController]
 })
 export class ReportsModule {}

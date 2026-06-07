@@ -2,13 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Report } from "app/models/report.entity";
-import { log } from "console";
 import { Repository } from 'typeorm';
 
 @Injectable()
 export class ReportsCleanup {
-    private readonly logger = new Logger(ReportsCleanup.name);
-
     constructor(
         @InjectRepository(Report)
         private reportsRepository: Repository<Report>,
@@ -26,7 +23,7 @@ export class ReportsCleanup {
     // └───────── minuto
 
     // en nuestro caso es cada media hora
-    @Cron('* * * * *')
+    @Cron('*/30 * * * *')
     async removeExpiredReports(){
         console.log("Se ejectuo del trabajo")
         const result = await this.reportsRepository
@@ -36,7 +33,7 @@ export class ReportsCleanup {
             .andWhere('deleted_at IS NULL')
             .execute();
         if (result.affected) {
-            this.logger.log(
+            console.log(
                 `${result.affected} reportes expirados eliminados`
             );
         }
