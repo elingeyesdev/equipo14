@@ -7,9 +7,10 @@ import { Report } from 'app/models/report.entity';
 import { User } from 'app/models/user.entity';
 import { Image } from 'app/models/image.entity';
 import { ReportType } from 'app/models/report-types.entity';
+import { CommentsModule } from './comments.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Report, User, Image, ReportType]), ImagesModule],
+  imports: [TypeOrmModule.forFeature([Report, User, Image, ReportType]), ImagesModule, CommentsModule],
   providers: [ReportsService],
   controllers: [ReportsController]
 })

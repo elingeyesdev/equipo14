@@ -1,25 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
 import { UsersService } from '../../services/users.service';
-import { CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
+import { UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from 'app/decorators/roles.decorator';
-import { RolesGuard } from 'app/guards/roles.guard';
 
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
-    @Post()
-    @UseGuards(RolesGuard)
-    @Roles('autoridad', 'admin')
-    create(@Body() createUserDto: CreateUserRequest, @Request() req) {
-        return this.usersService.create(createUserDto, req.user?.role);
-    }
-
     @Get()
-    @UseGuards(RolesGuard)
-    @Roles('autoridad', 'admin')
     findAll(){
         return this.usersService.findAll()
     }
@@ -45,8 +34,6 @@ export class UsersController {
     }
 
     @Delete(':id')
-    @UseGuards(RolesGuard)
-    @Roles('autoridad', 'admin')
     remove(@Param('id') id: string){
         return this.usersService.remove(id)
     }

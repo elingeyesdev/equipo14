@@ -19,7 +19,7 @@ export class ReportTypeController{
             },
         }
     })
-    create(@Body('name') name: string, @Request() req){
+    create(@Body('name') name: string){
         return this.reportTypesService.create(name)
     }
 

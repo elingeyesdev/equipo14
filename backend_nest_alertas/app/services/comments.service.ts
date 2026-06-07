@@ -1,60 +1,115 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { CreateCommentRequest } from "app/http/requests/comments/request";
+import { CommentResponse } from "app/http/requests/comments/response";
 import { Comment } from "app/models/comment.entity";
+import { Report } from "app/models/report.entity";
 import { User } from "app/models/user.entity";
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
-// Falta mejorar los dos servicios, ademas de consider la implementacion de un request/response
-
-
-    // Comment {
-    // id
-    // text
-    // created_at
-    // responses
-    // parent_comment
-    // report
-    // creator
-    //}
 @Injectable()
 export class CommentsService{
     constructor(
         @InjectRepository(Comment)
         private commentsRepository: Repository<Comment>,
         @InjectRepository(User)
-        private usersRepository: Repository<User>
+        private usersRepository: Repository<User>,
+        @InjectRepository(Report)
+        private reportsRepository: Repository<Report>
     ){}
 
-    async create(text: string){
+    async create(reportId: number, createCommentRequest: CreateCommentRequest){
+        const creator = await this.usersRepository.findOne({where: {id: createCommentRequest.creatorId}})
+        
+        if(!creator){
+            throw new NotFoundException("Usuario no encontrado")
+        }
+
+        const report = await this.reportsRepository.findOne({where: {id: reportId}})
+        
+        if(!report){
+            throw new NotFoundException("Reporte no encontrado")
+        }
+
         const newCommnet = this.commentsRepository.create({
-            text: text
+            text: createCommentRequest.text,
+            report: report,
+            creator: creator
         })
 
         const savedComment = await this.commentsRepository.save(newCommnet)
 
-        return savedComment
+        return CommentResponse.FromCommentToResponse(savedComment)
     }
 
-    async response(creatorId: string, parentCommentId: number, text: string){
+    async reply(parentCommentId: number, createCommentRequest: CreateCommentRequest){
         const parentComment = await this.commentsRepository.findOne({where : {id: parentCommentId}})
 
         if (!parentComment){
             throw new NotFoundException("Comentario no encontrado")
         }
 
-        const creator = await this.usersRepository.findOne({where: {id: creatorId}})
+        const creator = await this.usersRepository.findOne({where: {id: createCommentRequest.creatorId}})
         
         if(!creator){
             throw new NotFoundException("Usuario no encontrado")
         }
 
         const newComment = this.commentsRepository.create({
-            text: text,
+            text: createCommentRequest.text,
             parent_comment: parentComment,
             report: parentComment.report,
             creator: creator,
         })
 
-        return await this.commentsRepository.save(newComment)
+        const savedComment = await this.commentsRepository.save(newComment)
+
+        return CommentResponse.FromCommentToResponse(savedComment)
+    }
+
+    async findByReport(reportId: number){
+        const report = await this.reportsRepository.findOne({
+            where: { id: reportId }
+        })
+
+        if(!report){
+            throw new NotFoundException(`El reporte con ID ${reportId} no se encontro`)
+        }
+
+        const comments = await this.commentsRepository.find({
+            where: {
+                report: { id: reportId },
+                parent_comment: IsNull()
+            },
+            relations: ['creator'],
+            order: {
+                created_at: 'DESC'
+                }
+            })
+        return CommentResponse.FromCommentListToResponse(comments)
+    }
+
+    async findReplies(commentId: number){
+        const comment = await this.commentsRepository.findOne({
+            where: { id: commentId },
+            relations: ['creator']
+        })
+
+        if(!comment){
+            throw new NotFoundException(`El comentario con ID ${commentId} no se encontro`)
+        }
+
+        const replies = await this.commentsRepository.find({
+            where: {
+                    parent_comment: {
+                        id: commentId
+                    }
+                },
+                relations: ['creator'],
+                order: {
+                    created_at: 'ASC'
+                }
+        })
+        return CommentResponse.FromCommentListToResponse(replies)
     }
 }

@@ -4,11 +4,16 @@ import { CreateReportRequest, VerifyReportRequest } from '../requests/reports/re
 import { FilterReportsQuery } from '../requests/reports/filter-query';
 import { ApiAddImageUpload, ApiImageUpload } from '../../decorators/request.decorator';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { CommentsService } from 'app/services/comments.service';
+import { CreateCommentRequest } from '../requests/comments/request';
 
 @ApiBearerAuth()
 @Controller('reports')
 export class ReportsController {
-    constructor(private readonly reportsService: ReportsService){}
+    constructor(
+        private readonly reportsService: ReportsService,
+        private readonly commentsService: CommentsService
+    ){}
 
     @Post()
     @ApiImageUpload()
@@ -17,6 +22,14 @@ export class ReportsController {
         @Body() createReportDto: CreateReportRequest
     ){
         return this.reportsService.create(createReportDto, file)
+    }
+
+    @Post(':id/comments')
+    createComment(
+        @Param('id') reportId: number, 
+        @Body() createCommentRequest: CreateCommentRequest
+    ){
+        return this.commentsService.create(reportId, createCommentRequest)
     }
 
     @Post(':id/images/:userId')
@@ -69,6 +82,11 @@ export class ReportsController {
     @Get(':id')
     findOne(@Param('id') id:string){
         return this.reportsService.findOne(id)
+    }
+
+    @Get(':id/comments')
+    findComments(@Param('id') reportId: number){
+        return this.commentsService.findByReport(reportId)
     }
 
     @Delete(':id')

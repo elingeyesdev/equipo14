@@ -35,7 +35,7 @@ export class ReportResponse{
         // response.type = report.type ?? FALLBACK_TYPE;
         response.type = report.type;
         response.description = report.description ?? '';
-        response.coordinates = extractCoordinates(report.location);
+        response.coordinates = report.location.coordinates;
         response.weight = report.weight ?? 0;
         response.verified = report.verified ?? false;
         response.created_at = report.created_at;
@@ -67,7 +67,7 @@ export class ReportCoinicdenceResponse{
 
         response.id = report.id;
         response.description = report.description ?? '';
-        response.coordinates = extractCoordinates(report.location);
+        response.coordinates = report.location.coordinates;
         response.weight = report.weight ?? 0;
         response.verified = report.verified ?? false;
         response.created_at = report.created_at;
