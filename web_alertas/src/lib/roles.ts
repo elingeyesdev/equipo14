@@ -59,10 +59,5 @@ export function creatableRolesFor(current?: Role): { id: CreatableRoleId; label:
 export function canAccessAdminPanel(role?: Role): boolean {
   const id = role?.id;
   const name = (role?.name ?? "").toLowerCase();
-  return (
-    id === ROLE_IDS.AUTORIDAD ||
-    id === ROLE_IDS.ADMIN ||
-    name.includes("autoridad") ||
-    name.includes("admin")
-  );
+  return id === ROLE_IDS.ADMIN || name === "admin";
 }

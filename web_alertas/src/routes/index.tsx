@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Siren,
   MapPin,
@@ -190,31 +191,91 @@ function Logo() {
 }
 
 function Nav() {
+  const [open, setOpen] = useState(false);
+
+  const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    setOpen(false);
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const links = [
+    { label: "Funciones", id: "funciones" },
+    { label: "Impacto", id: "impacto" },
+    { label: "Mapa", id: "mapa" },
+    { label: "Soporte", id: "faq" },
+  ];
+
   return (
     <nav className="fixed top-0 inset-x-0 z-50 bg-background/70 backdrop-blur-xl border-b border-border">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <Logo />
+
+        {/* Desktop links */}
         <div className="hidden md:flex items-center gap-10 text-sm font-medium text-muted-foreground">
-          <a href="#funciones" className="hover:text-primary transition-colors">
-            Funciones
-          </a>
-          <a href="#impacto" className="hover:text-primary transition-colors">
-            Impacto
-          </a>
-          <a href="#mapa" className="hover:text-primary transition-colors">
-            Mapa
-          </a>
-          <a href="#faq" className="hover:text-primary transition-colors">
-            Soporte
-          </a>
+          {links.map((l) => (
+            <a
+              key={l.id}
+              href={`#${l.id}`}
+              onClick={(e) => handleNav(e, l.id)}
+              className="hover:text-primary transition-colors"
+            >
+              {l.label}
+            </a>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" asChild className="hidden sm:inline-flex">
+
+        {/* Desktop CTA */}
+        <div className="hidden md:flex items-center">
+          <Button asChild className="rounded-full font-bold px-6">
             <Link to="/login">Ingresar</Link>
           </Button>
-          <Button asChild className="rounded-full font-bold">
-            <Link to="/login">Únete ahora</Link>
-          </Button>
+        </div>
+
+        {/* Mobile: hamburger */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Abrir menú"
+          className="md:hidden size-10 rounded-lg border border-border bg-card grid place-items-center hover:bg-muted transition-colors"
+        >
+          <span className="flex flex-col gap-1.5 w-5">
+            <span
+              className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 ${open ? "rotate-45 translate-y-2" : ""}`}
+            />
+            <span
+              className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 ${open ? "opacity-0 scale-x-0" : ""}`}
+            />
+            <span
+              className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 ${open ? "-rotate-45 -translate-y-2" : ""}`}
+            />
+          </span>
+        </button>
+      </div>
+
+      {/* Mobile dropdown */}
+      <div
+        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+          open ? "max-h-96 border-t border-border" : "max-h-0"
+        } bg-background/95 backdrop-blur-xl`}
+      >
+        <div className="px-6 py-4 flex flex-col gap-1">
+          {links.map((l) => (
+            <a
+              key={l.id}
+              href={`#${l.id}`}
+              onClick={(e) => handleNav(e, l.id)}
+              className="py-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors border-b border-border last:border-0"
+            >
+              {l.label}
+            </a>
+          ))}
+          <div className="pt-4">
+            <Button asChild className="w-full rounded-xl font-bold">
+              <Link to="/login">Ingresar</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </nav>

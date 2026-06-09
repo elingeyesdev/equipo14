@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState, useEffect, type FormEvent } from "react";
-import { ShieldCheck, ArrowRight, Lock, Phone, Eye, EyeOff } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { ShieldCheck, ArrowRight, Lock, Phone, Eye, EyeOff, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
-import { authService } from "@/services/auth.service";
 import { getRememberLogin, setRememberLogin } from "@/lib/auth-session";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -24,13 +24,8 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(getRememberLogin);
+  const [accessDenied, setAccessDenied] = useState(false);
   const { login, isLoggingIn } = useAuth();
-
-  useEffect(() => {
-    authService.restoreSession().then((session) => {
-      if (session) navigate({ to: "/admin/mapa" });
-    });
-  }, [navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -40,12 +35,18 @@ function LoginPage() {
       toast.success(`Bienvenido de vuelta, ${session.user.first_name}!`);
       navigate({ to: "/admin/mapa" });
     } catch (err: any) {
-      toast.error(err.message || "Credenciales incorrectas o error en el servidor");
+      const msg: string = err?.message || "";
+      if (msg.toLowerCase().includes("acceso denegado")) {
+        setAccessDenied(true);
+      } else {
+        toast.error(msg || "Credenciales incorrectas o error en el servidor");
+      }
     }
   };
 
 
   return (
+    <>
     <div className="min-h-screen bg-background text-foreground grid lg:grid-cols-2">
       {/* Lado decorativo */}
       <aside className="relative hidden lg:flex flex-col justify-between p-12 border-r border-border bg-card/40 overflow-hidden">
@@ -102,9 +103,6 @@ function LoginPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-xs font-medium leading-relaxed">
-              <strong>Acceso restringido:</strong> Este panel está destinado exclusivamente para autoridades competentes y personal de seguridad urbana.
-            </div>
 
             <label className="block">
               <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -164,5 +162,25 @@ function LoginPage() {
         </div>
       </main>
     </div>
+
+    <Dialog open={accessDenied} onOpenChange={setAccessDenied}>
+      <DialogContent className="sm:max-w-sm text-center">
+        <DialogHeader className="items-center">
+          <div className="size-14 rounded-full bg-destructive/10 border border-destructive/20 grid place-items-center mb-2">
+            <ShieldX className="size-7 text-destructive" />
+          </div>
+          <DialogTitle className="text-lg font-bold">Acceso restringido</DialogTitle>
+          <DialogDescription className="text-sm leading-relaxed">
+            Reservado solo para <strong>Administradores</strong>. Tu cuenta no tiene los permisos necesarios para ingresar a este panel.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="justify-center">
+          <Button onClick={() => setAccessDenied(false)} className="w-full rounded-xl">
+            Entendido
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
   );
 }

@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TrendingUp, CheckCircle2, MapPin, Clock, Loader2 } from "lucide-react";
-import { useFilters } from "@/context/FilterContext";
 import { useReports } from "@/hooks/useReports";
 import { reportsService } from "@/services/reports.service";
 
@@ -9,10 +8,8 @@ export const Route = createFileRoute("/admin/metricas")({
 });
 
 export default function MetricasPage() {
-  const { filters } = useFilters();
-
-  // Fetch reports based on active filters via hook
-  const { reports = [], isLoading } = useReports(filters);
+  // Fetch reports via hook
+  const { reports = [], isLoading } = useReports({});
 
   if (isLoading) {
     return (
@@ -28,7 +25,7 @@ export default function MetricasPage() {
   const activity = reportsService.calculateActivityDistribution(reports);
   
   const kpis = [
-    { value: kpisData.total.toString(), label: "Alertas filtradas", sub: "Según filtros activos", icon: TrendingUp },
+    { value: kpisData.total.toString(), label: "Alertas totales", sub: "En el sistema", icon: TrendingUp },
     { value: kpisData.todayCount.toString(), label: "Alertas hoy", sub: "Registradas hoy", icon: Clock },
     { value: `${kpisData.verifiedPercentage}%`, label: "Verificación", sub: "Confirmadas por autoridad", icon: CheckCircle2 },
     { value: kpisData.uniqueZonesCount.toString(), label: "Zonas cubiertas", sub: "Con incidentes activos", icon: MapPin },
@@ -45,7 +42,7 @@ export default function MetricasPage() {
   const microCards = [
     { value: kpisData.verifiedCount.toString(), label: "Verificados" },
     { value: kpisData.uniqueZonesCount.toString(), label: "Zonas activas" },
-    { value: kpisData.total.toString(), label: "Total filtrado" },
+    { value: kpisData.total.toString(), label: "Total en sistema" },
   ];
 
   return (
@@ -87,7 +84,7 @@ export default function MetricasPage() {
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-display font-bold text-sm">Actividad por tipo</h3>
             <span className="text-[10px] uppercase tracking-widest text-primary font-bold">
-              Filtrado
+              Totales
             </span>
           </div>
           <p className="text-xs text-muted-foreground mb-6">{kpisData.total} reportes en vista</p>
@@ -143,7 +140,7 @@ export default function MetricasPage() {
       </div>
 
       <p className="text-xs text-muted-foreground mt-6">
-        Los datos se recalculan automáticamente según los filtros de búsqueda aplicados.
+        Los datos se recalculan en tiempo real.
       </p>
     </div>
   );

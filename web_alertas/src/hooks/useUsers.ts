@@ -33,6 +33,7 @@ export function useUsers(options: { enabled?: boolean } = {}) {
     isLoading: usersQuery.isLoading,
     isError: usersQuery.isError,
     error: usersQuery.error,
+    refetch: usersQuery.refetch,
 
     createUser: createUserMutation.mutateAsync,
     isCreating: createUserMutation.isPending,

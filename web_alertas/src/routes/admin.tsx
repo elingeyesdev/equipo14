@@ -6,7 +6,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, useState, createContext, useContext } from "react";
-import { ShieldCheck, LogOut, Map, BarChart3, LayoutGrid, FileText, SlidersHorizontal } from "lucide-react";
+import { ShieldCheck, LogOut, Map, BarChart3, Users, Tag, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -23,7 +23,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { FiltersBar } from "@/components/admin/FiltersBar";
+
 import { clearSession } from "@/api/httpClient";
 import { authService } from "@/services/auth.service";
 import { type Session } from "@/domain/types";
@@ -38,42 +38,19 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-import { Filters, FilterContext, useFilters } from "../context/FilterContext";
 
 const navItems = [
-  { to: "/admin/mapa", label: "Mapa en vivo", icon: Map },
+  { to: "/admin/mapa", label: "Reportes en vivo", icon: Map },
+  { to: "/admin/tipo_reporte", label: "Tipos de Alertas", icon: Tag },
+  { to: "/admin/usuarios", label: "Usuarios", icon: Users },
+  { to: "/admin/roles", label: "Roles", icon: Shield },
   { to: "/admin/metricas", label: "Métricas", icon: BarChart3 },
-  { to: "/admin/panel", label: "Panel Admin", icon: LayoutGrid },
-  { to: "/admin/reportes", label: "Reportes", icon: FileText },
 ] as const;
 
 function AdminLayout() {
   const navigate = useNavigate();
   const [sessionState, setSessionState] = useState<Session | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(true);
-  const [filters, setFilters] = useState<Filters>({
-    search: "",
-    category: "Todos",
-    status: "Todos",
-    zone: "Todas",
-    zoneId: "",
-    from: "",
-    to: "",
-    typeId: "",
-  });
 
-  const clearFilters = () => {
-    setFilters({
-      search: "",
-      category: "Todos",
-      status: "Todos",
-      zone: "Todas",
-    zoneId: "",
-      from: "",
-      to: "",
-      typeId: "",
-    });
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -111,40 +88,18 @@ function AdminLayout() {
   }
 
   return (
-    <FilterContext.Provider value={{ filters, setFilters, clearFilters }}>
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background text-foreground">
-          <AdminSidebar session={sessionState} onLogout={logout} />
-          <main className="flex-1 min-w-0 px-6 lg:px-10 py-8">
-            <div className="flex items-center gap-3 mb-6">
-              <SidebarTrigger className="size-9 rounded-lg border border-border bg-card hover:bg-muted" />
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-                Panel administrativo
-              </span>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background text-foreground">
+        <AdminSidebar session={sessionState} onLogout={logout} />
+        <main className="flex-1 min-w-0 px-6 lg:px-10 py-8">
+          <div className="">
+            <div className="min-w-0">
+              <Outlet />
             </div>
-            {!filtersOpen && (
-              <div className="mb-4">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setFiltersOpen(true)}
-                  className="rounded-xl gap-2 border border-border cursor-pointer"
-                >
-                  <SlidersHorizontal className="size-4" />
-                  Mostrar filtros
-                </Button>
-              </div>
-            )}
-            <div className={filtersOpen ? "grid lg:grid-cols-[300px_1fr] gap-8" : ""}>
-              {filtersOpen && <FiltersBar onClose={() => setFiltersOpen(false)} />}
-              <div className="min-w-0">
-                <Outlet />
-              </div>
-            </div>
-          </main>
-        </div>
-      </SidebarProvider>
-    </FilterContext.Provider>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
 
@@ -160,21 +115,24 @@ function AdminSidebar({ session, onLogout }: { session: Session; onLogout: () =>
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-2 px-2 py-2 min-w-0">
-          <div className="size-9 rounded-lg bg-primary grid place-items-center shrink-0">
-            <ShieldCheck className="size-5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
+        <div className={`flex items-center px-2 py-2 min-w-0 ${collapsed ? "justify-center" : "justify-between"}`}>
           {!collapsed && (
-            <div className="min-w-0 flex flex-col leading-tight animate-in fade-in slide-in-from-left-2 duration-300">
-              <span className="font-display font-bold text-base tracking-tight truncate">
-                ALERTAS
-              </span>
-              <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
-                Admin
-              </span>
-            </div>
+            <Link to="/" className="flex items-center gap-2 min-w-0 overflow-hidden">
+              <div className="size-9 rounded-lg bg-primary grid place-items-center shrink-0">
+                <ShieldCheck className="size-5 text-primary-foreground" strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 flex flex-col leading-tight animate-in fade-in slide-in-from-left-2 duration-300">
+                <span className="font-display font-bold text-base tracking-tight truncate">
+                  ALERTAS
+                </span>
+                <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                  Admin
+                </span>
+              </div>
+            </Link>
           )}
-        </Link>
+          <SidebarTrigger className="shrink-0 size-7 rounded-md hover:bg-sidebar-accent transition-colors" />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>

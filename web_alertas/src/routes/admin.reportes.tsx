@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, FileSpreadsheet, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useFilters } from "@/context/FilterContext";
 import { useReports } from "@/hooks/useReports";
 import { reportsService } from "@/services/reports.service";
 import { toast } from "sonner";
@@ -11,10 +10,8 @@ export const Route = createFileRoute("/admin/reportes")({
 });
 
 function ReportesPage() {
-  const { filters } = useFilters();
-
-  // Fetch reports based on active filters via layered hooks
-  const { reports = [], isLoading } = useReports(filters);
+  // Fetch all reports
+  const { reports = [], isLoading } = useReports({});
 
   // Calculate dynamic zones from current reports
   const zonesMap: Record<string, { alerts: number; verified: number; color: string }> = {};
@@ -151,7 +148,7 @@ function ReportesPage() {
         <div className="px-6 py-4 border-b border-border flex items-center justify-between print:hidden">
           <h3 className="font-display font-bold text-sm">Vista previa de exportación</h3>
           <span className="text-xs text-muted-foreground">
-            {reports.length} resultados · según filtros activos
+            {reports.length} resultados totales
           </span>
         </div>
         
@@ -167,11 +164,7 @@ function ReportesPage() {
               <div>Registros totales: {reports.length}</div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4 text-xs bg-gray-100 p-4 rounded-lg mb-6">
-            <div><strong>Filtro Categoría:</strong> {filters.category || "Todos"}</div>
-            <div><strong>Filtro Estado:</strong> {filters.status || "Todos"}</div>
-            <div><strong>Filtro Zona:</strong> {filters.zone || "Todas"}</div>
-          </div>
+
         </div>
 
         <div className="overflow-x-auto">
@@ -182,7 +175,7 @@ function ReportesPage() {
             </div>
           ) : reports.length === 0 ? (
             <div className="py-20 text-center text-xs text-muted-foreground">
-              No hay incidentes que coincidan con los filtros para exportar.
+              No hay incidentes registrados para exportar.
             </div>
           ) : (
             <table className="w-full text-sm print:text-xs">

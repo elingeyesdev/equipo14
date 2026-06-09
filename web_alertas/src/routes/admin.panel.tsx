@@ -14,7 +14,6 @@ import {
   Map,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useFilters } from "@/context/FilterContext";
 import { useReports } from "@/hooks/useReports";
 import { useReportTypes } from "@/hooks/useReportTypes";
 import { useUsers } from "@/hooks/useUsers";
@@ -28,7 +27,6 @@ export const Route = createFileRoute("/admin/panel")({
 });
 
 function PanelPage() {
-  const { filters } = useFilters();
   const [activeTab, setActiveTab] = useState<"incidentes" | "tipos" | "usuarios">("incidentes");
   const [newTypeName, setNewTypeName] = useState("");
   const [createAlertOpen, setCreateAlertOpen] = useState(false);
@@ -48,7 +46,7 @@ function PanelPage() {
     verifyReport, 
     deleteReport,
     refetch: refetchReports
-  } = useReports(filters, { enabled: activeTab === "incidentes" });
+  } = useReports({}, { enabled: activeTab === "incidentes" });
 
   const { 
     reportTypes = [], 
@@ -139,7 +137,7 @@ function PanelPage() {
   const uniqueZones = new Set(reports.map((r) => r.zone).filter(Boolean)).size;
 
   const cards = [
-    { label: "Total (filtro)", value: totalCount.toString() },
+    { label: "Total", value: totalCount.toString() },
     { label: "Verificados", value: verifiedCount.toString() },
     { label: "Pendientes", value: pendingCount.toString() },
     { label: "Zonas", value: uniqueZones.toString() },
@@ -247,7 +245,7 @@ function PanelPage() {
               </div>
             ) : reports.length === 0 ? (
               <div className="py-20 text-center text-xs text-muted-foreground">
-                Ningún reporte encontrado con los filtros actuales.
+                Ningún reporte encontrado.
               </div>
             ) : (
               <table className="w-full text-sm">
