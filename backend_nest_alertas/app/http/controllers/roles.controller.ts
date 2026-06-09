@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Param, Post, Get, Request } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody } from "@nestjs/swagger";
+import { Roles } from "app/decorators/roles.decorator";
 import { RolesService } from "app/services/roles.service";
 
 @ApiBearerAuth()
@@ -8,6 +9,7 @@ export class RolesController{
     constructor(private readonly rolesService: RolesService){}
 
     @Post()
+    @Roles('admin')
     @ApiBody({
         schema: {
             type: 'object',
@@ -28,6 +30,7 @@ export class RolesController{
     }
 
     @Delete(':id')
+    @Roles('admin')
     remove(@Param('id') id: number){
         return this.rolesService.remove(id)
     }

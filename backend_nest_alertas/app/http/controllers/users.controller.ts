@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
 import { UsersService } from '../../services/users.service';
 import { UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { Roles } from 'app/decorators/roles.decorator';
 
 @ApiBearerAuth()
 @Controller('users')
@@ -34,6 +35,7 @@ export class UsersController {
     }
 
     @Delete(':id')
+    @Roles('admin')
     remove(@Param('id') id: string){
         return this.usersService.remove(id)
     }

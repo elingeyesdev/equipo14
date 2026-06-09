@@ -6,6 +6,7 @@ import { ApiAddImageUpload, ApiImageUpload } from '../../decorators/request.deco
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CommentsService } from 'app/services/comments.service';
 import { CreateCommentRequest } from '../requests/comments/request';
+import { Roles } from 'app/decorators/roles.decorator';
 
 @ApiBearerAuth()
 @Controller('reports')
@@ -45,6 +46,7 @@ export class ReportsController {
     // modificar, solo para autoridades
     // unicamnete permite a autoridades verificar los reportes
     @Patch(':id/verify')
+    @Roles('admin','autoridad')
     verifyReport(@Param('id') id: number) 
     {
         return this.reportsService.verifyReport(id);
