@@ -56,7 +56,6 @@ class ProfilePageState extends State<ProfilePage> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => reload(),
-          color: const Color(0xFF3B82F6),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [

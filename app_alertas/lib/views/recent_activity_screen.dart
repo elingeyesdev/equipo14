@@ -7,6 +7,7 @@ import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/views/alert_card.dart';
 import 'package:app_alertas/views/widgets/custom_snackbar.dart';
+import 'package:app_alertas/services/location_service.dart';
 
 class RecentActivityScreen extends StatefulWidget {
   final Function(AlertModel)? onAlertTap;
@@ -16,68 +17,54 @@ class RecentActivityScreen extends StatefulWidget {
   State<RecentActivityScreen> createState() => RecentActivityScreenState();
 }
 
-/// Filtros de segunda fila: alineados con las reglas de credibilidad de la lista.
-enum _PriorityFilter {
-  all,
-  highPriority,
-  verifiedAuthority,
-  credibilityHigh,
-  credibilityModerate,
-  credibilityLow,
-}
-
-extension _PriorityFilterMatch on _PriorityFilter {
-  bool matches(AlertModel a) {
-    switch (this) {
-      case _PriorityFilter.all:
-        return true;
-      case _PriorityFilter.highPriority:
-        return a.verified || a.weight >= 20;
-      case _PriorityFilter.verifiedAuthority:
-        return a.verified;
-      case _PriorityFilter.credibilityHigh:
-        return !a.verified && a.weight >= 20;
-      case _PriorityFilter.credibilityModerate:
-        return !a.verified && a.weight >= 15 && a.weight < 20;
-      case _PriorityFilter.credibilityLow:
-        return !a.verified && a.weight < 15;
-    }
-  }
-
-  String get chipLabel {
-    switch (this) {
-      case _PriorityFilter.all:
-        return 'Todas';
-      case _PriorityFilter.highPriority:
-        return 'Alta prioridad';
-      case _PriorityFilter.verifiedAuthority:
-        return 'Verificado';
-      case _PriorityFilter.credibilityHigh:
-        return 'Credibilidad alta';
-      case _PriorityFilter.credibilityModerate:
-        return 'Credibilidad moderada';
-      case _PriorityFilter.credibilityLow:
-        return 'Credibilidad baja';
-    }
-  }
-}
-
 class RecentActivityScreenState extends State<RecentActivityScreen> {
-  String? _selectedZone;
-  _PriorityFilter _priorityFilter = _PriorityFilter.all;
+  String? _selectedType;
+  bool _onlyNearby = false;
+  final _locationService = const LocationService();
+  int _currentLoadId = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AlertViewModel>().fetchAlerts();
+      _loadAlerts();
     });
   }
 
   Future<void> reload() => _loadAlerts();
 
   Future<void> _loadAlerts() async {
-    await context.read<AlertViewModel>().fetchAlerts();
+    final alertVM = context.read<AlertViewModel>();
+    final int loadId = ++_currentLoadId;
+    final bool currentFilter = _onlyNearby;
+
+    if (currentFilter) {
+      try {
+        final loc = await _locationService.getCurrentLocation();
+        
+        if (loadId != _currentLoadId) return;
+
+        await alertVM.fetchNearbyAlerts(
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          radius: 5000.0, 
+        );
+      } catch (e) {
+        if (loadId != _currentLoadId) return;
+
+        if (mounted) {
+          showCustomSnackBar(
+            context: context,
+            title: 'Ubicación',
+            message: 'No se pudo obtener tu ubicación. Cargando alertas globales.',
+            type: CustomSnackBarType.warning,
+          );
+        }
+        await alertVM.fetchAlerts();
+      }
+    } else {
+      await alertVM.fetchAlerts();
+    }
   }
 
   Future<void> _verifyAlert(AlertModel alert) async {
@@ -232,14 +219,29 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       builder: (ctx) {
         return _FilterBottomSheet(
           alerts: alerts,
-          initialZone: _selectedZone,
-          initialPriority: _priorityFilter,
-          onConfirm: (zone, priority) {
+          initialType: _selectedType,
+          initialOnlyNearby: _onlyNearby,
+          onConfirm: (type, onlyNearby) {
+            final bool changed = _onlyNearby != onlyNearby;
             setState(() {
-              _selectedZone = zone;
-              _priorityFilter = priority;
+              _selectedType = type;
+              _onlyNearby = onlyNearby;
             });
             Navigator.of(ctx).pop();
+            if (changed) {
+              _loadAlerts();
+            }
+          },
+          onReset: () {
+            final bool changed = _onlyNearby != false;
+            setState(() {
+              _selectedType = null;
+              _onlyNearby = false;
+            });
+            Navigator.of(ctx).pop();
+            if (changed) {
+              _loadAlerts();
+            }
           },
         );
       },
@@ -253,11 +255,7 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
     final loading = alertVM.isLoading;
 
     final filteredAlerts = alerts.where((alert) {
-      if (_selectedZone != null &&
-          (alert.zone ?? 'Desconocida') != _selectedZone) {
-        return false;
-      }
-      if (!_priorityFilter.matches(alert)) {
+      if (_selectedType != null && alert.type != _selectedType) {
         return false;
       }
       return true;
@@ -289,7 +287,6 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
               child: RefreshIndicator(
                 onRefresh: _loadAlerts,
                 displacement: 20,
-                color: const Color(0xFFAF6D58),
                 child: Skeletonizer(
                   enabled: loading && alerts.isEmpty,
                   effect: const ShimmerEffect(
@@ -326,23 +323,86 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                                   ),
                                   child: Row(
                                     children: [
-                                      Text(
-                                        'Filtrar Reportes',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.6,
-                                          ),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.normal,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
                                       Icon(
                                         Icons.filter_list,
                                         color: Colors.white.withValues(
                                           alpha: 0.6,
                                         ),
                                         size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Wrap(
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            if (_selectedType == null && !_onlyNearby)
+                                              Text(
+                                                'Filtrar Reportes',
+                                                style: TextStyle(
+                                                  color: Colors.white.withValues(
+                                                    alpha: 0.6,
+                                                  ),
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.normal,
+                                                ),
+                                              ),
+                                            if (_selectedType != null)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF40403E),
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      _selectedType!,
+                                                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    GestureDetector(
+                                                      onTap: () {
+                                                        setState(() {
+                                                          _selectedType = null;
+                                                        });
+                                                      },
+                                                      child: const Icon(Icons.close, color: Colors.white70, size: 14),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            if (_onlyNearby)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF40403E),
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Text(
+                                                      "Cercanos",
+                                                      style: TextStyle(color: Colors.white, fontSize: 13),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    GestureDetector(
+                                                      onTap: () {
+                                                        setState(() {
+                                                          _onlyNearby = false;
+                                                        });
+                                                        _loadAlerts();
+                                                      },
+                                                      child: const Icon(Icons.close, color: Colors.white70, size: 14),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -393,15 +453,17 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
 
 class _FilterBottomSheet extends StatefulWidget {
   final List<AlertModel> alerts;
-  final String? initialZone;
-  final _PriorityFilter initialPriority;
-  final Function(String?, _PriorityFilter) onConfirm;
+  final String? initialType;
+  final bool initialOnlyNearby;
+  final Function(String?, bool) onConfirm;
+  final VoidCallback onReset;
 
   const _FilterBottomSheet({
     required this.alerts,
-    this.initialZone,
-    required this.initialPriority,
+    this.initialType,
+    required this.initialOnlyNearby,
     required this.onConfirm,
+    required this.onReset,
   });
 
   @override
@@ -409,24 +471,26 @@ class _FilterBottomSheet extends StatefulWidget {
 }
 
 class _FilterBottomSheetState extends State<_FilterBottomSheet> {
-  String? _selectedZone;
-  late _PriorityFilter _priorityFilter;
+  String? _selectedType;
+  late bool _onlyNearby;
 
   @override
   void initState() {
     super.initState();
-    _selectedZone = widget.initialZone;
-    _priorityFilter = widget.initialPriority;
+    _selectedType = widget.initialType;
+    _onlyNearby = widget.initialOnlyNearby;
   }
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, int> zoneCounts = {};
+    final Map<String, int> typeCounts = {};
     for (var alert in widget.alerts) {
-      final zone = alert.zone ?? 'Desconocida';
-      zoneCounts[zone] = (zoneCounts[zone] ?? 0) + 1;
+      final type = alert.type;
+      if (type.isNotEmpty) {
+        typeCounts[type] = (typeCounts[type] ?? 0) + 1;
+      }
     }
-    final sortedZones = zoneCounts.entries.toList()
+    final sortedTypes = typeCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return FractionallySizedBox(
@@ -437,18 +501,33 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 16, 24, 16),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Filtrar por",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  "Filtrar por",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.normal,
+                TextButton(
+                  onPressed: widget.onReset,
+                  child: const Text(
+                    'Restablecer',
+                    style: TextStyle(
+                      color: Color(0xFFAF6D58),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -461,7 +540,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               children: [
                 const Text(
-                  'INCIDENTES POR ZONA',
+                  'UBICACIÓN',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -471,21 +550,15 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 ),
                 const SizedBox(height: 12),
                 _FilterRowItem(
-                  label: 'Todas',
-                  isSelected: _selectedZone == null,
-                  onTap: () => setState(() => _selectedZone = null),
+                  label: 'Solo reportes cercanos',
+                  isSelected: _onlyNearby,
+                  onTap: () => setState(() => _onlyNearby = !_onlyNearby),
                 ),
-                ...sortedZones.map(
-                  (z) => _FilterRowItem(
-                    label: z.key,
-                    isSelected: _selectedZone == z.key,
-                    onTap: () => setState(() => _selectedZone = z.key),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: Color(0xFF30302E)),
+                const SizedBox(height: 16),
                 const Text(
-                  'PRIORIDAD Y CREDIBILIDAD',
+                  'TIPO DE INCIDENTE',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -494,12 +567,18 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                for (final f in _PriorityFilter.values)
-                  _FilterRowItem(
-                    label: f.chipLabel,
-                    isSelected: _priorityFilter == f,
-                    onTap: () => setState(() => _priorityFilter = f),
+                _FilterRowItem(
+                  label: 'Todos',
+                  isSelected: _selectedType == null,
+                  onTap: () => setState(() => _selectedType = null),
+                ),
+                ...sortedTypes.map(
+                  (t) => _FilterRowItem(
+                    label: t.key,
+                    isSelected: _selectedType == t.key,
+                    onTap: () => setState(() => _selectedType = t.key),
                   ),
+                ),
               ],
             ),
           ),
@@ -517,8 +596,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () =>
-                    widget.onConfirm(_selectedZone, _priorityFilter),
+                onPressed: () => widget.onConfirm(_selectedType, _onlyNearby),
                 child: const Text(
                   'Confirmar',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),

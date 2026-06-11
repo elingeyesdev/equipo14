@@ -34,6 +34,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
   AlertTypeModel? _selectedType;
 
   File? image;
+  double _aspectRatio = 1.0;
 
   final picker = ImagePicker();
   final _descriptionController = TextEditingController();
@@ -56,6 +57,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
     setState(() {
       _selectedType = null;
       image = null;
+      _aspectRatio = 1.0;
       _isSubmitting = false;
       _isLoadingLocation = true;
       _locationTitle = 'Detectando ubicación...';
@@ -365,10 +367,33 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       maxHeight: 1280,);
 
     if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      _calculateAspectRatio(file);
       setState(() {
-        image = File(pickedFile.path);
+        image = file;
       });
     }
+  }
+
+  void _calculateAspectRatio(File file) {
+    final imageProvider = FileImage(file);
+    imageProvider.resolve(const ImageConfiguration()).addListener(
+      ImageStreamListener(
+        (info, _) {
+          if (mounted) {
+            setState(() {
+              double ratio = info.image.width / info.image.height;
+              if (ratio < 0.8) ratio = 0.8; // 4:5 vertical
+              if (ratio > 1.91) ratio = 1.91; // 1.91:1 horizontal
+              _aspectRatio = ratio;
+            });
+          }
+        },
+        onError: (exception, stackTrace) {
+          // Fallback remains 1.0
+        },
+      ),
+    );
   }
 
   // ---------------------------------------------------------------
@@ -833,11 +858,17 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
               if (image != null)
                 GestureDetector(
                   onTap: pickImage,
-                  child: Image.file(
-                    image!,
-                    width: double.infinity,
-                    height: MediaQuery.of(context).size.width,
-                    fit: BoxFit.contain,
+                  child: AspectRatio(
+                    aspectRatio: _aspectRatio,
+                    child: Container(
+                      width: double.infinity,
+                      color: Colors.black, // Fondo negro para bordes vacíos
+                      child: Image.file(
+                        image!,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                 )
               else

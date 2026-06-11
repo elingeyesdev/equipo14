@@ -71,7 +71,7 @@ class AlertViewModel extends ChangeNotifier {
   Future<void> fetchNearbyAlerts({
     required double latitude,
     required double longitude,
-    required int radius,
+    required double radius,
   }) async {
     _isLoading = true;
     _error = null;

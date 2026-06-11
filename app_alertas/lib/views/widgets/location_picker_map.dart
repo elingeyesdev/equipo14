@@ -265,6 +265,33 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                 ),
               ),
             ),
+
+            // Botón de centrado de ubicación del usuario
+            Positioned(
+              bottom: 50,
+              right: 10,
+              child: GestureDetector(
+                onTap: () {
+                  _mapController.move(widget.userLocation, 17.5);
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF30302E),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.my_location_rounded,
+                    color: Color(0xFFAF6D58),
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

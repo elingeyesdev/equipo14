@@ -304,7 +304,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: _refresh,
-              color: const Color(0xFF3B82F6),
               child: (!isLoading && commentVM.comments.isEmpty)
                   ? CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),

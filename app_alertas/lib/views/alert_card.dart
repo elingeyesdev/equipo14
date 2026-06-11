@@ -269,90 +269,7 @@ class _AlertCardState extends State<AlertCard> {
             ),
           ),
 
-          const SizedBox(height: 8),
-
-          // 4. Carrusel de imágenes interactivo
-          if (widget.alert.images.isNotEmpty)
-            widget.isInBottomSheet
-                ? SizedBox(
-                    height: 180,
-                    width: double.infinity,
-                    child: _buildImageCarousel(),
-                  )
-                : AspectRatio(
-                    aspectRatio: _aspectRatio,
-                    child: _buildImageCarousel(),
-                  ),
-
-          // Action bar style Instagram
-          if (!widget.isInBottomSheet)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context, rootNavigator: true).push(
-                        PageRouteBuilder(
-                          pageBuilder: (context, animation, secondaryAnimation) => CommentsScreen(alertId: widget.alert.id),
-                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(0.0, 1.0);
-                            const end = Offset.zero;
-                            const curve = Curves.ease;
-                            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                            return SlideTransition(position: animation.drive(tween), child: child);
-                          },
-                        ),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      backgroundColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: const BorderSide(color: Colors.white),
-                      ),
-                    ),
-                    child: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                  TextButton(
-                    onPressed: widget.onTap,
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      backgroundColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: const BorderSide(color: Colors.white),
-                      ),
-                    ),
-                    child: const Text('NAVEGAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                ],
-              ),
-            ),
-          if (!widget.isInBottomSheet)
-            const SizedBox(height: 4),
-
-          if (contributions > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Contribuciones: $contributions',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-
-          if (contributions > 0)
-            const SizedBox(height: 4),
+          const SizedBox(height: 4),
 
           // 5. Descripción del incidente
           Padding(
@@ -381,6 +298,90 @@ class _AlertCardState extends State<AlertCard> {
               ),
             ),
           ),
+
+          const SizedBox(height: 12),
+
+          if (contributions > 0) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Contribuciones: $contributions',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // 4. Carrusel de imágenes interactivo
+          if (widget.alert.images.isNotEmpty)
+            widget.isInBottomSheet
+                ? SizedBox(
+                    height: 180,
+                    width: double.infinity,
+                    child: _buildImageCarousel(),
+                  )
+                : AspectRatio(
+                    aspectRatio: _aspectRatio,
+                    child: _buildImageCarousel(),
+                  ),
+
+          // Action bar style Instagram
+          if (!widget.isInBottomSheet)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context, rootNavigator: true).push(
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => CommentsScreen(alertId: widget.alert.id),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              const begin = Offset(0.0, 1.0);
+                              const end = Offset.zero;
+                              const curve = Curves.ease;
+                              var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                              return SlideTransition(position: animation.drive(tween), child: child);
+                            },
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.chat, color: Colors.white, size: 16),
+                      label: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          side: const BorderSide(color: Colors.white, width: 1.0),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: widget.onTap,
+                      icon: const Icon(Icons.explore, color: Colors.white, size: 16),
+                      label: const Text('NAVEGAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          side: const BorderSide(color: Colors.white, width: 1.0),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           // 6. Botón de trazar ruta para autoridades
           if (isAuthority && incidentLocation != null)

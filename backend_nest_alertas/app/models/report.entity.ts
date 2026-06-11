@@ -17,6 +17,7 @@ export class Report {
     })
     description: string
 
+    @Index({spatial: true})
     @Column({
         type: 'geography',
         spatialFeatureType: 'Point',

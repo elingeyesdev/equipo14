@@ -222,6 +222,8 @@ export class ReportsService {
             .orderBy('report.created_at', 'DESC')
             .getMany();
 
+            console.log(reports)
+            console.log(latitude, longitude)
         return ReportResponse.FromReportListToResponse(reports);
     }
 

@@ -1,13 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { UsersService } from '../../services/users.service';
-import { UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
+import { CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from 'app/decorators/roles.decorator';
+import { UserResponse } from '../requests/users/response';
 
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
+
+    // pensado para que el admin cree autoridades
+    @Post()
+    @Roles('admin')
+    create(@Body() createUserDto: CreateUserRequest){
+        return this.usersService.create(createUserDto)
+        .then(UserResponse.FromUserToResponse);
+    }
 
     @Get()
     findAll(){

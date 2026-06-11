@@ -6,9 +6,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF262624),
-      primaryColor: const Color(0xFF3B82F6),
+      primaryColor: const Color(0xFFAF6D58),
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF3B82F6),
+        seedColor: const Color(0xFFAF6D58),
         brightness: Brightness.dark,
         surface: const Color(0xFF30302E),
         onSurface: Colors.white,

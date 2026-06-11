@@ -23,14 +23,14 @@ class AlertService {
   Future<List<AlertModel>> getNearbyAlerts({
     required double latitude,
     required double longitude,
-    required int radius,
+    required double radius,
   }) async {
     final response = await _dio.get(
       '/reports/nearby',
       queryParameters: {
-        'latitude': latitude,
-        'longitude': longitude,
-        'radius': radius,
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'radius': radius.toString(),
       },
     );
     final List<dynamic> data = response.data;

@@ -19,7 +19,7 @@ class AlertRepository {
   Future<List<AlertModel>> getNearbyAlerts({
     required double latitude,
     required double longitude,
-    required int radius,
+    required double radius,
   }) async {
     return await _service.getNearbyAlerts(
       latitude: latitude,
