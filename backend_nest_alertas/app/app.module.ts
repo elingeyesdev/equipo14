@@ -20,6 +20,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CommentsModule } from './providers/comments.module';
 import { ZonesModule } from './providers/zones.module';
 import { RoleGuard } from './guards/roles.guard';
+import { AuthorityProfileModule } from './providers/authority-profile.module';
 
 
 @Module({
@@ -40,6 +41,7 @@ import { RoleGuard } from './guards/roles.guard';
 
     AuthModule,
     UsersModule,
+    AuthorityProfileModule,
     RolesModule,
     ReportsModule,
     CommentsModule,

@@ -5,24 +5,26 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt'
 
 import { UserResponse } from '../http/requests/users/response';
-import { CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from 'app/http/requests/users/request';
+import { CreateAuthorityUserRequest, CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from 'app/http/requests/users/request';
 import { Role } from 'app/models/role.entity';
+import { AuthorityProfileService } from './authority-profile.service';
 
 @Injectable()
 export class UsersService {
     constructor(
+        private authProfileService: AuthorityProfileService,
         @InjectRepository(User) 
         private usersRepository: Repository<User>,
         @InjectRepository(Role)
         private rolesRepository: Repository<Role>,
     ) {}
 
-    async create(CreateUserRequest: CreateUserRequest){
-        const role = await this.rolesRepository.findOne({where: {id: CreateUserRequest.roleId}})
+    async create(createUserRequest: CreateUserRequest){
+        const role = await this.rolesRepository.findOne({where: {id: createUserRequest.roleId}})
         if(!role){
             throw new NotFoundException("Rol no encontrado")
         }
-        const createUser = CreateUserRequest.toUser();
+        const createUser = createUserRequest.toUser();
 
         const existPhone = await this.usersRepository.findOne({
             where: {phone: createUser.phone}
@@ -44,9 +46,22 @@ export class UsersService {
         return savedUser;
     }
 
+    async createAuthUser(createAuthUserRequest: CreateAuthorityUserRequest){
+        const newUser = await this.create(createAuthUserRequest)
+        if (!newUser){
+            throw new BadRequestException("Error al craer el usuario")
+        }
+        const createAuthProfile = createAuthUserRequest.toAuthorityProfile()
+        const newAuthProfile = await this.authProfileService.create(createAuthProfile, newUser)
+
+        newUser.authority_profile = newAuthProfile
+
+        return UserResponse.FromUserToResponse(newUser)
+    }
+
     async findAll(){
         const users = await this.usersRepository.find({
-            relations: ['role'],
+            relations: ['role', 'authority_profile'],
         });
         return UserResponse.FromUserListToResponse(users)
     }
@@ -54,7 +69,7 @@ export class UsersService {
     async findOne(id: string){
         const user = await this.usersRepository.findOne({
             where: { id },
-            relations: ['role'],
+            relations: ['role', 'authority_profile'],
         });
 
         if(!user){
@@ -66,7 +81,7 @@ export class UsersService {
     async findByPhone(phone: string){
         return this.usersRepository.findOne({
             where: {phone},
-            relations: ['role'],
+            relations: ['role', 'authority_profile'],
         })
     }
 

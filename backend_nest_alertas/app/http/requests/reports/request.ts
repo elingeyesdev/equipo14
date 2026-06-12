@@ -23,8 +23,7 @@ export class CreateReportRequest {
     longitude: number;
 
     @IsString()
-    @IsOptional()
-    userId?: string
+    userId: string
 
     @IsString()
     @IsOptional()

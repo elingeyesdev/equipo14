@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { UsersService } from '../../services/users.service';
-import { CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
+import { CreateAuthorityUserRequest, CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from 'app/decorators/roles.decorator';
 import { UserResponse } from '../requests/users/response';
@@ -10,16 +10,13 @@ import { UserResponse } from '../requests/users/response';
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
-    // pensado para que el admin cree autoridades
-    @Post()
+    @Post('/authority')
     @Roles('admin')
-    create(@Body() createUserDto: CreateUserRequest){
-        return this.usersService.create(createUserDto)
-        .then(UserResponse.FromUserToResponse);
+    createAuthProfile(@Body() createAuthUser: CreateAuthorityUserRequest){
+        return this.usersService.createAuthUser(createAuthUser)
     }
 
     @Get()
-    @Roles('admin', 'autoridad')
     findAll(){
         return this.usersService.findAll()
     }

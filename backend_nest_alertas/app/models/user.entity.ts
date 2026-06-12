@@ -1,9 +1,10 @@
 import { Report } from "./report.entity";
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import type { Point } from 'geojson';
 import { Role } from "./role.entity";
 import { Image } from "./image.entity";
 import { Comment } from "./comment.entity";
+import { AuthorityProfile } from "./authority-profile.entity";
 
 @Entity()
 export class User {
@@ -36,12 +37,6 @@ export class User {
     })
     last_location: Point;
 
-    @Column({ default: 0 })
-    failed_login_attempts: number;
-
-    @Column({ type: 'timestamp', nullable: true })
-    locked_until: Date | null;
-
     @OneToMany(() => Report, report => report.creator)
     reports: Report[];
 
@@ -53,4 +48,7 @@ export class User {
 
     @ManyToOne(() => Role, role => role.users)
     role: Role;
+
+    @OneToOne(() => AuthorityProfile, authProfile => authProfile.user)
+    authority_profile: AuthorityProfile
 }

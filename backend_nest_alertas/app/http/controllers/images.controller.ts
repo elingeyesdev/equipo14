@@ -9,7 +9,7 @@ export class ImagesController {
     constructor(private readonly imagesService: ImagesService) {}
 
     @Delete(':id')
-    @Roles('admin', 'autoridad')
+    @Roles('admin')
     remove(@Param('id') id: number){
         return this.imagesService.remove(id)
     }
