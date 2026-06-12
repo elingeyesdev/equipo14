@@ -63,8 +63,8 @@ export const reportsRepository = {
     return httpClient.post<Report>("/reports", formData);
   },
 
-  uploadImage: async (reportId: number, formData: FormData): Promise<Report> => {
-    return httpClient.post<Report>(`/reports/${reportId}/images`, formData);
+  uploadImage: async (reportId: number, userId: string, formData: FormData): Promise<Report> => {
+    return httpClient.post<Report>(`/reports/${reportId}/images/${userId}`, formData);
   },
 
   findNearby: async (latitude: number, longitude: number, radius: number): Promise<Report[]> => {

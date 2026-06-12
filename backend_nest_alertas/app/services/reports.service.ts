@@ -212,6 +212,9 @@ export class ReportsService {
             )
             .orderBy('report.created_at', 'DESC')
             .getMany();
+
+        console.log(usersCoincidence)
+        console.log(latitude, longitude)
         return ReportCoinicdenceResponse.FromReportListToResponse(usersCoincidence)
     }
 

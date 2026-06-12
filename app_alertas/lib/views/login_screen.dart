@@ -2,7 +2,8 @@ import 'package:app_alertas/views/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
-import 'package:app_alertas/views/widgets/custom_snackbar.dart';
+import 'package:app_alertas/core/utils/error_handler.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.onGoToRegister});
@@ -39,11 +40,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
     } catch (e) {
       if (!mounted) return;
-      showCustomSnackBar(
-        context: context,
-        title: 'Error de Inicio',
-        message: e.toString().replaceFirst('Exception: ', ''),
-        type: CustomSnackBarType.error,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(parseError(e)),
+          backgroundColor: const Color(0xFFB64D4C),
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }

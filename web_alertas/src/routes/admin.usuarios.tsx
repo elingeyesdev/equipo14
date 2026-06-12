@@ -79,17 +79,41 @@ function UsuariosPage() {
       id: "fullName",
       header: "Nombre completo",
       accessorFn: (row) => `${row.first_name} ${row.last_name}`,
-      cell: ({ getValue }) => <span className="font-medium">{String(getValue())}</span>,
+      cell: ({ row }) => {
+        const auth = row.original.authority_profile;
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium capitalize">
+              {row.original.first_name} {row.original.last_name}
+            </span>
+            {auth && (
+              <span className="text-[10px] text-muted-foreground">
+                CI: {auth.ci} · {auth.gmail}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "role",
-      header: "Rol",
+      header: "Rol / Perfil",
       accessorFn: (row) => row.role?.name ?? "",
-      cell: ({ row }) => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${roleBadgeClass(row.original.role)}`}>
-          {roleLabel(row.original.role?.name)}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const auth = row.original.authority_profile;
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${roleBadgeClass(row.original.role)}`}>
+              {roleLabel(row.original.role?.name)}
+            </span>
+            {auth?.profile_type && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                {auth.profile_type === "policia" ? "Policía" : auth.profile_type === "bombero" ? "Bombero" : "Paramédico"}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "actions",

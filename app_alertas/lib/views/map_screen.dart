@@ -1,4 +1,7 @@
 import 'package:app_alertas/core/config/mapbox_config.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:app_alertas/core/utils/error_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -40,6 +43,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   // Tracking
   final _trackingService = TrackingService();
   StreamSubscription? _trackingSub;
+  StreamSubscription<ServiceStatus>? _serviceStatusSub;
   List<Map<String, dynamic>> _activeVehicles = [];
   String? _selectedVehicleId;
 
@@ -165,6 +169,126 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     trackingProvider.clearPreTracking();
   }
 
+  Future<void> _handleContribute(AlertModel alert) async {
+    // 1. Check if user location is available and GPS is active
+    if (!_locationFromGps || currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ubicación no disponible. Por favor, activa el GPS para poder aportar.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // 2. Extract coordinates from alert
+    if (alert.coordinates.length < 2) return;
+    final alertLat = alert.coordinates[1];
+    final alertLng = alert.coordinates[0];
+
+    // 3. Calculate distance
+    final distance = Geolocator.distanceBetween(
+      currentLocation!.latitude,
+      currentLocation!.longitude,
+      alertLat,
+      alertLng,
+    );
+
+    // 4. Validate 100 meters
+    if (distance > 100.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se encuentra dentro del área para apoyar el reporte.'),
+          backgroundColor: Color(0xFFB64D4C),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    // 5. Open image selector bottom sheet
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: const Color(0xFF262624),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.white),
+              title: const Text('Cámara', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.white),
+              title: const Text('Galería', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final ImagePicker picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1280,
+      maxHeight: 1280,
+    );
+
+    if (pickedFile == null) return;
+    final File imageFile = File(pickedFile.path);
+
+    // 6. Show loading dialog
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    // 7. Call API via alertVM
+    try {
+      final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
+      final alertVM = context.read<AlertViewModel>();
+      await alertVM.attachImageToReport(
+        reportId: alert.id,
+        userId: userId,
+        imageFile: imageFile,
+      ).timeout(const Duration(seconds: 15));
+
+      if (mounted) {
+        Navigator.pop(context); // close loading dialog
+        Navigator.pop(context); // close alert bottom sheet
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Aporte subido con éxito!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        await _loadAlerts();
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir el aporte: ${parseError(e)}'),
+            backgroundColor: const Color(0xFFB64D4C),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _showArrivalDialog() async {
     if (!mounted) return;
     return showDialog<void>(
@@ -280,6 +404,18 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       trackingProvider.addListener(_onTrackingProviderUpdate);
     });
 
+    _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
+      if (status == ServiceStatus.enabled) {
+        getLocation();
+      } else {
+        if (mounted) {
+          setState(() {
+            _locationFromGps = false;
+          });
+        }
+      }
+    });
+
     getLocation();
     _initPushNotifications();
 
@@ -314,6 +450,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
       trackingProvider.removeListener(_onTrackingProviderUpdate);
     } catch (_) {}
+    _serviceStatusSub?.cancel();
     _trackingSub?.cancel();
     _vehicleAnimController?.dispose();
     super.dispose();
@@ -348,7 +485,11 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     setState(() {
       _isAuthority = _userIsAuthority(user?.roleId, user?.roleName);
     });
-    await _loadAlerts();
+    if (!_locationFromGps) {
+      await getLocation();
+    } else {
+      await _loadAlerts();
+    }
   }
 
   Future<void> _initPushNotifications() async {
@@ -422,12 +563,20 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   }
 
   void _centerOnUser() {
-    if (currentLocation != null) {
+    if (_locationFromGps && currentLocation != null) {
       mapController.move(currentLocation!, 16);
     } else {
       getLocation().then((_) {
-        if (currentLocation != null && mounted) {
+        if (_locationFromGps && currentLocation != null && mounted) {
           mapController.move(currentLocation!, 16);
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo acceder a la ubicación. Verifica que el GPS esté activo y los permisos concedidos.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
         }
       });
     }
@@ -518,6 +667,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                     AlertCard(
                       alert: alert,
                       isInBottomSheet: true,
+                      onContribute: () => _handleContribute(alert),
                     ),
                     if (_isAuthority && incidentLocation != null)
                       Padding(
@@ -777,141 +927,146 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                     }(),
 
                     MarkerLayer(
-                      markers: [
-                        ..._buildAlertMarkers(),
-                        ..._activeVehicles.map((vehicle) {
-                          final lat = vehicle['latitude'] as double;
-                          final lng = vehicle['longitude'] as double;
-                          final type =
-                              vehicle['type'] as String? ?? 'Desconocido';
-                          final isSelected =
-                              vehicle['id'] == _selectedVehicleId;
+                      markers: _locationFromGps
+                          ? [
+                              ..._buildAlertMarkers(),
+                              ..._activeVehicles.map((vehicle) {
+                                final lat = vehicle['latitude'] as double;
+                                final lng = vehicle['longitude'] as double;
+                                final type =
+                                    vehicle['type'] as String? ?? 'Desconocido';
+                                final isSelected =
+                                    vehicle['id'] == _selectedVehicleId;
 
-                          return Marker(
-                            point: LatLng(lat, lng),
-                            width: 50,
-                            height: 50,
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedVehicleId = vehicle['id'] as String;
-                                });
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Colors.green
-                                      : const Color(0xFF3B82F6),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          (isSelected
-                                                  ? Colors.green
-                                                  : const Color(0xFF3B82F6))
-                                              .withValues(alpha: 0.55),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Icon(
-                                  _vehicleIconByType(type),
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                        ...() {
-                          final trackingProvider = Provider.of<TrackingProvider>(context);
-                          final isTrackingActive = trackingProvider.incidentLatitude != null &&
-                              trackingProvider.incidentLongitude != null;
-                          final LatLng? userLoc = isTrackingActive
-                              ? trackingProvider.currentLocation
-                              : currentLocation;
-
-                          if (userLoc == null) return <Marker>[];
-
-                          if (isTrackingActive) {
-                            final bool isFollowingRoute = trackingProvider.isFollowingRoute;
-                            final String incidentType = trackingProvider.incidentType ?? '';
-                            return [
-                              Marker(
-                                point: userLoc,
-                                width: 30,
-                                height: 30,
-                                child: Transform.rotate(
-                                  angle: _animatedBearing * math.pi / 180,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFAF6D58),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
-                                    ),
-                                    child: Icon(
-                                      isFollowingRoute
-                                          ? _vehicleIconByType(incidentType)
-                                          : Icons.my_location_rounded,
-                                      color: Colors.white,
-                                      size: 14,
+                                return Marker(
+                                  point: LatLng(lat, lng),
+                                  width: 50,
+                                  height: 50,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedVehicleId = vehicle['id'] as String;
+                                      });
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Colors.green
+                                            : const Color(0xFF3B82F6),
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                (isSelected
+                                                        ? Colors.green
+                                                        : const Color(0xFF3B82F6))
+                                                    .withValues(alpha: 0.55),
+                                            blurRadius: 10,
+                                            spreadRadius: 2,
+                                          ),
+                                        ],
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        _vehicleIconByType(type),
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              )
-                            ];
-                          } else {
-                            return [
-                              Marker(
-                                point: userLoc,
-                                width: 30,
-                                height: 30,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFAF6D58),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
-                                  child: const Icon(
-                                    Icons.my_location_rounded,
-                                    color: Colors.white,
-                                    size: 14,
-                                  ),
-                                ),
-                              )
-                            ];
-                          }
-                        }(),
-                      ],
+                                );
+                              }),
+                              ...() {
+                                final trackingProvider = Provider.of<TrackingProvider>(context);
+                                final isTrackingActive = trackingProvider.incidentLatitude != null &&
+                                    trackingProvider.incidentLongitude != null;
+                                final LatLng? userLoc = isTrackingActive
+                                    ? trackingProvider.currentLocation
+                                    : (_locationFromGps ? currentLocation : null);
+
+                                if (userLoc == null) return <Marker>[];
+
+                                if (isTrackingActive) {
+                                  final bool isFollowingRoute = trackingProvider.isFollowingRoute;
+                                  final String incidentType = trackingProvider.incidentType ?? '';
+                                  return [
+                                    Marker(
+                                      point: userLoc,
+                                      width: 30,
+                                      height: 30,
+                                      child: Transform.rotate(
+                                        angle: _animatedBearing * math.pi / 180,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFAF6D58),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white, width: 2),
+                                          ),
+                                          child: Icon(
+                                            isFollowingRoute
+                                                ? _vehicleIconByType(incidentType)
+                                                : Icons.my_location_rounded,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  ];
+                                } else {
+                                  return [
+                                    Marker(
+                                      point: userLoc,
+                                      width: 30,
+                                      height: 30,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFAF6D58),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                        ),
+                                        child: const Icon(
+                                          Icons.my_location_rounded,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
+                                      ),
+                                    )
+                                  ];
+                                }
+                              }(),
+                            ]
+                          : [],
                     ),
                   ],
                 ),
 
           if (!_locationFromGps && currentLocation != null)
             Positioned(
-              top: MediaQuery.paddingOf(context).top + (_isAuthority ? 48 : 8),
+              bottom: 16,
               left: 12,
-              right: 12,
+              right: 88,
               child: Center(
-                child: Material(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      'Sin GPS: mapa centrado en Santa Cruz. Activa ubicación para ver tu zona.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 11,
+                child: GestureDetector(
+                  onTap: _centerOnUser,
+                  child: Material(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        'Sin GPS: mapa centrado en Santa Cruz. Toca aquí para reintentar obtener ubicación.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ),

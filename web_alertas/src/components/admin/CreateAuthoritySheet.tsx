@@ -18,9 +18,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { httpClient } from "@/api/httpClient";
 import { type CreatableRoleId } from "@/lib/roles";
+import { ProfileType } from "@/domain/types";
 
 interface CreateAuthoritySheetProps {
   open: boolean;
@@ -38,6 +46,9 @@ export function CreateAuthoritySheet({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [ci, setCi] = useState("");
+  const [gmail, setGmail] = useState("");
+  const [profileType, setProfileType] = useState<string>("policia");
 
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const [generatedPhone, setGeneratedPhone] = useState("");
@@ -48,6 +59,9 @@ export function CreateAuthoritySheet({
     setFirstName("");
     setLastName("");
     setPhone("");
+    setCi("");
+    setGmail("");
+    setProfileType("policia");
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -59,17 +73,30 @@ export function CreateAuthoritySheet({
       return;
     }
 
+    if (!ci.trim()) {
+      toast.error("El CI es requerido");
+      return;
+    }
+
+    if (!gmail.trim() || !gmail.includes("@")) {
+      toast.error("Ingresa un correo de Gmail válido");
+      return;
+    }
+
     // Generate random 8-char password
     const newPassword = Math.random().toString(36).slice(-8);
 
     setIsCreating(true);
     try {
-      await httpClient.post("/auth/register", {
+      await httpClient.post("/users/authority", {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         phone: trimmedPhone,
         password: newPassword,
         roleId: 2, // always autoridad
+        ci: ci.trim(),
+        gmail: gmail.trim(),
+        profile_type: profileType,
       });
       
       setGeneratedPhone(trimmedPhone);
@@ -150,6 +177,45 @@ export function CreateAuthoritySheet({
                 required
                 className="rounded-xl font-mono"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="auth-ci">Cédula de Identidad (CI)</Label>
+              <Input
+                id="auth-ci"
+                value={ci}
+                onChange={(e) => setCi(e.target.value)}
+                placeholder="Ej. 1234567"
+                required
+                className="rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="auth-gmail">Correo Electrónico (Gmail)</Label>
+              <Input
+                id="auth-gmail"
+                type="email"
+                value={gmail}
+                onChange={(e) => setGmail(e.target.value)}
+                placeholder="ejemplo@gmail.com"
+                required
+                className="rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de Perfil</Label>
+              <Select value={profileType} onValueChange={setProfileType}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Seleccionar perfil" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="policia">Policía</SelectItem>
+                  <SelectItem value="bombero">Bombero</SelectItem>
+                  <SelectItem value="paramedico">Paramédico</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
+import 'package:app_alertas/core/utils/error_handler.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import 'package:app_alertas/models/alert_model.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/views/alert_card.dart';
-import 'package:app_alertas/views/widgets/custom_snackbar.dart';
+
 import 'package:app_alertas/services/location_service.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:math' as math;
@@ -76,11 +76,12 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
         if (loadId != _currentLoadId) return;
 
         if (mounted) {
-          showCustomSnackBar(
-            context: context,
-            title: 'Ubicación',
-            message: 'No se pudo obtener tu ubicación para filtrar los reportes.',
-            type: CustomSnackBarType.warning,
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo obtener tu ubicación para filtrar los reportes.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
           );
           setState(() {
             _userLocation = null;
@@ -141,35 +142,20 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
 
       if (mounted) {
         Navigator.pop(context); // cerrar loading
-        showCustomSnackBar(
-          context: context,
-          title: 'Éxito',
-          message: '¡Reporte verificado exitosamente!',
-          type: CustomSnackBarType.success,
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Reporte verificado exitosamente!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
         );
       }
 
       await _loadAlerts();
     } catch (e) {
       if (mounted) Navigator.pop(context); // cerrar loading
-
-      String errorMsg = e.toString();
-      if (errorMsg.contains('Exception:')) {
-        final parts = errorMsg.split(' — ');
-        if (parts.length > 1) {
-          try {
-            final jsonError = jsonDecode(parts[1]);
-            if (jsonError['message'] != null) {
-              errorMsg = jsonError['message'];
-            }
-          } catch (_) {}
-        }
-      } else if (errorMsg.startsWith('Exception: ')) {
-        errorMsg = errorMsg.replaceFirst('Exception: ', '');
-      }
-
       if (mounted) {
-        _showErrorDialog(errorMsg);
+        _showErrorDialog(parseError(e));
       }
     }
   }

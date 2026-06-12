@@ -9,6 +9,7 @@ class AlertCard extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onVerify;
   final bool isInBottomSheet;
+  final VoidCallback? onContribute;
 
   const AlertCard({
     super.key,
@@ -16,6 +17,7 @@ class AlertCard extends StatefulWidget {
     this.onTap,
     this.onVerify,
     this.isInBottomSheet = false,
+    this.onContribute,
   });
 
   @override
@@ -195,34 +197,6 @@ class _AlertCardState extends State<AlertCard> {
                   ),
                 ),
                 const Spacer(),
-                if (widget.isInBottomSheet) ...[
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context, rootNavigator: true).push(
-                        PageRouteBuilder(
-                          pageBuilder: (context, animation, secondaryAnimation) => CommentsScreen(alertId: widget.alert.id),
-                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(0.0, 1.0);
-                            const end = Offset.zero;
-                            const curve = Curves.ease;
-                            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                            return SlideTransition(position: animation.drive(tween), child: child);
-                          },
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 14),
-                    label: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      backgroundColor: Colors.white.withValues(alpha: 0.1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  if (widget.alert.verified) const SizedBox(width: 8),
-                ],
                 if (widget.alert.verified)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -280,11 +254,12 @@ class _AlertCardState extends State<AlertCard> {
 
           const SizedBox(height: 6),
 
-          // 6. Fecha de creación
+          // 6. Fecha de creación y contribuciones
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              _timeAgo(widget.alert.createdAt),
+              _timeAgo(widget.alert.createdAt) +
+                  (contributions > 0 ? '  •  contribuciones: $contributions' : ''),
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.6),
                 fontSize: 10,
@@ -294,21 +269,6 @@ class _AlertCardState extends State<AlertCard> {
           ),
 
           const SizedBox(height: 12),
-
-          if (contributions > 0) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Contribuciones: $contributions',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
 
           // 4. Carrusel de imágenes interactivo
           if (widget.alert.images.isNotEmpty)
@@ -324,7 +284,61 @@ class _AlertCardState extends State<AlertCard> {
                   ),
 
           // Action bar style Instagram
-          if (!widget.isInBottomSheet)
+          if (widget.isInBottomSheet)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context, rootNavigator: true).push(
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => CommentsScreen(alertId: widget.alert.id),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              const begin = Offset(0.0, 1.0);
+                              const end = Offset.zero;
+                              const curve = Curves.ease;
+                              var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                              return SlideTransition(position: animation.drive(tween), child: child);
+                            },
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.chat, color: Colors.white, size: 16),
+                      label: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          side: const BorderSide(color: Colors.white, width: 1.0),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.onContribute != null) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: widget.onContribute,
+                        icon: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 16),
+                        label: const Text('APORTAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            side: const BorderSide(color: Colors.white, width: 1.0),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            )
+          else
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
               child: Row(

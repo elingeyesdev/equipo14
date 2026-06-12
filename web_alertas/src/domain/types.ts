@@ -3,12 +3,25 @@ export interface Role {
   name: string;
 }
 
+export const ProfileType = {
+  Policia: "policia",
+  Bombero: "bombero",
+  Paramedico: "paramedico",
+} as const;
+
+export type ProfileType = (typeof ProfileType)[keyof typeof ProfileType];
+
 export interface User {
   id: string;
   first_name: string;
   last_name: string;
   phone: string;
   role: Role;
+  authority_profile: {
+    ci: string;
+    gmail: string;
+    profile_type: string;
+  } | null;
 }
 
 export interface ReportType {

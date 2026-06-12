@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_alertas/core/utils/error_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/comment_viewmodel.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
@@ -101,7 +102,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
       _commentController.clear();
       await _refresh();
     } catch (e) {
-      // Manejar error si es necesario
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al enviar comentario: ${parseError(e)}'),
+            backgroundColor: const Color(0xFFB64D4C),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isPosting = false);

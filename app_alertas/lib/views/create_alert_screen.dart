@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:app_alertas/core/utils/error_handler.dart';
+import 'package:app_alertas/views/main_navigation_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -15,7 +17,7 @@ import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:app_alertas/models/alert_model.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
-import 'package:app_alertas/views/widgets/custom_snackbar.dart';
+
 import 'package:app_alertas/viewmodels/alert_type_viewmodel.dart';
 import 'package:app_alertas/views/widgets/location_picker_map.dart';
 
@@ -411,53 +413,57 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
   Future<void> _submitAlert() async {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
-      showCustomSnackBar(
-        context: context,
-        title: 'Falta información',
-        message: 'Ingresa una descripción',
-        type: CustomSnackBarType.warning,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ingresa una descripción'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+        ),
       );
       return;
     }
 
     if (image == null) {
-      showCustomSnackBar(
-        context: context,
-        title: 'Falta imagen',
-        message: 'Debes adjuntar una imagen del incidente',
-        type: CustomSnackBarType.warning,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes adjuntar una imagen del incidente'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+        ),
       );
       return;
     }
 
     if (_position == null) {
-      showCustomSnackBar(
-        context: context,
-        title: 'Error de Ubicación',
-        message: 'No se pudo obtener tu ubicación',
-        type: CustomSnackBarType.error,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo obtener tu ubicación'),
+          backgroundColor: Color(0xFFB64D4C),
+          duration: Duration(seconds: 4),
+        ),
       );
       return;
     }
 
     if (_selectedType == null) {
-      showCustomSnackBar(
-        context: context,
-        title: 'Falta información',
-        message: 'Selecciona un tipo de alerta',
-        type: CustomSnackBarType.warning,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecciona un tipo de alerta'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+        ),
       );
       return;
     }
 
     // Validar que la ubicación seleccionada esté dentro del radio permitido
     if (!_alertLocationInsideRadius) {
-      showCustomSnackBar(
-        context: context,
-        title: 'Ubicación fuera de rango',
-        message:
-            'La ubicación de la alerta debe encontrarse dentro de un radio máximo de 100 metros de su posición actual.',
-        type: CustomSnackBarType.warning,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La ubicación de la alerta debe encontrarse dentro de un radio máximo de 100 metros de su posición actual.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+        ),
       );
       return;
     }
@@ -488,14 +494,20 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       await _createActualAlert();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al verificar alertas: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al verificar alertas: ${parseError(e)}'),
+          backgroundColor: const Color(0xFFB64D4C),
+          duration: const Duration(seconds: 4),
+        ),
+      );
       setState(() => _isSubmitting = false);
     }
   }
 
   Future<void> _createActualAlert() async {
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
     try {
       final alertVM = context.read<AlertViewModel>();
@@ -504,6 +516,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       final alertLat = _selectedAlertLocation?.latitude ?? _position!.latitude;
       final alertLon =
           _selectedAlertLocation?.longitude ?? _position!.longitude;
+      
       final report = await alertVM.createAlert(
         typeId: _selectedType!.id,
         description: _descriptionController.text.trim(),
@@ -512,7 +525,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
         longitude: alertLon,
         zone: _locationTitle,
         imageFile: image,
-      );
+      ).timeout(const Duration(seconds: 15));
 
       final url = report.images.isNotEmpty ? report.images.first : null;
 
@@ -520,23 +533,50 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
       setState(() {
         image = null;
       });
+      
       widget.onCreated?.call();
-      if (!mounted) return;
-      showCustomSnackBar(
-        context: context,
-        title: 'Éxito',
-        message: url != null
-            ? 'Alerta creada. Imagen en Cloudinary.'
-            : 'Alerta creada (sin foto: no hay URL remota).',
-        type: CustomSnackBarType.success,
-      );
+      
+      final navContext = MainNavigationScreen.navigationKey.currentContext;
+      if (navContext != null && navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          SnackBar(
+            content: Text(url != null
+                ? '¡Reporte creado con éxito! Imagen subida.'
+                : '¡Reporte creado con éxito!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+
+      MainNavigationScreen.navigationKey.currentState?.selectTab(3);
+
+    } on TimeoutException catch (_) {
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+
+      final navContext = MainNavigationScreen.navigationKey.currentContext;
+      if (navContext != null && navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          const SnackBar(
+            content: Text('La petición está tardando demasiado. El servidor podría estar procesándolo en segundo plano.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+
+      MainNavigationScreen.navigationKey.currentState?.selectTab(3);
+
     } catch (e) {
       if (!mounted) return;
-      showCustomSnackBar(
-        context: context,
-        title: 'Error al Reportar',
-        message: 'No se pudo crear la alerta: $e',
-        type: CustomSnackBarType.error,
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al crear la alerta: ${parseError(e)}'),
+          backgroundColor: const Color(0xFFB64D4C),
+          duration: const Duration(seconds: 4),
+        ),
       );
     } finally {
       if (mounted) {
@@ -774,12 +814,15 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
   }
 
   Future<void> _attachToExistingAlert(int reportId) async {
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     if (image == null) {
-      showCustomSnackBar(
-        context: context,
-        title: 'Reporte Existente',
-        message: 'Te has sumado a la alerta existente.',
-        type: CustomSnackBarType.info,
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Te has sumado a la alerta existente.'),
+          backgroundColor: Color(0xFF506E96),
+          duration: Duration(seconds: 4),
+        ),
       );
       _descriptionController.clear();
       widget.onCreated?.call();
@@ -794,26 +837,45 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
         reportId: reportId,
         userId: userId,
         imageFile: image!,
-      );
+      ).timeout(const Duration(seconds: 15));
       _descriptionController.clear();
       setState(() {
         image = null;
       });
       widget.onCreated?.call();
-      if (!mounted) return;
-      showCustomSnackBar(
-        context: context,
-        title: 'Éxito',
-        message: 'Has aportado una imagen a la alerta existente exitosamente.',
-        type: CustomSnackBarType.success,
-      );
+      
+      final navContext = MainNavigationScreen.navigationKey.currentContext;
+      if (navContext != null && navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          const SnackBar(
+            content: Text('Has aportado una imagen a la alerta existente exitosamente.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } on TimeoutException catch (_) {
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+      final navContext = MainNavigationScreen.navigationKey.currentContext;
+      if (navContext != null && navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          const SnackBar(
+            content: Text('La petición está tardando demasiado. El servidor podría estar procesándolo en segundo plano.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      showCustomSnackBar(
-        context: context,
-        title: 'Error de Aportación',
-        message: 'Error al verificar: $e',
-        type: CustomSnackBarType.error,
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al verificar: ${parseError(e)}'),
+          backgroundColor: const Color(0xFFB64D4C),
+          duration: const Duration(seconds: 4),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
