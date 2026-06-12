@@ -17,7 +17,7 @@ class SettingsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 20, 24, 0),
+              padding: const EdgeInsets.fromLTRB(12, 2, 24, 0),
               child: Row(
                 children: [
                   IconButton(

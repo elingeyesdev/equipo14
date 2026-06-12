@@ -843,15 +843,28 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                child: const Text(
-                  "Nueva alerta",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.normal,
-                    letterSpacing: -0.3,
-                    color: Colors.white,
-                  ),
+                padding: const EdgeInsets.fromLTRB(12, 2, 24, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Nueva alerta",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.normal,
+                        letterSpacing: -0.3,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),

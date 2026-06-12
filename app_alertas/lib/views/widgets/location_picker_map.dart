@@ -106,7 +106,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(
-        height: 240,
+        height: 200,
         child: Stack(
           children: [
             FlutterMap(

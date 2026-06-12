@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:app_alertas/models/alert_model.dart';
-import 'package:app_alertas/views/map_route_screen.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/views/comments_screen.dart';
@@ -57,10 +55,7 @@ class _AlertCardState extends State<AlertCard> {
     );
   }
 
-  LatLng? _toLatLng(List<double> coordinates) {
-    if (coordinates.length < 2) return null;
-    return LatLng(coordinates[1], coordinates[0]);
-  }
+
 
   Color _alertColor(String type) {
     final t = type.toUpperCase();
@@ -159,7 +154,6 @@ class _AlertCardState extends State<AlertCard> {
   Widget build(BuildContext context) {
     final color = _alertColor(widget.alert.type);
     final isAuthority = context.read<AuthViewModel>().user?.roleId == 2;
-    final incidentLocation = _toLatLng(widget.alert.coordinates);
 
     // Contribuciones: tamaño de la lista de imágenes menos 1 (la del creador)
     final contributions = widget.alert.images.isEmpty ? 0 : widget.alert.images.length - 1;
@@ -383,39 +377,7 @@ class _AlertCardState extends State<AlertCard> {
               ),
             ),
 
-          // 6. Botón de trazar ruta para autoridades
-          if (isAuthority && incidentLocation != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFAF6D58),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MapRouteScreen(
-                          latitude: incidentLocation.latitude,
-                          longitude: incidentLocation.longitude,
-                          description: widget.alert.description,
-                          type: widget.alert.type,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.directions_rounded),
-                  label: const Text('TRAZAR RUTA', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ),
+
 
           // 7. Botón de verificar incidente para autoridades
           if (isAuthority && !widget.alert.verified && widget.onVerify != null)
@@ -430,12 +392,12 @@ class _AlertCardState extends State<AlertCard> {
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(25),
                     ),
                   ),
                   onPressed: widget.onVerify,
                   icon: const Icon(Icons.verified_outlined, size: 18),
-                  label: const Text('VERIFICAR ESTE INCIDENTE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  label: const Text('VERIFICAR INCIDENTE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ),
             ),

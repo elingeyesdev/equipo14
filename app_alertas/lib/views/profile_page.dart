@@ -63,7 +63,7 @@ class ProfilePageState extends State<ProfilePage> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     24,
-                    12,
+                    2,
                     24,
                     0,
                   ),

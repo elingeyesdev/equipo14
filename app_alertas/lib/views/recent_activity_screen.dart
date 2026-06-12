@@ -8,9 +8,13 @@ import 'package:provider/provider.dart';
 import 'package:app_alertas/views/alert_card.dart';
 import 'package:app_alertas/views/widgets/custom_snackbar.dart';
 import 'package:app_alertas/services/location_service.dart';
+import 'package:latlong2/latlong.dart';
+import 'dart:math' as math;
+import 'package:app_alertas/views/create_alert_screen.dart';
+import 'package:app_alertas/views/main_navigation_screen.dart';
 
 class RecentActivityScreen extends StatefulWidget {
-  final Function(AlertModel)? onAlertTap;
+  final Function(AlertModel, {bool traceRoute})? onAlertTap;
   const RecentActivityScreen({super.key, this.onAlertTap});
 
   @override
@@ -20,6 +24,7 @@ class RecentActivityScreen extends StatefulWidget {
 class RecentActivityScreenState extends State<RecentActivityScreen> {
   String? _selectedType;
   bool _onlyNearby = false;
+  LatLng? _userLocation;
   final _locationService = const LocationService();
   int _currentLoadId = 0;
 
@@ -33,22 +38,40 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
 
   Future<void> reload() => _loadAlerts();
 
+  double _distanceInMeters(LatLng a, LatLng b) {
+    const earthRadius = 6371000.0;
+    final lat1 = a.latitudeInRad;
+    final lat2 = b.latitudeInRad;
+    final dLat = (b.latitude - a.latitude) * math.pi / 180;
+    final dLon = (b.longitude - a.longitude) * math.pi / 180;
+    final x =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1) * math.cos(lat2) * math.sin(dLon / 2) * math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x));
+    return earthRadius * c;
+  }
+
+  LatLng? _getAlertLatLng(AlertModel alert) {
+    if (alert.coordinates.length < 2) return null;
+    return LatLng(alert.coordinates[1], alert.coordinates[0]);
+  }
+
   Future<void> _loadAlerts() async {
     final alertVM = context.read<AlertViewModel>();
     final int loadId = ++_currentLoadId;
-    final bool currentFilter = _onlyNearby;
 
-    if (currentFilter) {
+    await alertVM.fetchAlerts();
+
+    if (loadId != _currentLoadId) return;
+
+    if (_onlyNearby) {
       try {
         final loc = await _locationService.getCurrentLocation();
-        
-        if (loadId != _currentLoadId) return;
-
-        await alertVM.fetchNearbyAlerts(
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          radius: 5000.0, 
-        );
+        if (loadId == _currentLoadId && mounted) {
+          setState(() {
+            _userLocation = loc;
+          });
+        }
       } catch (e) {
         if (loadId != _currentLoadId) return;
 
@@ -56,14 +79,21 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
           showCustomSnackBar(
             context: context,
             title: 'Ubicación',
-            message: 'No se pudo obtener tu ubicación. Cargando alertas globales.',
+            message: 'No se pudo obtener tu ubicación para filtrar los reportes.',
             type: CustomSnackBarType.warning,
           );
+          setState(() {
+            _userLocation = null;
+            _onlyNearby = false;
+          });
         }
-        await alertVM.fetchAlerts();
       }
     } else {
-      await alertVM.fetchAlerts();
+      if (mounted) {
+        setState(() {
+          _userLocation = null;
+        });
+      }
     }
   }
 
@@ -258,6 +288,15 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
       if (_selectedType != null && alert.type != _selectedType) {
         return false;
       }
+      if (_onlyNearby) {
+        if (_userLocation == null) return false;
+        final alertLoc = _getAlertLatLng(alert);
+        if (alertLoc == null) return false;
+        final distance = _distanceInMeters(_userLocation!, alertLoc);
+        if (distance > 5000.0) {
+          return false;
+        }
+      }
       return true;
     }).toList();
 
@@ -271,18 +310,154 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: const Text(
-                "Actividad Reciente",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.normal,
-                  letterSpacing: -0.3,
-                  color: Colors.white,
-                ),
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Actividad Reciente",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.normal,
+                      letterSpacing: -0.3,
+                      color: Colors.white,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CreateAlertScreen(
+                            onCreated: () {
+                              Navigator.of(context).pop();
+                              _loadAlerts();
+                            },
+                            onShowMap: (alert, {bool traceRoute = false}) {
+                              Navigator.of(context).pop();
+                              MainNavigationScreen.navigationKey.currentState?.navigateToMap(alert, traceRoute: traceRoute);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add, size: 14, color: Colors.white),
+                    label: const Text(
+                      'CREAR REPORTE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: const Color(0xFF30302E),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _openFilterBottomSheet(alerts),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.filter_list,
+                      color: Colors.white.withValues(
+                        alpha: 0.6,
+                      ),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (_selectedType == null && !_onlyNearby)
+                            Text(
+                              'Filtrar Reportes',
+                              style: TextStyle(
+                                color: Colors.white.withValues(
+                                  alpha: 0.6,
+                                ),
+                                fontSize: 14,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                          if (_selectedType != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF40403E),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _selectedType!,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedType = null;
+                                      });
+                                    },
+                                    child: const Icon(Icons.close, color: Colors.white70, size: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (_onlyNearby)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF40403E),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    "Cercanos",
+                                    style: TextStyle(color: Colors.white, fontSize: 13),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _onlyNearby = false;
+                                      });
+                                      _loadAlerts();
+                                    },
+                                    child: const Icon(Icons.close, color: Colors.white70, size: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _loadAlerts,
@@ -313,102 +488,6 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                         )
                       : CustomScrollView(
                           slivers: [
-                            SliverToBoxAdapter(
-                              child: GestureDetector(
-                                onTap: () => _openFilterBottomSheet(alerts),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 8,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.filter_list,
-                                        color: Colors.white.withValues(
-                                          alpha: 0.6,
-                                        ),
-                                        size: 16,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Wrap(
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
-                                          children: [
-                                            if (_selectedType == null && !_onlyNearby)
-                                              Text(
-                                                'Filtrar Reportes',
-                                                style: TextStyle(
-                                                  color: Colors.white.withValues(
-                                                    alpha: 0.6,
-                                                  ),
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.normal,
-                                                ),
-                                              ),
-                                            if (_selectedType != null)
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFF40403E),
-                                                  borderRadius: BorderRadius.circular(16),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      _selectedType!,
-                                                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    GestureDetector(
-                                                      onTap: () {
-                                                        setState(() {
-                                                          _selectedType = null;
-                                                        });
-                                                      },
-                                                      child: const Icon(Icons.close, color: Colors.white70, size: 14),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            if (_onlyNearby)
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFF40403E),
-                                                  borderRadius: BorderRadius.circular(16),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const Text(
-                                                      "Cercanos",
-                                                      style: TextStyle(color: Colors.white, fontSize: 13),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    GestureDetector(
-                                                      onTap: () {
-                                                        setState(() {
-                                                          _onlyNearby = false;
-                                                        });
-                                                        _loadAlerts();
-                                                      },
-                                                      child: const Icon(Icons.close, color: Colors.white70, size: 14),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
                             SliverPadding(
                               padding: EdgeInsets.zero,
                               sliver: displayAlerts.isEmpty
