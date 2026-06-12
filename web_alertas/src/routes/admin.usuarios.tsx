@@ -8,6 +8,14 @@ import { roleBadgeClass, roleLabel } from "@/lib/roles";
 import { CreateAuthoritySheet } from "@/components/admin/CreateAuthoritySheet";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/admin/DataTable";
+import { FilterButton } from "@/components/admin/FilterButton";
+import {
+  applySimpleListFilters,
+  countSimpleFilters,
+  DEFAULT_SIMPLE_FILTERS,
+  SimpleListFilters,
+  type SimpleListFiltersState,
+} from "@/components/admin/SimpleListFilters";
 import type { User } from "@/domain/types";
 
 export const Route = createFileRoute("/admin/usuarios")({
@@ -17,8 +25,19 @@ export const Route = createFileRoute("/admin/usuarios")({
 function UsuariosPage() {
   const { users = [], isLoading, deleteUser, isDeleting, refetch } = useUsers();
   const [createOpen, setCreateOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<SimpleListFiltersState>(DEFAULT_SIMPLE_FILTERS);
 
-  const filteredUsers = users.filter((u) => u.role?.name?.toLowerCase() !== "admin");
+  const baseUsers = users.filter((u) => u.role?.name?.toLowerCase() !== "admin");
+  const filteredUsers = applySimpleListFilters(
+    baseUsers,
+    filters,
+    (user, search) => {
+      const haystack = `${user.first_name} ${user.last_name} ${user.phone}`.toLowerCase();
+      return haystack.includes(search);
+    },
+    (user, role) => (user.role?.name ?? "").toLowerCase() === role,
+  );
 
   const handleDeleteUser = async (id: string) => {
     if (!window.confirm("¿Estás seguro que deseas eliminar este usuario?")) return;
@@ -107,6 +126,7 @@ function UsuariosPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <FilterButton activeCount={countSimpleFilters(filters)} onClick={() => setFiltersOpen(true)} />
           <Button onClick={() => setCreateOpen(true)} className="rounded-xl gap-2 font-bold cursor-pointer">
             <PlusCircle className="size-4" />
             Nuevo usuario
@@ -135,6 +155,17 @@ function UsuariosPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={() => refetch?.()}
+      />
+
+      <SimpleListFilters
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        title="Filtros de usuarios"
+        description="Busca por nombre o teléfono y filtra por rol."
+        filters={filters}
+        onChange={setFilters}
+        showRoleFilter
+        resultCount={filteredUsers.length}
       />
     </div>
   );

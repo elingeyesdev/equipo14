@@ -8,6 +8,11 @@ import { UserResponse } from "app/http/requests/users/response";
 import { ConfigService } from "@nestjs/config";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
+import {
+    LOCKOUT_MINUTES,
+    MAX_FAILED_LOGIN_ATTEMPTS,
+    PUBLIC_REGISTER_ROLE_ID,
+} from "app/constants/security.constants";
 
 @Injectable()
 export class AuthService{
@@ -18,13 +23,41 @@ export class AuthService{
         private jwtService: JwtService,
         private readonly configService: ConfigService
     ) {}
+
     async validateUser(phone: string, password: string){
-        const user = await this.usersService.findByPhone(phone);
+        const user = await this.usersRepository.findOne({
+            where: { phone },
+            relations: ['role'],
+        });
+
         if(!user){
             throw new NotFoundException('usuario no encontrado')
         }
+
+        if (user.locked_until && user.locked_until > new Date()) {
+            const mins = Math.ceil(
+                (user.locked_until.getTime() - Date.now()) / 60000,
+            );
+            throw new BadRequestException(
+                `Cuenta bloqueada. Intenta de nuevo en ${mins} minuto(s).`,
+            );
+        }
+
         const isMatch: boolean = bcrypt.compareSync(password, user.password);
-        if(!isMatch) throw new BadRequestException('Contrasena Incorrecta')
+
+        if(!isMatch) {
+            user.failed_login_attempts = (user.failed_login_attempts ?? 0) + 1;
+            if (user.failed_login_attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+                user.failed_login_attempts = 0;
+                user.locked_until = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000);
+            }
+            await this.usersRepository.save(user);
+            throw new BadRequestException('Contrasena Incorrecta')
+        }
+
+        user.failed_login_attempts = 0;
+        user.locked_until = null;
+        await this.usersRepository.save(user);
 
         return user;
     }
@@ -50,8 +83,9 @@ export class AuthService{
         }
     }
 
-    async register(CreateUserRequest: CreateUserRequest){
-        const existingUser = await this.usersService.create(CreateUserRequest)
+    async register(createUserDto: CreateUserRequest){
+        createUserDto.roleId = PUBLIC_REGISTER_ROLE_ID;
+        const existingUser = await this.usersService.create(createUserDto)
         return this.login(existingUser)
     }
 

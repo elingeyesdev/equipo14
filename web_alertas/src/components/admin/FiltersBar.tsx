@@ -13,14 +13,17 @@ export function FiltersBar({ onClose }: FiltersBarProps) {
   const { filters, setFilters, clearFilters } = useFilters();
 
   // Fetch all reports to extract unique zones dynamically
-  const { reports: allReports = [] } = useReports({}, { enabled: true });
+  const { reports: allReports = [] } = useReports({ includeDeleted: true }, { enabled: true });
 
   // Fetch report types for specific type selector
   const { reportTypes = [] } = useReportTypes();
   const { zones = [] } = useZones();
 
   // Fetch active filtered reports to show correct total count
-  const { reports: filteredReports = [] } = useReports(filters);
+  const { reports: filteredReports = [] } = useReports({
+    ...filters,
+    includeDeleted: true,
+  });
 
   // Extract unique zones
   const uniqueZones = Array.from(

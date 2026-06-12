@@ -1,11 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsString, MaxLength } from "class-validator";
+import { IsOptional, IsString, MaxLength } from "class-validator";
 
 export class CreateCommentRequest {
-    @ApiProperty()
+    /** Ignorado: el backend usa el JWT */
+    @ApiProperty({ required: false, deprecated: true })
+    @IsOptional()
     @IsString()
-    creatorId: string;
+    creatorId?: string;
 
     @ApiProperty()
     @MaxLength(250)

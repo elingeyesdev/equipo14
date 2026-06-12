@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/commo
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ZonesService } from 'app/services/zones.service';
 import { CreateZoneRequest } from '../requests/zones/request';
+import { Roles } from 'app/decorators/roles.decorator';
 
 @ApiBearerAuth()
 @ApiTags('zones')
@@ -25,11 +26,13 @@ export class ZonesController {
     }
 
     @Post()
+    @Roles('admin', 'autoridad')
     create(@Body() dto: CreateZoneRequest) {
         return this.zonesService.create(dto);
     }
 
     @Delete(':id')
+    @Roles('admin')
     remove(@Param('id') id: string) {
         return this.zonesService.remove(Number(id));
     }

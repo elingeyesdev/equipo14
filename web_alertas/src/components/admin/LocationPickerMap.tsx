@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { MapPin } from "lucide-react";
 import {
   loadMapboxGl,
+  MAPBOX_MAP_OPTIONS,
   MAPBOX_STYLE,
   SANTA_CRUZ_CENTER,
   scheduleMapResize,
@@ -50,6 +51,7 @@ export function LocationPickerMap({
         zoom: value ? 14 : 12,
         pitch: 45,
         bearing: -12,
+        ...MAPBOX_MAP_OPTIONS,
       });
 
       mapRef.current = mapInstance;

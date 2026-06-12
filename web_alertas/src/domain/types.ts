@@ -17,9 +17,23 @@ export interface ReportType {
   base_weight: number;
 }
 
+export interface ReportImageUploader {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 export interface ReportImage {
   id: number;
   url: string;
+  uploaded_at?: string;
+  uploadedBy?: ReportImageUploader;
+}
+
+export interface ReportVerifier {
+  id: string;
+  first_name: string;
+  last_name: string;
 }
 
 export interface Report {
@@ -27,13 +41,16 @@ export interface Report {
   creator: string;
   type: ReportType;
   description: string;
-  coordinates: number[]; // [lng, lat]
+  coordinates: number[];
   weight: number;
   verified: boolean;
   created_at: string;
   expires_at: string;
   zone: string;
   images: ReportImage[];
+  verified_at?: string | null;
+  verified_by?: ReportVerifier | null;
+  distinct_contributors?: number;
 }
 
 export interface Session {
@@ -46,7 +63,6 @@ export interface Zone {
   id: number;
   name: string;
   color: string;
-  /** Anillo exterior [lng, lat][] */
   coordinates: number[][];
   created_at: string;
 }

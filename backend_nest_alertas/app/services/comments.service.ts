@@ -18,8 +18,8 @@ export class CommentsService{
         private reportsRepository: Repository<Report>
     ){}
 
-    async create(reportId: number, createCommentRequest: CreateCommentRequest){
-        const creator = await this.usersRepository.findOne({where: {id: createCommentRequest.creatorId}})
+    async create(reportId: number, text: string, creatorId: string){
+        const creator = await this.usersRepository.findOne({where: {id: creatorId}})
         
         if(!creator){
             throw new NotFoundException("Usuario no encontrado")
@@ -32,7 +32,7 @@ export class CommentsService{
         }
 
         const newCommnet = this.commentsRepository.create({
-            text: createCommentRequest.text,
+            text,
             report: report,
             creator: creator
         })
@@ -42,21 +42,21 @@ export class CommentsService{
         return CommentResponse.FromCommentToResponse(savedComment)
     }
 
-    async reply(parentCommentId: number, createCommentRequest: CreateCommentRequest){
+    async reply(parentCommentId: number, text: string, creatorId: string){
         const parentComment = await this.commentsRepository.findOne({where : {id: parentCommentId}})
 
         if (!parentComment){
             throw new NotFoundException("Comentario no encontrado")
         }
 
-        const creator = await this.usersRepository.findOne({where: {id: createCommentRequest.creatorId}})
+        const creator = await this.usersRepository.findOne({where: {id: creatorId}})
         
         if(!creator){
             throw new NotFoundException("Usuario no encontrado")
         }
 
         const newComment = this.commentsRepository.create({
-            text: createCommentRequest.text,
+            text,
             parent_comment: parentComment,
             report: parentComment.report,
             creator: creator,
@@ -118,5 +118,13 @@ export class CommentsService{
                 }
         })
         return CommentResponse.FromCommentListToResponse(replies)
+    }
+
+    async remove(commentId: number) {
+        const result = await this.commentsRepository.delete(commentId);
+        if (!result.affected) {
+            throw new NotFoundException(`El comentario con ID ${commentId} no se encontro`);
+        }
+        return { message: 'Comentario eliminado correctamente' };
     }
 }

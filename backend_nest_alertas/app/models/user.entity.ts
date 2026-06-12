@@ -36,6 +36,12 @@ export class User {
     })
     last_location: Point;
 
+    @Column({ default: 0 })
+    failed_login_attempts: number;
+
+    @Column({ type: 'timestamp', nullable: true })
+    locked_until: Date | null;
+
     @OneToMany(() => Report, report => report.creator)
     reports: Report[];
 

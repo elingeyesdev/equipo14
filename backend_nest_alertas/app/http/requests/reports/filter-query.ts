@@ -43,6 +43,12 @@ export class FilterReportsQuery {
     @IsOptional()
     @IsString()
     to?: string;
+
+    /** Solo admin/autoridad: incluye reportes archivados (soft-deleted por expiración) */
+    @ApiPropertyOptional({ description: 'true para incluir reportes archivados' })
+    @IsOptional()
+    @IsIn(['true', 'false'])
+    includeDeleted?: string;
 }
 
 export const REPORT_CATEGORY_TYPE_IDS: Record<string, number[]> = {

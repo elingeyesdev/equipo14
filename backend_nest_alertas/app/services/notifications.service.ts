@@ -70,6 +70,27 @@ export class NotificationsService {
         }
     }
 
+    async notifyReportVerified(report: Report): Promise<void> {
+        try {
+            const creator = report.creator;
+            if (!creator?.fcm_token) {
+                this.logger.log('Creador sin token FCM — omitiendo notificación de verificación');
+                return;
+            }
+            await this.sendPushNotificationToMultipleTokens(
+                [creator.fcm_token],
+                'Reporte verificado',
+                `Tu reporte #${report.id} fue confirmado por una autoridad.`,
+                {
+                    reportId: report.id.toString(),
+                    type: 'report_verified',
+                },
+            );
+        } catch (error) {
+            this.logger.error('Error notificando verificación de reporte', error);
+        }
+    }
+
     async sendPushNotificationToMultipleTokens(
         tokens: string[],
         title: string,

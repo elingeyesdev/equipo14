@@ -8,6 +8,8 @@ import { getRememberLogin, setRememberLogin } from "@/lib/auth-session";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
@@ -47,6 +49,9 @@ function LoginPage() {
 
   return (
     <>
+    <div className="fixed top-4 right-4 z-50">
+      <ThemeToggle />
+    </div>
     <div className="min-h-screen bg-background text-foreground grid lg:grid-cols-2">
       {/* Lado decorativo */}
       <aside className="relative hidden lg:flex flex-col justify-between p-12 border-r border-border bg-card/40 overflow-hidden">

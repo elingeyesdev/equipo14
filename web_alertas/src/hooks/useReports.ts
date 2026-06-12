@@ -9,6 +9,8 @@ export function useReports(filters: any = {}, options: { enabled?: boolean } = {
     queryKey: ["reports", filters],
     queryFn: () => reportsRepository.findAll(filters),
     enabled: options.enabled !== false,
+    retry: 1,
+    refetchOnWindowFocus: true,
   });
 
   const verifyMutation = useMutation<Report, Error, number>({

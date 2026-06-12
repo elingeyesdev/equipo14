@@ -46,7 +46,7 @@ function PanelPage() {
     verifyReport, 
     deleteReport,
     refetch: refetchReports
-  } = useReports({}, { enabled: activeTab === "incidentes" });
+  } = useReports({ includeDeleted: true }, { enabled: activeTab === "incidentes" });
 
   const { 
     reportTypes = [], 

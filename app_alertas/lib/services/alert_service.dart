@@ -96,7 +96,7 @@ class AlertService {
       await MultipartFile.fromFile(imageFile.path),
     ));
 
-    await _dio.post('/reports/$reportId/images/$userId', data: formData);
+    await _dio.post('/reports/$reportId/images', data: formData);
   }
 
   Future<AlertModel> verifyReport(int reportId) async {

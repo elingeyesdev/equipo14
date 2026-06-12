@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DataTable } from "@/components/admin/DataTable";
+import { FilterButton } from "@/components/admin/FilterButton";
+import {
+  applySimpleListFilters,
+  countSimpleFilters,
+  DEFAULT_SIMPLE_FILTERS,
+  SimpleListFilters,
+  type SimpleListFiltersState,
+} from "@/components/admin/SimpleListFilters";
 import type { Role } from "@/domain/types";
 
 export const Route = createFileRoute("/admin/roles")({
@@ -18,7 +26,13 @@ export const Route = createFileRoute("/admin/roles")({
 function RolesPage() {
   const { roles = [], isLoading, createRole, isCreating } = useRoles();
   const [createOpen, setCreateOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<SimpleListFiltersState>(DEFAULT_SIMPLE_FILTERS);
   const [newRoleName, setNewRoleName] = useState("");
+
+  const filteredRoles = applySimpleListFilters(roles, filters, (role, search) =>
+    role.name.toLowerCase().includes(search),
+  );
 
   const handleCreateRole = async (e: FormEvent) => {
     e.preventDefault();
@@ -83,6 +97,7 @@ function RolesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <FilterButton activeCount={countSimpleFilters(filters)} onClick={() => setFiltersOpen(true)} />
           <Button onClick={() => setCreateOpen(true)} className="rounded-xl gap-2 font-bold cursor-pointer">
             <PlusCircle className="size-4" />
             Nuevo rol
@@ -92,10 +107,10 @@ function RolesPage() {
 
       <DataTable
         columns={columns}
-        data={roles}
+        data={filteredRoles}
         isLoading={isLoading}
         emptyMessage="Ningún rol encontrado."
-        footerText={`${roles.length} roles en el sistema`}
+        footerText={`${filteredRoles.length} roles en el sistema`}
       />
 
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
@@ -128,6 +143,16 @@ function RolesPage() {
           </form>
         </SheetContent>
       </Sheet>
+
+      <SimpleListFilters
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        title="Filtros de roles"
+        description="Busca roles por nombre."
+        filters={filters}
+        onChange={setFilters}
+        resultCount={filteredRoles.length}
+      />
     </div>
   );
 }

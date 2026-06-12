@@ -25,14 +25,15 @@ export class ReportResponse{
     expires_at: Date;
     zone: string;
     images: ImageResponse[];
+    verified_at?: Date | null;
+    verified_by?: { id: string; first_name: string; last_name: string } | null;
+    distinct_contributors?: number;
 
     static FromReportToResponse(report: Report): ReportResponse {
         const response = new ReportResponse();
 
         response.id = report.id;
         response.creator = report.creator?.id ?? '';
-        // // ejmplo implementado la clase
-        // response.type = report.type ?? FALLBACK_TYPE;
         response.type = report.type;
         response.description = report.description ?? '';
         response.coordinates = report.location.coordinates;
@@ -42,6 +43,21 @@ export class ReportResponse{
         response.expires_at = report.expires_at;
         response.zone = report.zone ?? 'Sin zona';
         response.images = ImageResponse.FromImageListToResponse(report.images);
+        response.verified_at = report.verified_at ?? null;
+        response.verified_by = report.verified_by
+            ? {
+                id: report.verified_by.id,
+                first_name: report.verified_by.first_name ?? '',
+                last_name: report.verified_by.last_name ?? '',
+            }
+            : null;
+
+        const contributorIds = new Set<string>();
+        if (report.creator?.id) contributorIds.add(report.creator.id);
+        for (const img of report.images ?? []) {
+            if (img.uploadedBy?.id) contributorIds.add(img.uploadedBy.id);
+        }
+        response.distinct_contributors = contributorIds.size;
 
         return response;
     }

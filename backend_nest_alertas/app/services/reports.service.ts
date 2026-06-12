@@ -12,6 +12,7 @@ import {
     FilterReportsQuery,
     REPORT_CATEGORY_TYPE_IDS,
 } from '../http/requests/reports/filter-query';
+import { MIN_DISTINCT_CONTRIBUTORS_TO_VERIFY } from 'app/constants/security.constants';
 
 @Injectable()
 export class ReportsService {
@@ -29,10 +30,10 @@ export class ReportsService {
 
     ){}
 
-    async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
+    async create(createReportRequest: CreateReportRequest, file: Express.Multer.File, authUserId: string){
         console.time('total');
         console.time('upload');
-        const user = await this.usersRepository.findOne({where: {id: createReportRequest.userId}})
+        const user = await this.usersRepository.findOne({where: {id: authUserId}})
         if(!user){
             throw new NotFoundException("Usuario no encontrado");
         }
@@ -97,31 +98,69 @@ export class ReportsService {
             throw new BadRequestException("Error al subir la imagen")
         }
 
+        const existingUploaders = new Set(
+            (report.images ?? []).map((img) => img.uploadedBy?.id).filter(Boolean),
+        );
         report.images.push(image);
-        report.weight += 1
+        report.weight += existingUploaders.has(user.id) ? 1 : 2;
 
         const savedReport = await this.reportsRepository.save(report)
 
         return ReportResponse.FromReportToResponse(savedReport)
     }
 
-    async verifyReport(id: number) {
+    countDistinctContributors(report: Report): number {
+        const ids = new Set<string>();
+        if (report.creator?.id) ids.add(report.creator.id);
+        for (const img of report.images ?? []) {
+            if (img.uploadedBy?.id) ids.add(img.uploadedBy.id);
+        }
+        return ids.size;
+    }
+
+    async verifyReport(id: number, verifier: { id: string; role?: { name?: string } }) {
         const report = await this.reportsRepository.findOne({
             where: { id: Number(id) },
+            relations: ['creator', 'type', 'images', 'images.uploadedBy', 'verified_by'],
         });
         if (!report) {
             throw new NotFoundException('Reporte no encontrado');
         }
-        report.verified = true
+
+        const distinct = this.countDistinctContributors(report);
+        const isAdmin = verifier.role?.name?.toLowerCase() === 'admin';
+        if (distinct < MIN_DISTINCT_CONTRIBUTORS_TO_VERIFY && !isAdmin) {
+            throw new BadRequestException(
+                `Se requieren al menos ${MIN_DISTINCT_CONTRIBUTORS_TO_VERIFY} usuarios distintos con evidencia fotográfica (actual: ${distinct})`,
+            );
+        }
+
+        const verifierUser = await this.usersRepository.findOne({ where: { id: verifier.id } });
+        if (!verifierUser) {
+            throw new NotFoundException('Usuario verificador no encontrado');
+        }
+
+        report.verified = true;
+        report.verified_at = new Date();
+        report.verified_by = verifierUser;
+
         const savedReport = await this.reportsRepository.save(report);
 
-        return savedReport;
+        const fullReport = await this.reportsRepository.findOne({
+            where: { id: savedReport.id },
+            relations: ['creator', 'type', 'images', 'images.uploadedBy', 'verified_by'],
+        });
+        if (fullReport) {
+            await this.notificationsService.notifyReportVerified(fullReport);
+        }
+
+        return ReportResponse.FromReportToResponse(fullReport ?? savedReport);
     }
 
     async findOne(id: string) {
         const report = await this.reportsRepository.findOne({
             where: {id: Number(id)},
-            relations: ['creator','images','images.uploadedBy', 'type']
+            relations: ['creator','images','images.uploadedBy', 'type', 'verified_by']
         });
         if(!report){
             throw new NotFoundException("Reporte no encontrado")
@@ -144,13 +183,23 @@ export class ReportsService {
         return ReportResponse.FromReportListToResponse(reports)
     }
 
-    async findAll(filters?: FilterReportsQuery) {
+    async findAll(
+        filters?: FilterReportsQuery,
+        user?: { role?: { name?: string } },
+    ) {
         const qb = this.reportsRepository
             .createQueryBuilder('report')
             .leftJoinAndSelect('report.creator', 'creator')
             .leftJoinAndSelect('report.type', 'type')
+            .leftJoinAndSelect('report.verified_by', 'verified_by')
             .leftJoinAndSelect('report.images', 'images')
             .leftJoinAndSelect('images.uploadedBy', 'uploadedBy');
+
+        const role = user?.role?.name?.toLowerCase();
+        const isStaff = role === 'admin' || role === 'autoridad';
+        if (filters?.includeDeleted === 'true' && isStaff) {
+            qb.withDeleted();
+        }
 
         if (filters?.typeId) {
             qb.andWhere('type.id = :typeId', { typeId: Number(filters.typeId) });
@@ -272,7 +321,18 @@ export class ReportsService {
         return ReportCoinicdenceResponse.FromReportListToResponse(usersCoincidence)
     }
 
-    async remove(id: string){
+    async remove(id: string, deletedById: string){
+        const report = await this.reportsRepository.findOne({ where: { id: Number(id) } });
+        if (!report) {
+            throw new NotFoundException(`El reporte con ID ${id} no se encontro`);
+        }
+
+        const deletedBy = await this.usersRepository.findOne({ where: { id: deletedById } });
+        if (deletedBy) {
+            report.deleted_by = deletedBy;
+            await this.reportsRepository.save(report);
+        }
+
         const result = await this.reportsRepository.softDelete(id);
 
         if(result.affected === 0){

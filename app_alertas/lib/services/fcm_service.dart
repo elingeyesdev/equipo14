@@ -53,17 +53,20 @@ class FcmService {
       
       RemoteNotification? notification = message.notification;
       AndroidNotification? android = message.notification?.android;
+      final isVerified = message.data['type'] == 'report_verified';
 
       if (notification != null && android != null) {
         _localNotificationsPlugin.show(
           id: notification.hashCode,
           title: notification.title,
           body: notification.body,
-          notificationDetails: const NotificationDetails(
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
-              'alert_channel', // id
-              'Alertas', // title
-              channelDescription: 'Canal para alertas de incidentes cercanos',
+              isVerified ? 'verified_channel' : 'alert_channel',
+              isVerified ? 'Verificaciones' : 'Alertas',
+              channelDescription: isVerified
+                  ? 'Cuando una autoridad verifica tu reporte'
+                  : 'Canal para alertas de incidentes cercanos',
               importance: Importance.max,
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',

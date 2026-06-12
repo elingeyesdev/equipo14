@@ -42,6 +42,15 @@ export class Report {
     @Column({ default: false })
     verified: boolean;
 
+    @Column({ type: 'timestamp', nullable: true })
+    verified_at: Date | null;
+
+    @ManyToOne(() => User, { nullable: true })
+    verified_by: User | null;
+
+    @ManyToOne(() => User, { nullable: true })
+    deleted_by: User | null;
+
     @Column()
     expires_at: Date;
 

@@ -9,6 +9,11 @@ export const SANTA_CRUZ_CENTER = {
   lat: -17.7833,
 } as const;
 
+/** Evita peticiones de telemetría a events.mapbox.com (bloqueadas por adblockers) */
+export const MAPBOX_MAP_OPTIONS = {
+  performanceMetricsCollection: false,
+} as const;
+
 /** Tokens conocidos como revocados o inválidos (401 en API Mapbox) */
 const INVALID_TOKEN_PREFIXES = ["pk.eyJ1IjoiZGF2aWRlbmNl"];
 
@@ -36,6 +41,11 @@ export async function loadMapboxGl(): Promise<MapboxModule["default"]> {
   const mapboxgl = (await import("mapbox-gl")).default;
   await import("mapbox-gl/dist/mapbox-gl.css");
   mapboxgl.accessToken = getMapboxToken();
+
+  const disableTelemetry = (mapboxgl as { setTelemetryEnabled?: (enabled: boolean) => void })
+    .setTelemetryEnabled;
+  disableTelemetry?.(false);
+
   return mapboxgl;
 }
 

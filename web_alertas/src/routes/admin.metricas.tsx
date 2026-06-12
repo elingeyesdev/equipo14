@@ -1,15 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { TrendingUp, CheckCircle2, MapPin, Clock, Loader2 } from "lucide-react";
 import { useReports } from "@/hooks/useReports";
 import { reportsService } from "@/services/reports.service";
+import { FilterButton } from "@/components/admin/FilterButton";
+import { ReportsFilterSheet } from "@/components/admin/ReportsFilterSheet";
+import { AdminApiBanner } from "@/components/admin/AdminApiBanner";
+import { useFilters } from "@/context/FilterContext";
 
 export const Route = createFileRoute("/admin/metricas")({
   component: MetricasPage,
 });
 
 export default function MetricasPage() {
-  // Fetch reports via hook
-  const { reports = [], isLoading } = useReports({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const { filters, activeCount } = useFilters();
+  const { reports = [], isLoading, isError, error, refetch } = useReports({
+    ...filters,
+    includeDeleted: true,
+  });
 
   if (isLoading) {
     return (
@@ -47,16 +56,26 @@ export default function MetricasPage() {
 
   return (
     <div>
-      <div className="mb-10">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-3">
-          Inteligencia · Métricas
-        </p>
-        <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight mb-2">
-          Impacto medible en la comunidad
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Estadísticas calculadas en tiempo real a partir del backend de Alertas.
-        </p>
+      {isError && (
+        <AdminApiBanner
+          message={`No se pudieron cargar los reportes: ${error?.message ?? "error desconocido"}`}
+          onRetry={() => refetch()}
+        />
+      )}
+
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-3">
+            Inteligencia · Métricas
+          </p>
+          <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight mb-2">
+            Impacto medible en la comunidad
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Estadísticas calculadas en tiempo real a partir del backend de Alertas.
+          </p>
+        </div>
+        <FilterButton activeCount={activeCount} onClick={() => setFiltersOpen(true)} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mb-6">
@@ -140,8 +159,12 @@ export default function MetricasPage() {
       </div>
 
       <p className="text-xs text-muted-foreground mt-6">
-        Los datos se recalculan en tiempo real.
+        {reports.length === 0 && !isError
+          ? "No hay reportes. Crea uno desde el mapa con «Nueva alerta»."
+          : "Incluye reportes archivados (expirados). Los activos en app móvil expiran a las 24 h."}
       </p>
+
+      <ReportsFilterSheet open={filtersOpen} onOpenChange={setFiltersOpen} />
     </div>
   );
 }

@@ -24,9 +24,13 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { useReports } from "@/hooks/useReports";
 import { CreateAlertSheet } from "@/components/admin/CreateAlertSheet";
 import { SaveZoneDialog } from "@/components/admin/SaveZoneDialog";
+import { FilterButton } from "@/components/admin/FilterButton";
+import { ReportsFilterSheet } from "@/components/admin/ReportsFilterSheet";
+import { useFilters } from "@/context/FilterContext";
 import type { MapLocation } from "@/components/admin/LocationPickerMap";
 import {
   loadMapboxGl,
+  MAPBOX_MAP_OPTIONS,
   MAPBOX_STYLE,
   SANTA_CRUZ_CENTER,
   attachMapResizeObserver,
@@ -34,6 +38,11 @@ import {
 } from "@/lib/mapbox";
 import { useZones } from "@/hooks/useZones";
 import { useMapboxZoneLayers } from "@/hooks/useMapboxZoneLayers";
+import { useMapboxRiskZones, type RiskZone } from "@/hooks/useMapboxRiskZones";
+import { RiskZonesPanel } from "@/components/admin/RiskZonesPanel";
+import { VerifyEvidenceDialog } from "@/components/admin/VerifyEvidenceDialog";
+import { getSession } from "@/api/httpClient";
+import type { Report } from "@/domain/types";
 import { circlePolygon, ZONE_RADIUS_KM, normalizeReportCoordinates } from "@/lib/geo";
 import { syncReportMarkersLayer, bringReportMarkersToFront } from "@/lib/mapbox-reports";
 import { getZoneColorMap } from "@/lib/mapbox-zones";
@@ -47,6 +56,7 @@ function MapaPage() {
 
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [pickOnMainMap, setPickOnMainMap] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<MapLocation | null>(null);
   const [demarcateActive, setDemarcateActive] = useState(false);
@@ -56,6 +66,9 @@ function MapaPage() {
   const [activeRadiusZones, setActiveRadiusZones] = useState<Set<string>>(new Set());
   /** Zonas guardadas en BD con su área visible */
   const [visibleDemarcatedIds, setVisibleDemarcatedIds] = useState<Set<number>>(new Set());
+  /** Capa de índice de riesgo (círculos verde → rojo) */
+  const [showRiskZones, setShowRiskZones] = useState(true);
+  const [verifyTarget, setVerifyTarget] = useState<Report | null>(null);
 
   const [isDeletingReport, setIsDeletingReport] = useState(false);
 
@@ -69,10 +82,24 @@ function MapaPage() {
   pickOnMainMapRef.current = pickOnMainMap;
   demarcateActiveRef.current = demarcateActive;
 
-  const { reports = [], isLoading, verifyReport, isVerifying, deleteReport, refetch } = useReports({});
+  const { filters, activeCount } = useFilters();
+  const { reports = [], isLoading, verifyReport, isVerifying, deleteReport, refetch } = useReports({
+    ...filters,
+    includeDeleted: true,
+  });
   const { zones, createZone, deleteZone, isDeleting, refetch: refetchZones } = useZones();
 
   useMapboxZoneLayers(mapRef, zones, visibleDemarcatedIds, activeRadiusZones, reports);
+  const { riskZones } = useMapboxRiskZones(mapRef, reports, showRiskZones);
+
+  const handleFocusRiskZone = (zone: RiskZone) => {
+    mapRef.current?.flyTo({
+      center: [zone.lng, zone.lat],
+      zoom: 13.8,
+      pitch: 50,
+      speed: 1.2,
+    });
+  };
 
   const toggleRadiusZone = (zoneName: string, enabled: boolean) => {
     setActiveRadiusZones((prev) => {
@@ -120,6 +147,36 @@ function MapaPage() {
     };
   }, [zones]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.getLayer?.("risk-zones-fill")) return;
+
+    const onRiskClick = (e: {
+      features?: { properties?: { name?: string; riskIndex?: number; reportCount?: number } }[];
+    }) => {
+      const props = e.features?.[0]?.properties;
+      if (!props?.name) return;
+      const pct = Math.round((props.riskIndex ?? 0) * 100);
+      toast.info(`Zona «${props.name}» · índice ${pct}% · ${props.reportCount ?? 0} incidentes`);
+    };
+    const onEnter = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+    const onLeave = () => {
+      map.getCanvas().style.cursor = "";
+    };
+
+    map.on("click", "risk-zones-fill", onRiskClick);
+    map.on("mouseenter", "risk-zones-fill", onEnter);
+    map.on("mouseleave", "risk-zones-fill", onLeave);
+
+    return () => {
+      map.off("click", "risk-zones-fill", onRiskClick);
+      map.off("mouseenter", "risk-zones-fill", onEnter);
+      map.off("mouseleave", "risk-zones-fill", onLeave);
+    };
+  }, [showRiskZones, riskZones.length]);
+
   // Hex color codes for the categories
   const getCategoryColorHex = (type?: string) => {
     const t = type?.toLowerCase() || "";
@@ -147,7 +204,8 @@ function MapaPage() {
           zoom: 12.5,
           pitch: 55, // 3D tilt
           bearing: -15,
-          antialias: true
+          antialias: true,
+          ...MAPBOX_MAP_OPTIONS,
         });
 
         mapRef.current = mapInstance;
@@ -403,14 +461,23 @@ function MapaPage() {
   }, [reports]);
 
   // Verify report handler calling service/hook layer
-  const handleVerify = async (id: number) => {
+  const handleVerify = (report: Report) => {
+    setVerifyTarget(report);
+  };
+
+  const handleConfirmVerify = async () => {
+    if (!verifyTarget) return;
     try {
-      await verifyReport(id);
-      toast.success(`Incidente #${id} verificado con éxito.`);
+      await verifyReport(verifyTarget.id);
+      toast.success(`Incidente #${verifyTarget.id} verificado con éxito.`);
+      setVerifyTarget(null);
+      setSelectedReportId(null);
     } catch (err: any) {
       toast.error(err.message || "Error al verificar el reporte");
     }
   };
+
+  const isAdmin = getSession()?.user?.role?.name?.toLowerCase() === "admin";
 
   const handleDeleteReport = async (id: number) => {
     setIsDeletingReport(true);
@@ -533,7 +600,7 @@ function MapaPage() {
         <div className="flex items-center justify-end gap-1.5">
           {!row.original.verified && (
             <button
-              onClick={() => handleVerify(row.original.id)}
+              onClick={() => handleVerify(row.original)}
               disabled={isVerifying}
               title="Verificar"
               className="size-8 rounded-lg border border-border hover:border-emerald-500 hover:text-emerald-500 grid place-items-center transition-colors cursor-pointer disabled:opacity-50"
@@ -565,17 +632,16 @@ function MapaPage() {
             Mapa de incidentes 3D
           </h1>
           <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            Visualiza reportes activos mapeados proporcionalmente sobre Santa Cruz de la Sierra. 
-            Filtra en la barra lateral para acotar baches, accidentes, o robos en tiempo real.
+            Reportes georreferenciados sobre Santa Cruz. Las zonas de riesgo se calculan en
+            círculos verde → rojo según la densidad de incidentes y accidentes en cada área.
           </p>
         </div>
       </div>
 
       <div className="min-w-0 flex flex-col gap-4">
-
-
-        {/* Mapa Real Mapbox 3D */}
-        <div
+        <div className="grid lg:grid-cols-[1fr_minmax(280px,340px)] gap-4 items-start">
+          {/* Mapa Real Mapbox 3D */}
+          <div
           className={`relative w-full h-[min(72vh,720px)] min-h-[520px] bg-card border rounded-2xl overflow-hidden transition-colors ${
             pickOnMainMap || demarcateActive
               ? "border-primary ring-2 ring-primary/30"
@@ -642,7 +708,7 @@ function MapaPage() {
 
               {!selectedReport.verified && (
                 <Button
-                  onClick={() => handleVerify(selectedReport.id)}
+                  onClick={() => handleVerify(selectedReport)}
                   disabled={isVerifying}
                   size="sm"
                   className="w-full rounded-lg font-bold gap-2 cursor-pointer"
@@ -670,9 +736,9 @@ function MapaPage() {
                 Clic en el mapa · área de {ZONE_RADIUS_KM} km
               </div>
             )}
-            {activeRadiusZones.size > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-sky-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
-                {activeRadiusZones.size + visibleDemarcatedIds.size} zona(s) visibles · {ZONE_RADIUS_KM} km
+            {showRiskZones && riskZones.length > 0 && (
+              <div className="px-3 py-1.5 rounded-full bg-emerald-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
+                {riskZones.length} zona(s) de riesgo · verde → rojo
               </div>
             )}
           </div>
@@ -706,8 +772,17 @@ function MapaPage() {
             Santa Cruz de la Sierra · Bolivia
           </div>
         </div>
+
+          <RiskZonesPanel
+            zones={riskZones}
+            enabled={showRiskZones}
+            onEnabledChange={setShowRiskZones}
+            onFocusZone={handleFocusRiskZone}
+          />
+        </div>
         
         <div className="flex flex-wrap items-center justify-end gap-2 mt-4">
+          <FilterButton activeCount={activeCount} onClick={() => setFiltersOpen(true)} />
           <Button
             onClick={() => {
               setPendingLocation(null);
@@ -749,6 +824,17 @@ function MapaPage() {
           footerText={`${reports.length} incidentes en vista`}
         />
       </div>
+
+      <ReportsFilterSheet open={filtersOpen} onOpenChange={setFiltersOpen} />
+
+      <VerifyEvidenceDialog
+        report={verifyTarget}
+        open={!!verifyTarget}
+        onOpenChange={(open) => !open && setVerifyTarget(null)}
+        onConfirm={handleConfirmVerify}
+        isVerifying={isVerifying}
+        isAdmin={isAdmin}
+      />
 
       <SaveZoneDialog
         open={saveZoneOpen}

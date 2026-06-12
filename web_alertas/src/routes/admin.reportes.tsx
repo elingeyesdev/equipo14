@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin/reportes")({
 
 function ReportesPage() {
   // Fetch all reports
-  const { reports = [], isLoading } = useReports({});
+  const { reports = [], isLoading } = useReports({ includeDeleted: true });
 
   // Calculate dynamic zones from current reports
   const zonesMap: Record<string, { alerts: number; verified: number; color: string }> = {};

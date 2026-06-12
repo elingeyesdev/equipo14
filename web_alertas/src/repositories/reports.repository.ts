@@ -11,6 +11,7 @@ export const reportsRepository = {
     search?: string;
     from?: string;
     to?: string;
+    includeDeleted?: boolean;
   } = {}): Promise<Report[]> => {
     const params = new URLSearchParams();
     if (filters.typeId) params.append("typeId", filters.typeId);
@@ -40,6 +41,7 @@ export const reportsRepository = {
     if (filters.search) params.append("search", filters.search);
     if (filters.from) params.append("from", filters.from);
     if (filters.to) params.append("to", filters.to);
+    if (filters.includeDeleted) params.append("includeDeleted", "true");
 
     const queryString = params.toString();
     return httpClient.get<Report[]>(`/reports${queryString ? `?${queryString}` : ""}`);
@@ -61,8 +63,8 @@ export const reportsRepository = {
     return httpClient.post<Report>("/reports", formData);
   },
 
-  uploadImage: async (reportId: number, userId: string, formData: FormData): Promise<Report> => {
-    return httpClient.post<Report>(`/reports/${reportId}/images/${userId}`, formData);
+  uploadImage: async (reportId: number, formData: FormData): Promise<Report> => {
+    return httpClient.post<Report>(`/reports/${reportId}/images`, formData);
   },
 
   findNearby: async (latitude: number, longitude: number, radius: number): Promise<Report[]> => {

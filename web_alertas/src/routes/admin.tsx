@@ -27,6 +27,11 @@ import {
 import { clearSession } from "@/api/httpClient";
 import { authService } from "@/services/auth.service";
 import { type Session } from "@/domain/types";
+import { FilterProvider } from "@/context/FilterContext";
+import { AdminApiBanner } from "@/components/admin/AdminApiBanner";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { reportTypesRepository } from "@/repositories/reportTypes.repository";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -88,19 +93,41 @@ function AdminLayout() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background text-foreground">
-        <AdminSidebar session={sessionState} onLogout={logout} />
-        <main className="flex-1 min-w-0 px-6 lg:px-10 py-8">
-          <div className="">
-            <div className="min-w-0">
-              <Outlet />
+    <FilterProvider>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background text-foreground">
+          <AdminSidebar session={sessionState} onLogout={logout} />
+          <main className="flex-1 min-w-0 px-6 lg:px-10 py-8">
+            <AdminBackendStatus />
+            <div className="">
+              <div className="min-w-0">
+                <Outlet />
+              </div>
             </div>
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
+          </main>
+        </div>
+      </SidebarProvider>
+    </FilterProvider>
   );
+}
+
+function AdminBackendStatus() {
+  const healthQuery = useQuery({
+    queryKey: ["admin-api-health"],
+    queryFn: () => reportTypesRepository.findAll(),
+    retry: 1,
+    staleTime: 30_000,
+  });
+
+  if (healthQuery.isLoading || healthQuery.isSuccess) return null;
+
+  const message =
+    healthQuery.error?.message?.includes("Failed to fetch") ||
+    healthQuery.error?.message?.includes("NetworkError")
+      ? "No se pudo conectar con el backend. Verifica que NestJS esté corriendo en el puerto 3000 y reinicia el frontend."
+      : `Error al cargar datos del backend: ${healthQuery.error?.message ?? "desconocido"}. Cierra sesión y vuelve a entrar si el token expiró.`;
+
+  return <AdminApiBanner message={message} onRetry={() => healthQuery.refetch()} />;
 }
 
 function AdminSidebar({ session, onLogout }: { session: Session; onLogout: () => void }) {
@@ -132,6 +159,7 @@ function AdminSidebar({ session, onLogout }: { session: Session; onLogout: () =>
             </Link>
           )}
           <SidebarTrigger className="shrink-0 size-7 rounded-md hover:bg-sidebar-accent transition-colors" />
+          <ThemeToggle />
         </div>
       </SidebarHeader>
 

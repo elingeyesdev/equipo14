@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DataTable } from "@/components/admin/DataTable";
+import { FilterButton } from "@/components/admin/FilterButton";
+import {
+  applySimpleListFilters,
+  countSimpleFilters,
+  DEFAULT_SIMPLE_FILTERS,
+  SimpleListFilters,
+  type SimpleListFiltersState,
+} from "@/components/admin/SimpleListFilters";
 import type { ReportType } from "@/domain/types";
 
 export const Route = createFileRoute("/admin/tipo_reporte")({
@@ -18,7 +26,13 @@ export const Route = createFileRoute("/admin/tipo_reporte")({
 function TipoReportePage() {
   const { reportTypes = [], isLoading, createReportType, deleteReportType, isCreating, isDeleting } = useReportTypes();
   const [createOpen, setCreateOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<SimpleListFiltersState>(DEFAULT_SIMPLE_FILTERS);
   const [newTypeName, setNewTypeName] = useState("");
+
+  const filteredTypes = applySimpleListFilters(reportTypes, filters, (type, search) =>
+    type.name.toLowerCase().includes(search),
+  );
 
   // Logic kept intact for future use
   const handleDeleteType = async (id: number) => {
@@ -81,6 +95,7 @@ function TipoReportePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <FilterButton activeCount={countSimpleFilters(filters)} onClick={() => setFiltersOpen(true)} />
           <Button onClick={() => setCreateOpen(true)} className="rounded-xl gap-2 font-bold cursor-pointer">
             <PlusCircle className="size-4" />
             Crear nuevo tipo
@@ -90,10 +105,10 @@ function TipoReportePage() {
 
       <DataTable
         columns={columns}
-        data={reportTypes}
+        data={filteredTypes}
         isLoading={isLoading}
         emptyMessage="Ningún tipo de reporte encontrado."
-        footerText={`${reportTypes.length} tipos de alerta`}
+        footerText={`${filteredTypes.length} tipos de alerta`}
       />
 
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
@@ -126,6 +141,16 @@ function TipoReportePage() {
           </form>
         </SheetContent>
       </Sheet>
+
+      <SimpleListFilters
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        title="Filtros de tipos de alerta"
+        description="Busca categorías por nombre."
+        filters={filters}
+        onChange={setFilters}
+        resultCount={filteredTypes.length}
+      />
     </div>
   );
 }
