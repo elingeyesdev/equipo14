@@ -70,6 +70,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   bool _isBottomSheetOpen = false;
   final LayerHitNotifier<AlertModel> _polylineHitNotifier = ValueNotifier(null);
 
+  // Animación de pulso para vehículos de tracking
+  AnimationController? _pulseController;
+  Animation<double>? _pulseAnimation;
+
   void _onTrackingProviderUpdate() {
     if (!mounted) return;
     final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
@@ -474,6 +478,18 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       }
     });
 
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.82, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _pulseController!,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _pulseController!.repeat(reverse: true);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<AuthViewModel>().user;
       _isAuthority = _userIsAuthority(user?.roleId, user?.roleName);
@@ -536,6 +552,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     _trackingSub?.cancel();
     unawaited(RouteCorridorMonitorService.instance.stop());
     _vehicleAnimController?.dispose();
+    _pulseController?.dispose();
     super.dispose();
   }
 
@@ -748,30 +765,32 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
           point: LatLng(lat, lng),
           width: 50,
           height: 50,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedVehicleId = vehicle['id'] as String;
-              });
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.green : const Color(0xFF3B82F6),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: (isSelected ? Colors.green : const Color(0xFF3B82F6))
-                        .withValues(alpha: 0.55),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: Icon(
-                _vehicleIconByType(type),
-                color: Colors.white,
-                size: 22,
+          child: ScaleTransition(
+            scale: _pulseAnimation ?? const AlwaysStoppedAnimation(1.0),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedVehicleId = vehicle['id'] as String;
+                });
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.green : const Color(0xFF3B82F6),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  _vehicleIconByType(type),
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
             ),
           ),
@@ -857,9 +876,9 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                   border: Border.all(color: Colors.white, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: facilityTypeColor(facility.type).withValues(alpha: 0.45),
-                      blurRadius: 8,
-                      spreadRadius: 1,
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -1104,9 +1123,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
           final point = _toLatLng(alert.coordinates);
           if (point == null) return null;
 
-          Color color = alert.verified
-              ? Colors.green
-              : _colorByType(alert.type);
+          Color color = _colorByType(alert.type);
 
           return Marker(
             point: point,
@@ -1433,61 +1450,65 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
               ),
             ),
 
-          if (_isAuthority)
-            Positioned(
-              top: MediaQuery.paddingOf(context).top + 16,
-              left: 12,
-              right: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF30302E).withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.shield_rounded,
-                            color: Color(0xFFAF6D58),
-                            size: 15,
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 16,
+            left: 12,
+            right: 12,
+            child: Consumer<RiskZoneProvider>(
+              builder: (context, riskZoneProvider, _) {
+                final showRiskZone = riskZoneProvider.loaded;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (showRiskZone) ...[
+                      const RiskZoneOverlay(),
+                      if (_isAuthority) const SizedBox(height: 8),
+                    ],
+                    if (_isAuthority) ...[
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Vista autoridad · ${filterAlertsForMap(_alerts).length} en mapa · ${_alerts.length} total',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF30302E).withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
                             ),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.shield_rounded,
+                                color: Color(0xFFAF6D58),
+                                size: 15,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Vista autoridad · ${filterAlertsForMap(_alerts).length} en mapa · ${_alerts.length} total',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  FacilitiesOverlay(
-                    nearestFacilities: _nearestFacilities,
-                    profileType: context.watch<AuthViewModel>().user?.authorityProfileType,
-                    onFacilityTap: _showFacilityBottomSheet,
-                  ),
-                ],
-              ),
+                      const SizedBox(height: 8),
+                      FacilitiesOverlay(
+                        nearestFacilities: _nearestFacilities,
+                        profileType: context.watch<AuthViewModel>().user?.authorityProfileType,
+                        onFacilityTap: _showFacilityBottomSheet,
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
-
-          Positioned(
-            left: 12,
-            bottom: 24,
-            child: const RiskZoneOverlay(),
           ),
 
         ],

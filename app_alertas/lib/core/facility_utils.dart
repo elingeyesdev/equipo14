@@ -18,13 +18,12 @@ String facilityTypeLabel(String type) {
 Color facilityTypeColor(String type) {
   switch (type) {
     case 'policia':
-      return const Color(0xFF2563EB);
+      return const Color(0xFF506E96);
     case 'bombero':
-      return const Color(0xFFDC2626);
+      return const Color(0xFFAA5F3C);
     case 'hospital':
-      return const Color(0xFF16A34A);
     case 'ambulancia':
-      return const Color(0xFFEA580C);
+      return const Color(0xFF3C8C6E);
     default:
       return const Color(0xFF64748B);
   }

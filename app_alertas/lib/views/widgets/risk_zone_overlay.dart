@@ -20,12 +20,18 @@ class RiskZoneOverlay extends StatelessWidget {
         return Material(
           color: Colors.transparent,
           child: Container(
-            width: 172,
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: const Color(0xFF30302E).withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -39,57 +45,46 @@ class RiskZoneOverlay extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (provider.currentZone?.name case final name?) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.65),
-                      fontSize: 9,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: const SizedBox(
-                    height: 6,
+                    height: 12,
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(child: ColoredBox(color: Color(0xFF22C55E))),
+                        Expanded(child: ColoredBox(color: Color(0xFF84CC16))),
                         Expanded(child: ColoredBox(color: Color(0xFFEAB308))),
+                        Expanded(child: ColoredBox(color: Color(0xFFF97316))),
                         Expanded(child: ColoredBox(color: Color(0xFFEF4444))),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Bajo', style: TextStyle(color: Color(0xFF22C55E), fontSize: 8)),
-                    Text('Medio', style: TextStyle(color: Color(0xFFEAB308), fontSize: 8)),
-                    Text('Alto', style: TextStyle(color: Color(0xFFEF4444), fontSize: 8)),
-                  ],
-                ),
                 if (riskIndex != null) ...[
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: Alignment(-1 + 2 * riskIndex.clamp(0.0, 1.0), 0),
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: riskIndexToColor(riskIndex),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                  const SizedBox(height: 2),
+                  SizedBox(
+                    height: 14,
+                    child: Align(
+                      alignment: Alignment(-1.0 + 2.0 * riskIndex.clamp(0.0, 1.0), 0.0),
+                      child: const Icon(
+                        Icons.arrow_drop_up_rounded,
+                        color: Color(0xFF94A3B8),
+                        size: 24,
                       ),
                     ),
                   ),
-                ],
-                const SizedBox(height: 10),
+                ] else
+                  const SizedBox(height: 4),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Bajo', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w600)),
+                    Text('Alto', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 GestureDetector(
                   onTap: () => provider.setEnabled(!provider.enabled),
                   child: Row(
@@ -100,23 +95,23 @@ class RiskZoneOverlay extends StatelessWidget {
                         height: 22,
                         decoration: BoxDecoration(
                           color: provider.enabled
-                              ? const Color(0xFF22C55E).withValues(alpha: 0.25)
+                              ? const Color(0xFF3C8C6E)
                               : Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
                             color: provider.enabled
-                                ? const Color(0xFF22C55E)
+                                ? const Color(0xFF3C8C6E)
                                 : Colors.white.withValues(alpha: 0.25),
                             width: 1.5,
                           ),
                         ),
                         child: provider.enabled
-                            ? const Icon(Icons.check_rounded, size: 14, color: Color(0xFF22C55E))
+                            ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
                             : null,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        provider.enabled ? 'Zonas activas' : 'Zonas off',
+                        provider.enabled ? 'Zonas activas' : 'Zonas desactivadas',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 10,

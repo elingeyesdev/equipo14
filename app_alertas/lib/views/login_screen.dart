@@ -68,12 +68,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Logo / Icon
                         Center(
                           child: Container(
-                            padding: const EdgeInsets.all(20),
+                            width: 104,
+                            height: 104,
                             decoration: BoxDecoration(
                               color: const Color(0xFFAF6D58).withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.shield_rounded, size: 64, color: Color(0xFFAF6D58)),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/icon/avispate.webp',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 32),

@@ -176,10 +176,11 @@ class _SplashScreenState extends State<SplashScreen>
                                     ),
                                   ],
                                 ),
-                                child: const Icon(
-                                  Icons.shield_rounded,
-                                  size: 40,
-                                  color: Color(0xFFAF6D58),
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    'assets/icon/avispate.webp',
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
                             ),
@@ -201,7 +202,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Column(
                         children: [
                           const Text(
-                            'AlertaCiudadana',
+                            'Pregonero',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 26,
