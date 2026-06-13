@@ -38,12 +38,16 @@ export class CommentsService{
         })
 
         const savedComment = await this.commentsRepository.save(newCommnet)
+        await this.reportsRepository.save(report)
 
         return CommentResponse.FromCommentToResponse(savedComment)
     }
 
     async reply(parentCommentId: number, createCommentRequest: CreateCommentRequest){
-        const parentComment = await this.commentsRepository.findOne({where : {id: parentCommentId}})
+        const parentComment = await this.commentsRepository.findOne({
+            where: { id: parentCommentId },
+            relations: ['report'],
+        })
 
         if (!parentComment){
             throw new NotFoundException("Comentario no encontrado")
@@ -63,6 +67,9 @@ export class CommentsService{
         })
 
         const savedComment = await this.commentsRepository.save(newComment)
+        if (parentComment.report) {
+            await this.reportsRepository.save(parentComment.report)
+        }
 
         return CommentResponse.FromCommentToResponse(savedComment)
     }

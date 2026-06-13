@@ -28,13 +28,13 @@ class AlertViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchAlerts() async {
+  Future<void> fetchAlerts({bool includeDeleted = false}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _alerts = await _repository.getAlerts();
+      _alerts = await _repository.getAlerts(includeDeleted: includeDeleted);
       // Sort by newer first
       _alerts.sort((a, b) {
         if (a.createdAt == null || b.createdAt == null) return 0;

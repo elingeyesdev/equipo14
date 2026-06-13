@@ -1,4 +1,6 @@
+import 'package:app_alertas/core/report_visibility.dart';
 import 'package:app_alertas/core/config/mapbox_config.dart';
+import 'package:app_alertas/core/utils/role_utils.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:app_alertas/core/utils/error_handler.dart';
@@ -13,8 +15,16 @@ import 'package:app_alertas/services/fcm_service.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:app_alertas/viewmodels/tracking_provider.dart';
+import 'package:app_alertas/core/risk_zones.dart';
+import 'package:app_alertas/viewmodels/risk_zone_provider.dart';
+import 'package:app_alertas/views/widgets/risk_zone_overlay.dart';
+import 'package:app_alertas/views/widgets/facilities_overlay.dart';
 import 'package:app_alertas/views/alert_card.dart';
 import 'package:app_alertas/services/tracking_service.dart';
+import 'package:app_alertas/services/facility_service.dart';
+import 'package:app_alertas/services/route_corridor_monitor_service.dart';
+import 'package:app_alertas/core/facility_utils.dart';
+import 'package:app_alertas/models/facility_model.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -39,6 +49,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   bool _loadingLocation = true;
   bool _locationFromGps = false;
   bool _isAuthority = false;
+  bool _showFacilities = true;
+  List<FacilityModel> _facilities = const [];
+  List<FacilityModel> _nearestFacilities = const [];
+  final _facilityService = FacilityService();
 
   // Tracking
   final _trackingService = TrackingService();
@@ -59,9 +73,17 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   void _onTrackingProviderUpdate() {
     if (!mounted) return;
     final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
-    
-    if (trackingProvider.incidentLatitude != null && trackingProvider.incidentLongitude != null) {
-      if (trackingProvider.isFollowingRoute && trackingProvider.currentLocation != null) {
+
+    setState(() {});
+
+    if (trackingProvider.incidentLatitude != null &&
+        trackingProvider.incidentLongitude != null) {
+      if (trackingProvider.routePoints.isNotEmpty &&
+          !trackingProvider.isFollowingRoute) {
+        _fitRouteInView();
+      }
+      if (trackingProvider.isFollowingRoute &&
+          trackingProvider.currentLocation != null) {
         mapController.move(trackingProvider.currentLocation!, 17);
       }
       if (trackingProvider.bearing != _lastBearing) {
@@ -94,19 +116,71 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   }
 
   Future<void> _startPreTracking(AlertModel alert) async {
-    final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
     final incidentLocation = _toLatLng(alert.coordinates);
-    if (incidentLocation == null) return;
-    
-    _dialogShown = false;
-    await trackingProvider.preparePreTracking(
+    if (incidentLocation == null) {
+      _showRouteMessage('Este incidente no tiene coordenadas válidas.');
+      return;
+    }
+    await _startPreTrackingToDestination(
       lat: incidentLocation.latitude,
       lng: incidentLocation.longitude,
+      type: alert.type,
+      description: alert.description,
+      reportId: alert.id,
+      successMessage: 'Ruta guardada. Ya puedes ejecutar el script de simulación en la laptop.',
     );
-    
-    if (mounted) {
-      _fitRouteInView();
+  }
+
+  Future<void> _startPreTrackingToDestination({
+    required double lat,
+    required double lng,
+    required String type,
+    required String description,
+    int? reportId,
+    String successMessage = 'Ruta trazada hacia el destino.',
+  }) async {
+    final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
+
+    final userId = context.read<AuthViewModel>().user?.id;
+    if (userId == null || userId.isEmpty) {
+      _showRouteMessage('Sesión inválida. Vuelve a iniciar sesión como autoridad.');
+      return;
     }
+
+    _dialogShown = false;
+    final success = await trackingProvider.preparePreTracking(
+      lat: lat,
+      lng: lng,
+      type: type,
+      description: description,
+      userId: userId,
+      reportId: reportId,
+    );
+
+    if (!mounted) return;
+
+    if (!success) {
+      _showRouteMessage(
+        trackingProvider.locationError ??
+            'No se pudo trazar la ruta. Activa el GPS e intenta de nuevo.',
+      );
+      return;
+    }
+
+    setState(() {});
+    _fitRouteInView();
+    _showRouteMessage(successMessage, successColor: true);
+  }
+
+  void _showRouteMessage(String message, {bool successColor = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: successColor ? const Color(0xFF6D8566) : Colors.orange,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _fitRouteInView() {
@@ -133,16 +207,19 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     });
   }
 
-  Future<void> _toggleRouteTracking(AlertModel alert) async {
+  Future<void> _toggleRouteTrackingToDestination({
+    required double lat,
+    required double lng,
+    required String type,
+    required String description,
+    int? reportId,
+  }) async {
     final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
     final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
-    final incidentLocation = _toLatLng(alert.coordinates);
-    if (incidentLocation == null) return;
 
-    final isSameIncident = trackingProvider.incidentLatitude == incidentLocation.latitude &&
-                           trackingProvider.incidentLongitude == incidentLocation.longitude;
+    final isSameDestination = trackingProvider.isSameIncident(lat, lng);
 
-    if (trackingProvider.isFollowingRoute && isSameIncident) {
+    if (trackingProvider.isFollowingRoute && isSameDestination) {
       await trackingProvider.stopRouteTracking();
       _fitRouteInView();
     } else {
@@ -151,11 +228,12 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       }
       _dialogShown = false;
       await trackingProvider.startRouteTracking(
-        latitude: incidentLocation.latitude,
-        longitude: incidentLocation.longitude,
-        description: alert.description,
-        type: alert.type,
+        latitude: lat,
+        longitude: lng,
+        description: description,
+        type: type,
         userId: userId,
+        reportId: reportId,
       );
       if (trackingProvider.currentLocation != null) {
         mapController.move(trackingProvider.currentLocation!, 17);
@@ -166,7 +244,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   Future<void> _cancelRouteAndTracking() async {
     final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
     await trackingProvider.stopRouteTracking();
-    trackingProvider.clearPreTracking();
+    await trackingProvider.clearPreTracking();
   }
 
   Future<void> _handleContribute(AlertModel alert) async {
@@ -402,6 +480,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
       final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
       trackingProvider.addListener(_onTrackingProviderUpdate);
+
+      final userId = user?.id;
+      unawaited(RouteCorridorMonitorService.instance.start(userId));
+      unawaited(_loadFacilities());
     });
 
     _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
@@ -452,6 +534,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     } catch (_) {}
     _serviceStatusSub?.cancel();
     _trackingSub?.cancel();
+    unawaited(RouteCorridorMonitorService.instance.stop());
     _vehicleAnimController?.dispose();
     super.dispose();
   }
@@ -503,13 +586,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     }
   }
 
-  bool _userIsAuthority(int? roleId, String? roleName) {
-    final name = roleName?.toLowerCase() ?? '';
-    return roleId == 2 ||
-        roleId == 3 ||
-        name.contains('autoridad') ||
-        name.contains('admin');
-  }
+  bool _userIsAuthority(int? roleId, String? roleName) => isStaffRole(roleId, roleName);
 
   Future getLocation() async {
     if (!mounted) return;
@@ -560,6 +637,36 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     });
 
     await _loadAlerts();
+    if (_isAuthority && _locationFromGps && currentLocation != null) {
+      await _loadNearestFacilities();
+    }
+  }
+
+  Future<void> _loadFacilities() async {
+    try {
+      final facilities = await _facilityService.findAll();
+      if (!mounted) return;
+      setState(() => _facilities = facilities);
+    } catch (e) {
+      debugPrint('Error cargando instalaciones: $e');
+    }
+  }
+
+  Future<void> _loadNearestFacilities() async {
+    if (!_isAuthority || currentLocation == null) return;
+    try {
+      final user = context.read<AuthViewModel>().user;
+      final nearest = await _facilityService.findNearby(
+        latitude: currentLocation!.latitude,
+        longitude: currentLocation!.longitude,
+        profileType: user?.authorityProfileType,
+        limit: 6,
+      );
+      if (!mounted) return;
+      setState(() => _nearestFacilities = nearest);
+    } catch (e) {
+      debugPrint('Error cargando instalaciones cercanas: $e');
+    }
   }
 
   void _centerOnUser() {
@@ -587,18 +694,411 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     
     try {
       final alertVM = context.read<AlertViewModel>();
-      await alertVM.fetchAlerts();
+      final user = context.read<AuthViewModel>().user;
+      await alertVM.fetchAlerts(
+        includeDeleted: _userIsAuthority(user?.roleId, user?.roleName),
+      );
       
       if (!mounted) return;
       setState(() => _alerts = alertVM.alerts);
+      await context.read<RiskZoneProvider>().updateFromAlerts(
+        filterAlertsForMap(alertVM.alerts),
+      );
     } catch (e) {
       debugPrint('Error al cargar alertas: $e');
     } finally {
     }
   }
 
+  List<CircleMarker<Object>> _buildRiskZoneCircles(List<RiskZone> zones) {
+    final circles = <CircleMarker<Object>>[];
+    for (final zone in zones) {
+      void addRing(double factor, double alpha) {
+        circles.add(
+          CircleMarker(
+            point: zone.center,
+            radius: zone.radiusMeters * factor,
+            useRadiusInMeter: true,
+            color: zone.color.withValues(alpha: alpha + zone.riskIndex * 0.18),
+            borderColor: zone.color.withValues(alpha: 0.5),
+            borderStrokeWidth: 1,
+          ),
+        );
+      }
+
+      addRing(1.0, 0.1);
+      addRing(0.62, 0.14);
+      addRing(0.32, 0.2);
+    }
+    return circles;
+  }
+
+  List<Marker> _buildTrackingMarkers(BuildContext context) {
+    final trackingProvider = Provider.of<TrackingProvider>(context);
+    final markers = <Marker>[];
+
+    for (final vehicle in _activeVehicles) {
+      final lat = vehicle['latitude'] as double;
+      final lng = vehicle['longitude'] as double;
+      final type = vehicle['type'] as String? ?? 'Desconocido';
+      final isSelected = vehicle['id'] == _selectedVehicleId;
+
+      markers.add(
+        Marker(
+          point: LatLng(lat, lng),
+          width: 50,
+          height: 50,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedVehicleId = vehicle['id'] as String;
+              });
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.green : const Color(0xFF3B82F6),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: (isSelected ? Colors.green : const Color(0xFF3B82F6))
+                        .withValues(alpha: 0.55),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Icon(
+                _vehicleIconByType(type),
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final isTrackingActive = trackingProvider.incidentLatitude != null &&
+        trackingProvider.incidentLongitude != null;
+    final userLoc = isTrackingActive
+        ? trackingProvider.currentLocation
+        : currentLocation;
+    if (userLoc == null) return markers;
+
+    if (isTrackingActive) {
+      final isFollowingRoute = trackingProvider.isFollowingRoute;
+      final incidentType = trackingProvider.incidentType ?? '';
+      markers.add(
+        Marker(
+          point: userLoc,
+          width: 30,
+          height: 30,
+          child: Transform.rotate(
+            angle: _animatedBearing * math.pi / 180,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFAF6D58),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Icon(
+                isFollowingRoute
+                    ? _vehicleIconByType(incidentType)
+                    : Icons.my_location_rounded,
+                color: Colors.white,
+                size: 14,
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      markers.add(
+        Marker(
+          point: userLoc,
+          width: 30,
+          height: 30,
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFAF6D58),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: const Icon(
+              Icons.my_location_rounded,
+              color: Colors.white,
+              size: 14,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
+  List<Marker> _buildFacilityMarkers() {
+    if (!_showFacilities) return const [];
+
+    return _facilities
+        .where((f) => f.latitude != 0 && f.longitude != 0)
+        .map(
+          (facility) => Marker(
+            point: LatLng(facility.latitude, facility.longitude),
+            width: 40,
+            height: 40,
+            child: GestureDetector(
+              onTap: () => _showFacilityBottomSheet(facility),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: facilityTypeColor(facility.type),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: facilityTypeColor(facility.type).withValues(alpha: 0.45),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  facilityTypeIcon(facility.type),
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+        )
+        .toList();
+  }
+
+  Widget _buildRouteTrackingButton({
+    required TrackingProvider trackingProvider,
+    required double destLat,
+    required double destLng,
+    required String type,
+    required String description,
+    int? reportId,
+  }) {
+    final isSameDestination = trackingProvider.isSameIncident(destLat, destLng);
+    final isRouteTraced =
+        trackingProvider.routePoints.isNotEmpty && isSameDestination;
+    final isFollowingRoute =
+        trackingProvider.isFollowingRoute && isSameDestination;
+    final hasArrived = trackingProvider.hasArrived && isSameDestination;
+    final isLoadingRoute = trackingProvider.isLoadingRoute && isSameDestination;
+    final isAnotherRouteActive =
+        trackingProvider.isFollowingRoute && !isSameDestination;
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isAnotherRouteActive
+              ? Colors.grey.shade800
+              : isFollowingRoute
+                  ? const Color(0xFFAF3C32)
+                  : const Color(0xFFAF6D58),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0,
+        ),
+        onPressed: isAnotherRouteActive
+            ? () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Ya hay una navegación activa hacia otro destino. Deténla primero.',
+                    ),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            : (isLoadingRoute || hasArrived)
+                ? null
+                : () {
+                    if (isRouteTraced || isFollowingRoute) {
+                      _toggleRouteTrackingToDestination(
+                        lat: destLat,
+                        lng: destLng,
+                        type: type,
+                        description: description,
+                        reportId: reportId,
+                      );
+                    } else {
+                      _startPreTrackingToDestination(
+                        lat: destLat,
+                        lng: destLng,
+                        type: type,
+                        description: description,
+                        reportId: reportId,
+                        successMessage: 'Ruta trazada. Pulsa INICIAR NAVEGACIÓN para ir en vivo.',
+                      );
+                    }
+                  },
+        icon: isAnotherRouteActive
+            ? const Icon(Icons.warning_amber_rounded, color: Colors.grey)
+            : isLoadingRoute
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(
+                    isFollowingRoute
+                        ? (hasArrived ? Icons.check_circle_rounded : Icons.stop_rounded)
+                        : (isRouteTraced ? Icons.navigation_rounded : Icons.directions_rounded),
+                  ),
+        label: Text(
+          isAnotherRouteActive
+              ? 'OTRA RUTA EN CURSO'
+              : isLoadingRoute
+                  ? 'CARGANDO RUTA...'
+                  : isFollowingRoute
+                      ? (hasArrived ? 'LLEGÓ AL DESTINO' : 'DETENER RUTA')
+                      : (isRouteTraced ? 'INICIAR NAVEGACIÓN' : 'TRAZAR RUTA'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  void _showFacilityBottomSheet(FacilityModel facility) {
+    if (_isBottomSheetOpen) {
+      Navigator.of(context).pop();
+    }
+    _isBottomSheetOpen = true;
+
+    mapController.move(LatLng(facility.latitude, facility.longitude), 16);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF262624),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return Consumer<TrackingProvider>(
+          builder: (context, trackingProvider, _) {
+            final trackingType = facilityTrackingType(facility.type);
+            final distanceKm = (facility.distanceMeters ?? 0) / 1000;
+
+            return SingleChildScrollView(
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: facilityTypeColor(facility.type)
+                                  .withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              facilityTypeIcon(facility.type),
+                              color: facilityTypeColor(facility.type),
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  facility.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  facilityTypeLabel(facility.type),
+                                  style: TextStyle(
+                                    color: facilityTypeColor(facility.type),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (facility.address != null &&
+                                    facility.address!.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      facility.address!,
+                                      style: const TextStyle(
+                                        color: Colors.white60,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                if (facility.distanceMeters != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      'A ${distanceKm.toStringAsFixed(1)} km de tu ubicación',
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_isAuthority) ...[
+                        const SizedBox(height: 20),
+                        _buildRouteTrackingButton(
+                          trackingProvider: trackingProvider,
+                          destLat: facility.latitude,
+                          destLng: facility.longitude,
+                          type: trackingType,
+                          description: facility.name,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) {
+      _isBottomSheetOpen = false;
+      if (!mounted) return;
+      final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
+      if (!trackingProvider.isFollowingRoute) {
+        _cancelRouteAndTracking();
+      }
+    });
+  }
+
   List<Marker> _buildAlertMarkers() {
-    return _alerts
+    return filterAlertsForMap(_alerts)
         .where((a) => a.coordinates.length >= 2)
         .map((alert) {
           final point = _toLatLng(alert.coordinates);
@@ -649,14 +1149,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         return Consumer<TrackingProvider>(
           builder: (context, trackingProvider, _) {
             final incidentLocation = _toLatLng(alert.coordinates);
-            final isSameIncident = incidentLocation != null &&
-                trackingProvider.incidentLatitude == incidentLocation.latitude &&
-                trackingProvider.incidentLongitude == incidentLocation.longitude;
-            final bool isRouteTraced = trackingProvider.routePoints.isNotEmpty && isSameIncident;
-            final bool isFollowingRoute = trackingProvider.isFollowingRoute && isSameIncident;
-            final bool hasArrived = trackingProvider.hasArrived && isSameIncident;
-            final bool isLoadingRoute = trackingProvider.isLoadingRoute && isSameIncident;
-            final bool isAnotherRouteActive = trackingProvider.isFollowingRoute && !isSameIncident;
 
             return SingleChildScrollView(
               child: SafeArea(
@@ -672,67 +1164,13 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                     if (_isAuthority && incidentLocation != null)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isAnotherRouteActive
-                                  ? Colors.grey.shade800
-                                  : isFollowingRoute
-                                      ? const Color(0xFFAF3C32)
-                                      : const Color(0xFFAF6D58),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            onPressed: isAnotherRouteActive
-                                ? () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Ya hay una navegación activa para otro incidente. Deténla primero.'),
-                                        backgroundColor: Colors.redAccent,
-                                      ),
-                                    );
-                                  }
-                                : (isLoadingRoute || hasArrived)
-                                    ? null
-                                    : () {
-                                        if (isRouteTraced || isFollowingRoute) {
-                                          _toggleRouteTracking(alert);
-                                        } else {
-                                          _startPreTracking(alert);
-                                        }
-                                      },
-                            icon: isAnotherRouteActive
-                                ? const Icon(Icons.warning_amber_rounded, color: Colors.grey)
-                                : isLoadingRoute
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Icon(
-                                        isFollowingRoute
-                                            ? (hasArrived ? Icons.check_circle_rounded : Icons.stop_rounded)
-                                            : (isRouteTraced ? Icons.navigation_rounded : Icons.directions_rounded),
-                                      ),
-                            label: Text(
-                              isAnotherRouteActive
-                                  ? 'OTRA RUTA EN CURSO'
-                                  : isLoadingRoute
-                                      ? 'CARGANDO RUTA...'
-                                      : isFollowingRoute
-                                          ? (hasArrived ? 'LLEGÓ AL DESTINO' : 'DETENER RUTA')
-                                          : (isRouteTraced ? 'INICIAR NAVEGACIÓN' : 'TRAZAR RUTA'),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
+                        child: _buildRouteTrackingButton(
+                          trackingProvider: trackingProvider,
+                          destLat: incidentLocation.latitude,
+                          destLng: incidentLocation.longitude,
+                          type: alert.type,
+                          description: alert.description,
+                          reportId: alert.id,
                         ),
                       ),
                   ],
@@ -751,6 +1189,11 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         _cancelRouteAndTracking();
       }
     });
+  }
+
+  bool _coordsMatch(double? a, double? b) {
+    if (a == null || b == null) return false;
+    return (a - b).abs() < 0.00001;
   }
 
   LatLng? _toLatLng(List<double> coordinates) {
@@ -775,9 +1218,11 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
   IconData _vehicleIconByType(String type) {
     final t = type.toLowerCase();
+    if (t.contains('polic')) return Icons.local_police_rounded;
     if (t.contains('ambulancia') ||
         t.contains('medic') ||
-        t.contains('salud')) {
+        t.contains('salud') ||
+        t.contains('hospital')) {
       return Icons.local_hospital_rounded;
     }
     if (t.contains('bombero') || t.contains('incendio')) {
@@ -833,6 +1278,15 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                   ),
                   children: [
                     MapboxConfig.darkTileLayer(),
+                    Consumer<RiskZoneProvider>(
+                      builder: (context, riskZones, _) {
+                        return CircleLayer(
+                          circles: riskZones.enabled
+                              ? _buildRiskZoneCircles(riskZones.zones)
+                              : const <CircleMarker<Object>>[],
+                        );
+                      },
+                    ),
                     if (_selectedVehicleId != null)
                       ...() {
                         final selectedVehicle = _activeVehicles
@@ -866,16 +1320,26 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                         return [];
                       }(),
 
-                    // NUESTRO PROPIO CAMINO DE RASTREO
-                    ...() {
-                      final trackingProvider = Provider.of<TrackingProvider>(context);
-                      final isSameIncident = trackingProvider.incidentLatitude != null && trackingProvider.incidentLongitude != null;
-                      if (isSameIncident && trackingProvider.routePoints.isNotEmpty) {
+                    // Ruta de navegación (autoridad)
+                    Consumer<TrackingProvider>(
+                      builder: (context, trackingProvider, _) {
+                        if (trackingProvider.incidentLatitude == null ||
+                            trackingProvider.incidentLongitude == null ||
+                            trackingProvider.routePoints.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+
                         AlertModel? alert;
                         for (final a in _alerts) {
                           if (a.coordinates.length >= 2 &&
-                              a.coordinates[1] == trackingProvider.incidentLatitude &&
-                              a.coordinates[0] == trackingProvider.incidentLongitude) {
+                              _coordsMatch(
+                                a.coordinates[1],
+                                trackingProvider.incidentLatitude,
+                              ) &&
+                              _coordsMatch(
+                                a.coordinates[0],
+                                trackingProvider.incidentLongitude,
+                              )) {
                             alert = a;
                             break;
                           }
@@ -883,8 +1347,14 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                         if (alert == null && widget.initialAlert != null) {
                           final a = widget.initialAlert!;
                           if (a.coordinates.length >= 2 &&
-                              a.coordinates[1] == trackingProvider.incidentLatitude &&
-                              a.coordinates[0] == trackingProvider.incidentLongitude) {
+                              _coordsMatch(
+                                a.coordinates[1],
+                                trackingProvider.incidentLatitude,
+                              ) &&
+                              _coordsMatch(
+                                a.coordinates[0],
+                                trackingProvider.incidentLongitude,
+                              )) {
                             alert = a;
                           }
                         }
@@ -895,7 +1365,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                           description: trackingProvider.incidentDescription ?? '',
                           coordinates: [
                             trackingProvider.incidentLongitude ?? 0.0,
-                            trackingProvider.incidentLatitude ?? 0.0
+                            trackingProvider.incidentLatitude ?? 0.0,
                           ],
                           weight: 0.0,
                           verified: false,
@@ -904,142 +1374,31 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                           createdAt: DateTime.now(),
                         );
 
-                        return [
-                          PolylineLayer(
-                            hitNotifier: _polylineHitNotifier,
-                            minimumHitbox: 15.0,
-                            polylines: [
-                              Polyline(
-                                points: trackingProvider.routePoints,
-                                strokeWidth: 6,
-                                color: trackingProvider.isLoadingRoute
-                                    ? Colors.grey
-                                    : const Color(0xFFAF6D58),
-                                strokeCap: StrokeCap.round,
-                                strokeJoin: StrokeJoin.round,
-                                hitValue: alert,
-                              ),
-                            ],
-                          ),
-                        ];
-                      }
-                      return [];
-                    }(),
+                        return PolylineLayer(
+                          hitNotifier: _polylineHitNotifier,
+                          minimumHitbox: 15.0,
+                          polylines: [
+                            Polyline(
+                              points: trackingProvider.routePoints,
+                              strokeWidth: 6,
+                              color: trackingProvider.isLoadingRoute
+                                  ? Colors.grey
+                                  : const Color(0xFFAF6D58),
+                              strokeCap: StrokeCap.round,
+                              strokeJoin: StrokeJoin.round,
+                              hitValue: alert,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
 
                     MarkerLayer(
-                      markers: _locationFromGps
-                          ? [
-                              ..._buildAlertMarkers(),
-                              ..._activeVehicles.map((vehicle) {
-                                final lat = vehicle['latitude'] as double;
-                                final lng = vehicle['longitude'] as double;
-                                final type =
-                                    vehicle['type'] as String? ?? 'Desconocido';
-                                final isSelected =
-                                    vehicle['id'] == _selectedVehicleId;
-
-                                return Marker(
-                                  point: LatLng(lat, lng),
-                                  width: 50,
-                                  height: 50,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedVehicleId = vehicle['id'] as String;
-                                      });
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? Colors.green
-                                            : const Color(0xFF3B82F6),
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                (isSelected
-                                                        ? Colors.green
-                                                        : const Color(0xFF3B82F6))
-                                                    .withValues(alpha: 0.55),
-                                            blurRadius: 10,
-                                            spreadRadius: 2,
-                                          ),
-                                        ],
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        _vehicleIconByType(type),
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                              ...() {
-                                final trackingProvider = Provider.of<TrackingProvider>(context);
-                                final isTrackingActive = trackingProvider.incidentLatitude != null &&
-                                    trackingProvider.incidentLongitude != null;
-                                final LatLng? userLoc = isTrackingActive
-                                    ? trackingProvider.currentLocation
-                                    : (_locationFromGps ? currentLocation : null);
-
-                                if (userLoc == null) return <Marker>[];
-
-                                if (isTrackingActive) {
-                                  final bool isFollowingRoute = trackingProvider.isFollowingRoute;
-                                  final String incidentType = trackingProvider.incidentType ?? '';
-                                  return [
-                                    Marker(
-                                      point: userLoc,
-                                      width: 30,
-                                      height: 30,
-                                      child: Transform.rotate(
-                                        angle: _animatedBearing * math.pi / 180,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFAF6D58),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: Colors.white, width: 2),
-                                          ),
-                                          child: Icon(
-                                            isFollowingRoute
-                                                ? _vehicleIconByType(incidentType)
-                                                : Icons.my_location_rounded,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  ];
-                                } else {
-                                  return [
-                                    Marker(
-                                      point: userLoc,
-                                      width: 30,
-                                      height: 30,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFAF6D58),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 2),
-                                        ),
-                                        child: const Icon(
-                                          Icons.my_location_rounded,
-                                          color: Colors.white,
-                                          size: 14,
-                                        ),
-                                      ),
-                                    )
-                                  ];
-                                }
-                              }(),
-                            ]
-                          : [],
+                      markers: [
+                        ..._buildFacilityMarkers(),
+                        ..._buildAlertMarkers(),
+                        if (_locationFromGps) ..._buildTrackingMarkers(context),
+                      ],
                     ),
                   ],
                 ),
@@ -1077,43 +1436,60 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
           if (_isAuthority)
             Positioned(
               top: MediaQuery.paddingOf(context).top + 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF30302E).withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.shield_rounded,
-                        color: Color(0xFFAF6D58),
-                        size: 15,
+              left: 12,
+              right: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Vista autoridad · ${_alerts.length} reportes',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF30302E).withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
                         ),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.shield_rounded,
+                            color: Color(0xFFAF6D58),
+                            size: 15,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Vista autoridad · ${filterAlertsForMap(_alerts).length} en mapa · ${_alerts.length} total',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  FacilitiesOverlay(
+                    nearestFacilities: _nearestFacilities,
+                    profileType: context.watch<AuthViewModel>().user?.authorityProfileType,
+                    onFacilityTap: _showFacilityBottomSheet,
+                  ),
+                ],
               ),
             ),
-            
+
+          Positioned(
+            left: 12,
+            bottom: 24,
+            child: const RiskZoneOverlay(),
+          ),
+
         ],
       ),
       floatingActionButton: Column(

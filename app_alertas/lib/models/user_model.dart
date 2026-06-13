@@ -5,6 +5,7 @@ class UserModel {
   final String phone;
   final int? roleId;
   final String? roleName;
+  final String? authorityProfileType;
 
   const UserModel({
     required this.id,
@@ -13,6 +14,7 @@ class UserModel {
     required this.phone,
     this.roleId,
     this.roleName,
+    this.authorityProfileType,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,14 @@ class UserModel {
       final name = (role['name'] ?? '').toString().trim();
       roleName = name.isEmpty ? null : name;
     }
+
+    String? authorityProfileType;
+    final authorityProfile = json['authority_profile'];
+    if (authorityProfile is Map<String, dynamic>) {
+      final profileType = (authorityProfile['profile_type'] ?? '').toString().trim();
+      authorityProfileType = profileType.isEmpty ? null : profileType;
+    }
+
     return UserModel(
       id: (json['id'] ?? '').toString(),
       firstName: (json['first_name'] ?? '').toString(),
@@ -31,6 +41,7 @@ class UserModel {
       phone: (json['phone'] ?? '').toString(),
       roleId: roleId,
       roleName: roleName,
+      authorityProfileType: authorityProfileType,
     );
   }
 
@@ -42,6 +53,8 @@ class UserModel {
     'role': roleId == null && roleName == null
         ? null
         : {'id': roleId, 'name': roleName},
+    if (authorityProfileType != null)
+      'authority_profile': {'profile_type': authorityProfileType},
   };
 }
 

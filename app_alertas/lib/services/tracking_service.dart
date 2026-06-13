@@ -13,6 +13,7 @@ class TrackingService {
         ...data,
         'timestamp': ServerValue.timestamp,
       });
+      debugPrint('Tracking guardado en Firebase: $trackingId (${data['status']})');
     } catch (e) {
       debugPrint('Error starting tracking: $e');
     }

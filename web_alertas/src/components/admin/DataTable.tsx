@@ -24,6 +24,7 @@ interface DataTableProps<TData> {
   isLoading?: boolean;
   emptyMessage?: string;
   footerText?: string;
+  onRowClick?: (row: TData) => void;
 }
 
 export function DataTable<TData>({
@@ -32,6 +33,7 @@ export function DataTable<TData>({
   isLoading,
   emptyMessage = "Sin datos.",
   footerText,
+  onRowClick,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -106,7 +108,14 @@ export function DataTable<TData>({
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="border-b border-border">
+                  <TableRow
+                    key={row.id}
+                    className={cn(
+                      "border-b border-border",
+                      onRowClick && "cursor-pointer hover:bg-muted/30 transition-colors",
+                    )}
+                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}

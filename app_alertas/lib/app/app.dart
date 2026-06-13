@@ -12,6 +12,7 @@ import 'package:app_alertas/viewmodels/alert_type_viewmodel.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
 import 'package:app_alertas/viewmodels/comment_viewmodel.dart';
 import 'package:app_alertas/viewmodels/tracking_provider.dart';
+import 'package:app_alertas/viewmodels/risk_zone_provider.dart';
 
 /// Raíz de la app (MaterialApp + tema + pantalla inicial).
 class App extends StatefulWidget {
@@ -90,13 +91,16 @@ class _AppState extends State<App> {
           create: (_) => AlertTypeViewModel()..fetchAlertTypes(),
         ),
         ChangeNotifierProvider<AlertViewModel>(
-          create: (_) => AlertViewModel()..fetchAlerts(),
+          create: (_) => AlertViewModel(),
         ),
         ChangeNotifierProvider<CommentViewModel>(
           create: (_) => CommentViewModel(),
         ),
         ChangeNotifierProvider<TrackingProvider>(
           create: (_) => TrackingProvider(),
+        ),
+        ChangeNotifierProvider<RiskZoneProvider>(
+          create: (_) => RiskZoneProvider()..loadPreference(),
         ),
       ],
       child: Consumer<AuthViewModel>(

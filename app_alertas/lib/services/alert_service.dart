@@ -8,8 +8,11 @@ class AlertService {
 
   AlertService({Dio? dio}) : _dio = dio ?? dioClient.dio;
 
-  Future<List<AlertModel>> getAlerts() async {
-    final response = await _dio.get('/reports');
+  Future<List<AlertModel>> getAlerts({bool includeDeleted = false}) async {
+    final response = await _dio.get(
+      '/reports',
+      queryParameters: includeDeleted ? {'includeDeleted': 'true'} : null,
+    );
     final List<dynamic> data = response.data;
     return data.map((json) => AlertModel.fromJson(json)).toList();
   }

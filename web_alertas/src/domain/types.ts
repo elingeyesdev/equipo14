@@ -58,6 +58,7 @@ export interface Report {
   weight: number;
   verified: boolean;
   created_at: string;
+  updated_at?: string;
   expires_at: string;
   zone: string;
   images: ReportImage[];
@@ -78,4 +79,14 @@ export interface Zone {
   color: string;
   coordinates: number[][];
   created_at: string;
+}
+
+export interface EmergencyFacility {
+  id: number;
+  name: string;
+  type: string;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  distance_meters?: number;
 }

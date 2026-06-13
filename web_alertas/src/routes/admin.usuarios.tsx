@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Trash2, PlusCircle } from "lucide-react";
+import { Trash2, PlusCircle, Copy, Check } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { toast } from "sonner";
 import { roleBadgeClass, roleLabel } from "@/lib/roles";
@@ -9,6 +9,13 @@ import { CreateAuthoritySheet } from "@/components/admin/CreateAuthoritySheet";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/admin/DataTable";
 import { FilterButton } from "@/components/admin/FilterButton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   applySimpleListFilters,
   countSimpleFilters,
@@ -27,6 +34,8 @@ function UsuariosPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<SimpleListFiltersState>(DEFAULT_SIMPLE_FILTERS);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [copiedUuid, setCopiedUuid] = useState(false);
 
   const baseUsers = users.filter((u) => u.role?.name?.toLowerCase() !== "admin");
   const filteredUsers = applySimpleListFilters(
@@ -44,9 +53,18 @@ function UsuariosPage() {
     try {
       await deleteUser(id);
       toast.success("Usuario eliminado.");
+      if (selectedUser?.id === id) setSelectedUser(null);
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar usuario");
     }
+  };
+
+  const copyUserUuid = async () => {
+    if (!selectedUser) return;
+    await navigator.clipboard.writeText(selectedUser.id);
+    setCopiedUuid(true);
+    toast.success("UUID copiado al portapapeles.");
+    window.setTimeout(() => setCopiedUuid(false), 2000);
   };
 
   const totalCount = filteredUsers.length;
@@ -123,7 +141,10 @@ function UsuariosPage() {
       cell: ({ row }) => (
         <div className="flex justify-end">
           <button
-            onClick={() => handleDeleteUser(row.original.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteUser(row.original.id);
+            }}
             disabled={isDeleting}
             title="Eliminar"
             className="size-8 rounded-lg border border-border hover:border-destructive hover:text-destructive grid place-items-center transition-colors cursor-pointer disabled:opacity-50"
@@ -172,8 +193,66 @@ function UsuariosPage() {
         data={filteredUsers}
         isLoading={isLoading}
         emptyMessage="Ningún usuario encontrado."
-        footerText={`${filteredUsers.length} usuarios mostrados`}
+        footerText={`${filteredUsers.length} usuarios mostrados · clic en fila para ver UUID`}
+        onRowClick={setSelectedUser}
       />
+
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalle del usuario</DialogTitle>
+            <DialogDescription>
+              UUID necesario para simular tracking u otras integraciones.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                  Nombre
+                </p>
+                <p className="font-medium capitalize">
+                  {selectedUser.first_name} {selectedUser.last_name}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                  Teléfono
+                </p>
+                <p className="font-mono">{selectedUser.phone}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                  Rol
+                </p>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${roleBadgeClass(selectedUser.role)}`}>
+                  {roleLabel(selectedUser.role?.name)}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  UUID
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs font-mono bg-muted px-3 py-2 rounded-lg break-all border border-border">
+                    {selectedUser.id}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 cursor-pointer"
+                    onClick={copyUserUuid}
+                    title="Copiar UUID"
+                  >
+                    {copiedUuid ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <CreateAuthoritySheet
         open={createOpen}

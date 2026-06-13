@@ -4,7 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from 'app/app.module';
 import { apiReference } from '@scalar/nestjs-api-reference';
-import { seedReportTypes, seedRoles, seedSampleReports } from './seed';
+import { seedReportTypes, seedRoles, seedSampleReports, seedEmergencyFacilities } from './seed';
 
 export async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -48,6 +48,7 @@ export async function bootstrap() {
     await seedReportTypes(app);
     await seedRoles(app);
     await seedSampleReports(app);
+    await seedEmergencyFacilities(app);
     
     await app.listen(port)
 

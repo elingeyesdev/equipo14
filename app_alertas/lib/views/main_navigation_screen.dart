@@ -4,6 +4,10 @@ import 'package:app_alertas/views/map_screen.dart';
 import 'package:app_alertas/views/recent_activity_screen.dart';
 import 'package:app_alertas/views/profile_page.dart';
 import 'package:app_alertas/models/alert_model.dart';
+import 'package:provider/provider.dart';
+import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
+import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
+import 'package:app_alertas/core/utils/role_utils.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   static final GlobalKey<MainNavigationScreenState> navigationKey = GlobalKey<MainNavigationScreenState>();
@@ -28,6 +32,13 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: currentIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = context.read<AuthViewModel>();
+      context.read<AlertViewModel>().fetchAlerts(
+            includeDeleted: isStaffRole(auth.user?.roleId, auth.user?.roleName),
+          );
+    });
   }
 
   @override

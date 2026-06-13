@@ -8,6 +8,10 @@ import { ImagesService } from './images.service';
 import { ReportCoinicdenceResponse, ReportResponse } from 'app/http/requests/reports/response';
 import { ReportType } from 'app/models/report-types.entity';
 import { NotificationsService } from './notifications.service';
+import {
+    FilterReportsQuery,
+    REPORT_CATEGORY_TYPE_IDS,
+} from '../http/requests/reports/filter-query';
 
 @Injectable()
 export class ReportsService {
@@ -104,12 +108,16 @@ export class ReportsService {
     async verifyReport(id: number) {
         const report = await this.reportsRepository.findOne({
             where: { id: Number(id) },
+            relations: ['creator'],
         });
         if (!report) {
             throw new NotFoundException('Reporte no encontrado');
         }
         report.verified = true
         const savedReport = await this.reportsRepository.save(report);
+
+        savedReport.creator = report.creator;
+        await this.notificationsService.notifyReportVerified(savedReport);
 
         return savedReport;
     }
@@ -140,10 +148,72 @@ export class ReportsService {
         return ReportResponse.FromReportListToResponse(reports)
     }
 
-    async findAll() {
-        const reports = await this.reportsRepository.find({
-            relations: ['creator', 'images', 'images.uploadedBy', 'type'],
-        });
+    async findAll(
+        filters?: FilterReportsQuery,
+        user?: { role?: { name?: string } },
+    ) {
+        const qb = this.reportsRepository
+            .createQueryBuilder('report')
+            .leftJoinAndSelect('report.creator', 'creator')
+            .leftJoinAndSelect('report.type', 'type')
+            .leftJoinAndSelect('report.images', 'images')
+            .leftJoinAndSelect('images.uploadedBy', 'uploadedBy');
+
+        const role = user?.role?.name?.toLowerCase();
+        const isStaff = role === 'admin' || role === 'autoridad';
+        if (filters?.includeDeleted === 'true' && isStaff) {
+            qb.withDeleted();
+        }
+
+        if (filters?.typeId) {
+            qb.andWhere('type.id = :typeId', { typeId: Number(filters.typeId) });
+        }
+
+        if (filters?.category && REPORT_CATEGORY_TYPE_IDS[filters.category]) {
+            qb.andWhere('type.id IN (:...categoryIds)', {
+                categoryIds: REPORT_CATEGORY_TYPE_IDS[filters.category],
+            });
+        }
+
+        if (filters?.status === 'verified') {
+            qb.andWhere('report.verified = true');
+        } else if (filters?.status === 'pending') {
+            qb.andWhere('report.verified = false');
+        }
+
+        if (filters?.zoneId) {
+            qb.andWhere(
+                `ST_Contains(
+                    (SELECT z.boundary FROM zone z WHERE z.id = :zoneId),
+                    report.location
+                )`,
+                { zoneId: Number(filters.zoneId) },
+            );
+        } else if (filters?.zone && filters.zone !== 'all') {
+            qb.andWhere('TRIM(report.zone) = :zone', { zone: filters.zone.trim() });
+        }
+
+        if (filters?.from) {
+            qb.andWhere('report.created_at >= :from', {
+                from: new Date(`${filters.from}T00:00:00`),
+            });
+        }
+
+        if (filters?.to) {
+            qb.andWhere('report.created_at <= :to', {
+                to: new Date(`${filters.to}T23:59:59`),
+            });
+        }
+
+        if (filters?.search?.trim()) {
+            const q = `%${filters.search.trim().toLowerCase()}%`;
+            qb.andWhere(
+                `(LOWER(report.description) LIKE :q OR LOWER(report.zone) LIKE :q OR LOWER(type.name) LIKE :q OR CAST(report.id AS TEXT) LIKE :q)`,
+                { q },
+            );
+        }
+
+        const reports = await qb.orderBy('report.created_at', 'DESC').getMany();
         return ReportResponse.FromReportListToResponse(reports);
     }
 
@@ -162,11 +232,10 @@ export class ReportsService {
                 )`,
                 { latitude, longitude, radius }
             )
+            .andWhere(`COALESCE(report.updated_at, report.created_at) >= NOW() - INTERVAL '2 hours'`)
             .orderBy('report.created_at', 'DESC')
             .getMany();
 
-            console.log(reports)
-            console.log(latitude, longitude)
         return ReportResponse.FromReportListToResponse(reports);
     }
 

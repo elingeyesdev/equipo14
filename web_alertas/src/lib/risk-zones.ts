@@ -1,12 +1,12 @@
 import type { Report } from "@/domain/types";
 import { circlePolygon, normalizeReportCoordinates } from "@/lib/geo";
 
-/** Tamaño de celda para agrupar incidentes (~1.2 km) */
-export const RISK_GRID_KM = 1.2;
+/** Tamaño de celda para agrupar incidentes (~250 m) */
+export const RISK_GRID_KM = 0.25;
 
 /** Radio mínimo/máximo del círculo de zona (km) */
-const MIN_RADIUS_KM = 0.85;
-const MAX_RADIUS_KM = 2.4;
+const MIN_RADIUS_KM = 0.08;
+const MAX_RADIUS_KM = 0.22;
 
 export interface RiskZone {
   id: string;

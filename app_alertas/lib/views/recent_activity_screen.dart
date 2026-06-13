@@ -4,6 +4,8 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 import 'package:app_alertas/models/alert_model.dart';
 import 'package:app_alertas/viewmodels/alert_viewmodel.dart';
+import 'package:app_alertas/core/utils/role_utils.dart';
+import 'package:app_alertas/viewmodels/auth_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:app_alertas/views/alert_card.dart';
 
@@ -58,9 +60,12 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
 
   Future<void> _loadAlerts() async {
     final alertVM = context.read<AlertViewModel>();
+    final user = context.read<AuthViewModel>().user;
     final int loadId = ++_currentLoadId;
 
-    await alertVM.fetchAlerts();
+    await alertVM.fetchAlerts(
+      includeDeleted: isStaffRole(user?.roleId, user?.roleName),
+    );
 
     if (loadId != _currentLoadId) return;
 

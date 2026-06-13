@@ -22,6 +22,7 @@ export class ReportResponse{
     weight: number;
     verified: boolean;
     created_at: Date;
+    updated_at: Date;
     expires_at: Date;
     zone: string;
     images: ImageResponse[];
@@ -39,6 +40,7 @@ export class ReportResponse{
         response.weight = report.weight ?? 0;
         response.verified = report.verified ?? false;
         response.created_at = report.created_at;
+        response.updated_at = report.updated_at ?? report.created_at;
         response.expires_at = report.expires_at;
         response.zone = report.zone ?? 'Sin zona';
         response.images = ImageResponse.FromImageListToResponse(report.images);

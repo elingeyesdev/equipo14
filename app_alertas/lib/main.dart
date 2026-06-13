@@ -8,7 +8,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterForegroundTask.initCommunicationPort();
   await Firebase.initializeApp();
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // .env opcional: Mapbox y API usan fallbacks en código.
+  }
   runApp(const App());
 }
 

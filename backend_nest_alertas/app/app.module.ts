@@ -21,6 +21,8 @@ import { CommentsModule } from './providers/comments.module';
 import { ZonesModule } from './providers/zones.module';
 import { RoleGuard } from './guards/roles.guard';
 import { AuthorityProfileModule } from './providers/authority-profile.module';
+import { FacilitiesModule } from './providers/facilities.module';
+import { TrackingsModule } from './providers/trackings.module';
 
 
 @Module({
@@ -49,6 +51,8 @@ import { AuthorityProfileModule } from './providers/authority-profile.module';
     ReportTypesModule,
     NotificationsModule,
     ZonesModule,
+    FacilitiesModule,
+    TrackingsModule,
   ],
   controllers: [AppController],
   providers: [AppService,{

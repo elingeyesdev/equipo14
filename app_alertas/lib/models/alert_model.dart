@@ -8,6 +8,7 @@ class AlertModel {
   final List<double> coordinates;
   final double weight;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
   final DateTime? expiresAt;
   final List<String> images; // Simplificado a lista de URLs (Strings)
   final bool verified;
@@ -21,6 +22,7 @@ class AlertModel {
     required this.coordinates,
     required this.weight,
     this.createdAt,
+    this.updatedAt,
     this.expiresAt,
     this.images = const [],
     this.verified = false,
@@ -86,6 +88,9 @@ class AlertModel {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
+          : null,
       expiresAt: json['expires_at'] != null
           ? DateTime.tryParse(json['expires_at'].toString())
           : null,
@@ -103,6 +108,7 @@ class AlertModel {
     'coordinates': coordinates,
     'weight': weight,
     'created_at': createdAt?.toIso8601String(),
+    'updated_at': updatedAt?.toIso8601String(),
     'expires_at': expiresAt?.toIso8601String(),
     'images': images,
     'verified': verified,

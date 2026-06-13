@@ -53,11 +53,11 @@ export function syncReportMarkersLayer(map: mapboxgl.Map, reports: Report[]) {
           ["linear"],
           ["zoom"],
           10,
-          7,
+          9,
           14,
-          11,
+          13,
           16,
-          14,
+          16,
         ],
         "circle-color": ["get", "color"],
         "circle-stroke-width": 2.5,
@@ -97,7 +97,19 @@ export function syncReportMarkersLayer(map: mapboxgl.Map, reports: Report[]) {
 }
 
 export function bringReportMarkersToFront(map: mapboxgl.Map) {
-  for (const layerId of [REPORTS_LAYER_ID, REPORTS_PIN_LAYER_ID]) {
+  const riskLayerIds = ["risk-zones-fill", "risk-zones-line", "risk-zones-label"];
+  const reportLayerIds = [REPORTS_LAYER_ID, REPORTS_PIN_LAYER_ID];
+
+  // Mantener zonas de riesgo debajo de los pines de incidentes
+  for (const riskId of riskLayerIds) {
+    if (!map.getLayer(riskId)) continue;
+    const beforeId = reportLayerIds.find((id) => map.getLayer(id));
+    if (beforeId) {
+      map.moveLayer(riskId, beforeId);
+    }
+  }
+
+  for (const layerId of reportLayerIds) {
     if (map.getLayer(layerId)) {
       map.moveLayer(layerId);
     }
@@ -107,10 +119,12 @@ export function bringReportMarkersToFront(map: mapboxgl.Map) {
     ".mapboxgl-marker-container",
   ) as HTMLElement | null;
   if (markerRoot) {
-    markerRoot.style.zIndex = "10";
+    markerRoot.style.zIndex = "30";
     markerRoot.style.pointerEvents = "none";
     markerRoot.querySelectorAll(".mapboxgl-marker").forEach((el) => {
-      (el as HTMLElement).style.pointerEvents = "auto";
+      const node = el as HTMLElement;
+      node.style.pointerEvents = "auto";
+      node.style.zIndex = "30";
     });
   }
 }

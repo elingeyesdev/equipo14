@@ -8,8 +8,8 @@ class AlertRepository {
   AlertRepository({AlertService? service})
       : _service = service ?? AlertService();
 
-  Future<List<AlertModel>> getAlerts() async {
-    return await _service.getAlerts();
+  Future<List<AlertModel>> getAlerts({bool includeDeleted = false}) async {
+    return await _service.getAlerts(includeDeleted: includeDeleted);
   }
 
   Future<List<AlertModel>> getAlertsByUser(String userId) async {

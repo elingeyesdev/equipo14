@@ -61,11 +61,14 @@ export function syncRiskZonesOnMap(map: mapboxgl.Map, zones: RiskZone[]) {
       type: "symbol",
       source: `${RISK_ZONES_SOURCE_ID}-labels`,
       minzoom: 11,
+      maxzoom: 13.5,
       layout: {
         "text-field": ["concat", ["get", "name"], "\n", ["get", "label"]],
-        "text-size": 11,
-        "text-anchor": "center",
-        "text-max-width": 14,
+        "text-size": 10,
+        "text-anchor": "bottom",
+        "text-offset": [0, -1.2],
+        "text-max-width": 12,
+        "text-allow-overlap": false,
       },
       paint: {
         "text-color": "#f8fafc",
@@ -78,6 +81,11 @@ export function syncRiskZonesOnMap(map: mapboxgl.Map, zones: RiskZone[]) {
     (map.getSource(`${RISK_ZONES_SOURCE_ID}-labels`) as mapboxgl.GeoJSONSource).setData(
       labelData,
     );
+    if (map.getLayer(RISK_LABEL_LAYER_ID)) {
+      map.setLayerZoomRange(RISK_LABEL_LAYER_ID, 11, 13.5);
+      map.setLayoutProperty(RISK_LABEL_LAYER_ID, "text-anchor", "bottom");
+      map.setLayoutProperty(RISK_LABEL_LAYER_ID, "text-offset", [0, -1.2]);
+    }
   }
 }
 
