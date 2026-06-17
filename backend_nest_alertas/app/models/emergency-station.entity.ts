@@ -1,7 +1,7 @@
 import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import type { Point } from 'geojson';
 import { InstallationType } from 'app/enums/installation-type.enum';
-import { DispatchTracking } from './dispatch-tracking.entity';
+import { Dispatch } from './dispatch.entity';
 
 @Entity()
 export class EmergencyStation {
@@ -24,6 +24,6 @@ export class EmergencyStation {
     })
     location: Point;
 
-    @OneToOne(() => DispatchTracking, dispatchTracking => dispatchTracking.destination)
-    dispatch_tracking: DispatchTracking;
+    @OneToOne(() => Dispatch, dispatch => dispatch.destination)
+    dispatch: Dispatch;
 }

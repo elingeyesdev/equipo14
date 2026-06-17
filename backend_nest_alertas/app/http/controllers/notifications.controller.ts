@@ -2,12 +2,12 @@ import { Body, Controller, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from 'app/decorators/roles.decorator';
 import { NotificationsService } from 'app/services/notifications.service';
-import { NotifyRouteRequest } from '../requests/trackings/request';
+import { NotifyRouteRequest } from '../requests/notifications/request';
 
 @ApiBearerAuth()
-@ApiTags('trackings')
-@Controller('trackings')
-export class TrackingsController {
+@ApiTags('notifications')
+@Controller('notifications')
+export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) {}
 
     @Post('notify-route')

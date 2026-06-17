@@ -21,7 +21,7 @@ class RouteNotifyService {
 
     try {
       await dioClient.dio.post(
-        '/trackings/notify-route',
+        '/notifications/notify-route',
         data: {
           'route': route
               .map((p) => {'lat': p.latitude, 'lng': p.longitude})

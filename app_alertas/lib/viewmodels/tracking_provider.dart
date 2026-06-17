@@ -10,6 +10,7 @@ import 'package:app_alertas/services/location_service.dart';
 import 'package:app_alertas/services/tracking_service.dart';
 import 'package:app_alertas/services/route_notify_service.dart';
 import 'package:app_alertas/core/config/mapbox_config.dart';
+import 'package:app_alertas/core/network/dio_client.dart';
 
 /// Calculates the distance in meters between two coordinates (Haversine formula).
 double _distanceInMeters(LatLng a, LatLng b) {
@@ -47,6 +48,8 @@ class TrackingProvider extends ChangeNotifier {
   String? _incidentType;
   String? _userId;
   int? _reportId;
+  int? _nearestStationId;
+  LatLng? _nearestStationCoords;
 
   // Subscriptions & Timers
   StreamSubscription<PositionWithBearing>? _positionSubscription;
@@ -66,6 +69,8 @@ class TrackingProvider extends ChangeNotifier {
   String? get incidentDescription => _incidentDescription;
   String? get incidentType => _incidentType;
   int? get reportId => _reportId;
+  int? get nearestStationId => _nearestStationId;
+  LatLng? get nearestStationCoords => _nearestStationCoords;
 
   static const double _arrivalThresholdMeters = 20.0;
 
@@ -85,7 +90,7 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
 
     final start = _currentLocation!;
-    final end = LatLng(_incidentLatitude!, _incidentLongitude!);
+    final waypoint = LatLng(_incidentLatitude!, _incidentLongitude!);
     var success = false;
 
     try {
@@ -94,10 +99,21 @@ class TrackingProvider extends ChangeNotifier {
         throw Exception('Token de Mapbox no configurado.');
       }
 
+      final String coordsString;
+      if (_nearestStationCoords != null) {
+        coordsString =
+            '${start.longitude},${start.latitude};'
+            '${waypoint.longitude},${waypoint.latitude};'
+            '${_nearestStationCoords!.longitude},${_nearestStationCoords!.latitude}';
+      } else {
+        coordsString =
+            '${start.longitude},${start.latitude};'
+            '${waypoint.longitude},${waypoint.latitude}';
+      }
+
       final url = Uri.parse(
         'https://api.mapbox.com/directions/v5/mapbox/driving/'
-        '${start.longitude},${start.latitude};'
-        '${end.longitude},${end.latitude}'
+        '$coordsString'
         '?alternatives=false'
         '&geometries=geojson'
         '&overview=full'
@@ -130,7 +146,9 @@ class TrackingProvider extends ChangeNotifier {
       debugPrint('Error fetching route in TrackingProvider: $e');
     } finally {
       if (_routePoints.isEmpty) {
-        _routePoints = [start, end];
+        _routePoints = _nearestStationCoords != null
+            ? [start, waypoint, _nearestStationCoords!]
+            : [start, waypoint];
         success = true;
       }
       _isLoadingRoute = false;
@@ -192,6 +210,8 @@ class TrackingProvider extends ChangeNotifier {
     String? description,
     String? userId,
     int? reportId,
+    int? nearestStationId,
+    LatLng? nearestStationCoords,
   }) async {
     if (_isFollowingRoute) {
       await stopRouteTracking();
@@ -203,6 +223,8 @@ class TrackingProvider extends ChangeNotifier {
     _incidentDescription = description;
     _reportId = reportId;
     _userId = userId;
+    _nearestStationId = nearestStationId;
+    _nearestStationCoords = nearestStationCoords;
     _hasArrived = false;
     _routePoints = [];
     _locationError = null;
@@ -223,12 +245,12 @@ class TrackingProvider extends ChangeNotifier {
         try {
           await _publishTrackingState(userId, status: 'planned');
         } catch (e) {
-          debugPrint('No se pudo guardar ruta en Firebase: $e');
+          debugPrint('No se pudo guardar ruta via WebSockets: $e');
           _locationError =
-              'Ruta trazada, pero Firebase no aceptó el guardado. Revisa reglas RTDB.';
+              'Ruta trazada, pero el servidor no la aceptó.';
         }
       } else if (ok) {
-        debugPrint('Ruta trazada pero no se guardó en Firebase: userId vacío');
+        debugPrint('Ruta trazada pero no se guardó: userId vacío');
       }
       return ok;
     } on LocationException catch (e) {
@@ -253,6 +275,8 @@ class TrackingProvider extends ChangeNotifier {
     required String type,
     required String userId,
     int? reportId,
+    int? nearestStationId,
+    LatLng? nearestStationCoords,
   }) async {
     if (_isFollowingRoute) return;
 
@@ -264,12 +288,28 @@ class TrackingProvider extends ChangeNotifier {
     _incidentType = type;
     _userId = userId;
     _reportId = reportId ?? _reportId;
+    _nearestStationId = nearestStationId ?? _nearestStationId;
+    _nearestStationCoords = nearestStationCoords ?? _nearestStationCoords;
     _isFollowingRoute = true;
     _hasArrived = false;
     if (!keepExistingRoute) {
       _routePoints = [];
     }
     notifyListeners();
+
+    // Persistir el despacho en base de datos PostgreSQL antes de iniciar tracking de ubicacion por socket
+    if (_reportId != null && _nearestStationId != null) {
+      try {
+        final response = await dioClient.dio.post('/dispatches', data: {
+          'reportId': _reportId,
+          'destinationId': _nearestStationId,
+          'userId': userId,
+        });
+        debugPrint('Despacho persistido en PostgreSQL con éxito: ${response.data}');
+      } catch (e) {
+        debugPrint('Error al persistir despacho en PostgreSQL: $e');
+      }
+    }
 
     // Attempt to load initial location and route before starting stream
     try {
@@ -358,7 +398,7 @@ class TrackingProvider extends ChangeNotifier {
 
   void _checkArrival(LatLng position) {
     if (_hasArrived || _incidentLatitude == null || _incidentLongitude == null) return;
-    
+
     final distance = _distanceInMeters(position, LatLng(_incidentLatitude!, _incidentLongitude!));
     if (distance <= _arrivalThresholdMeters) {
       _hasArrived = true;
@@ -382,6 +422,8 @@ class TrackingProvider extends ChangeNotifier {
     _incidentType = null;
     _reportId = null;
     _userId = null;
+    _nearestStationId = null;
+    _nearestStationCoords = null;
     _routePoints = [];
     _hasArrived = false;
     _bearing = 0.0;

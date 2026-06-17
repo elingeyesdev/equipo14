@@ -152,6 +152,12 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     }
 
     _dialogShown = false;
+    final nearestStation = _nearestEmergencyStations.isNotEmpty ? _nearestEmergencyStations.first : null;
+    final nearestStationId = nearestStation?.id;
+    final nearestStationCoords = (nearestStation != null && nearestStation.coordinates.length >= 2)
+        ? LatLng(nearestStation.coordinates[1], nearestStation.coordinates[0])
+        : null;
+
     final success = await trackingProvider.preparePreTracking(
       lat: lat,
       lng: lng,
@@ -159,6 +165,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       description: description,
       userId: userId,
       reportId: reportId,
+      nearestStationId: nearestStationId,
+      nearestStationCoords: nearestStationCoords,
     );
 
     if (!mounted) return;
@@ -231,6 +239,12 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         await trackingProvider.stopRouteTracking();
       }
       _dialogShown = false;
+      final nearestStation = _nearestEmergencyStations.isNotEmpty ? _nearestEmergencyStations.first : null;
+      final nearestStationId = nearestStation?.id;
+      final nearestStationCoords = (nearestStation != null && nearestStation.coordinates.length >= 2)
+          ? LatLng(nearestStation.coordinates[1], nearestStation.coordinates[0])
+          : null;
+
       await trackingProvider.startRouteTracking(
         latitude: lat,
         longitude: lng,
@@ -238,6 +252,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         type: type,
         userId: userId,
         reportId: reportId,
+        nearestStationId: nearestStationId,
+        nearestStationCoords: nearestStationCoords,
       );
       if (trackingProvider.currentLocation != null) {
         mapController.move(trackingProvider.currentLocation!, 17);

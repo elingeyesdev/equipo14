@@ -5,6 +5,7 @@ import { Role } from "./role.entity";
 import { Image } from "./image.entity";
 import { Comment } from "./comment.entity";
 import { AuthorityProfile } from "./authority-profile.entity";
+import { Dispatch } from "./dispatch.entity";
 
 @Entity()
 export class User {
@@ -51,4 +52,7 @@ export class User {
 
     @OneToOne(() => AuthorityProfile, authProfile => authProfile.user)
     authority_profile: AuthorityProfile
+
+    @OneToMany(() => Dispatch, dispatch => dispatch.attended_by)
+    dispatches: Dispatch[];
 }

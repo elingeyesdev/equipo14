@@ -4,7 +4,7 @@ import { User } from "app/models/user.entity";
 import { Image } from "./image.entity";
 import { ReportType } from "./report-types.entity";
 import { Comment } from "./comment.entity";
-import { DispatchTracking } from "./dispatch-tracking.entity";
+import { Dispatch } from "./dispatch.entity";
 
 @Index(['deleted_at'])
 @Index(['expires_at'])
@@ -61,6 +61,6 @@ export class Report {
     @OneToMany(() => Comment, comment => comment.report)
     comments: Comment[];
 
-    @OneToOne(() => DispatchTracking, dispatchTracking => dispatchTracking.response_report)
-    dispatch_tracking: DispatchTracking;
+    @OneToOne(() => Dispatch, dispatch => dispatch.response_report)
+    dispatch: Dispatch;
 }

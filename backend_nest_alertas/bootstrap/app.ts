@@ -5,9 +5,14 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from 'app/app.module';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { seedReportTypes, seedRoles, seedSampleReports, seedEmergencyStations } from './seed';
+import { RedisIoAdapter } from 'app/adapters/redis-io.adapter';
 
 export async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    const redisIoAdapter = new RedisIoAdapter(app);
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
 
     const configService = app.get(ConfigService);
 

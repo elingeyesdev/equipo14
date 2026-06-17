@@ -9,6 +9,7 @@ import { ImagesModule } from './providers/images.module';
 import appConfig from 'config/app.config';
 import jwtConfig from 'config/jwt.config';
 import databaseConfig from 'config/database.config';
+import redisConfig from 'config/redis.config';
 import { ReportTypesModule } from './providers/report-types.module';
 import { AuthModule } from './providers/auth.module';
 import { RolesModule } from './providers/roles.module';
@@ -21,7 +22,7 @@ import { CommentsModule } from './providers/comments.module';
 import { RoleGuard } from './guards/roles.guard';
 import { AuthorityProfileModule } from './providers/authority-profile.module';
 import { EmergencyStationModule } from './providers/emergency-station.module';
-import { TrackingsModule } from './providers/trackings.module';
+import { DispatchModule } from './providers/dispatch.module';
 
 
 
@@ -30,7 +31,7 @@ import { TrackingsModule } from './providers/trackings.module';
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, jwtConfig]
+      load: [appConfig, databaseConfig, jwtConfig, redisConfig]
     }),
     //configuracion dinamica mediante otros servicios, en nuestro caso los config
     //el forRoot usado antes configura todo aqui directamente con valores estaticos
@@ -51,7 +52,7 @@ import { TrackingsModule } from './providers/trackings.module';
     ReportTypesModule,
     NotificationsModule,
     EmergencyStationModule,
-    TrackingsModule,
+    DispatchModule,
   ],
   controllers: [AppController],
   providers: [AppService,{
