@@ -18,13 +18,13 @@ import 'package:app_alertas/viewmodels/tracking_provider.dart';
 import 'package:app_alertas/core/risk_zones.dart';
 import 'package:app_alertas/viewmodels/risk_zone_provider.dart';
 import 'package:app_alertas/views/widgets/risk_zone_overlay.dart';
-import 'package:app_alertas/views/widgets/facilities_overlay.dart';
+import 'package:app_alertas/views/widgets/emergency_stations_overlay.dart';
 import 'package:app_alertas/views/alert_card.dart';
 import 'package:app_alertas/services/tracking_service.dart';
-import 'package:app_alertas/services/facility_service.dart';
+import 'package:app_alertas/services/emergency_station_service.dart';
 import 'package:app_alertas/services/route_corridor_monitor_service.dart';
-import 'package:app_alertas/core/facility_utils.dart';
-import 'package:app_alertas/models/facility_model.dart';
+import 'package:app_alertas/core/emergency_station_utils.dart';
+import 'package:app_alertas/models/emergency_station_model.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -49,10 +49,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   bool _loadingLocation = true;
   bool _locationFromGps = false;
   bool _isAuthority = false;
-  bool _showFacilities = true;
-  List<FacilityModel> _facilities = const [];
-  List<FacilityModel> _nearestFacilities = const [];
-  final _facilityService = FacilityService();
+  bool _showEmergencyStations = true;
+  List<EmergencyStationModel> _emergencyStations = const [];
+  List<EmergencyStationModel> _nearestEmergencyStations = const [];
+  final _emergencyStationService = EmergencyStationService();
 
   // Tracking
   final _trackingService = TrackingService();
@@ -499,7 +499,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
       final userId = user?.id;
       unawaited(RouteCorridorMonitorService.instance.start(userId));
-      unawaited(_loadFacilities());
+      unawaited(_loadEmergencyStations());
     });
 
     _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
@@ -655,34 +655,79 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
     await _loadAlerts();
     if (_isAuthority && _locationFromGps && currentLocation != null) {
-      await _loadNearestFacilities();
+      await _loadNearestEmergencyStations();
     }
   }
 
-  Future<void> _loadFacilities() async {
+  Future<void> _loadEmergencyStations() async {
     try {
-      final facilities = await _facilityService.findAll();
+      final stations = await _emergencyStationService.findAll();
       if (!mounted) return;
-      setState(() => _facilities = facilities);
+      setState(() => _emergencyStations = stations);
     } catch (e) {
-      debugPrint('Error cargando instalaciones: $e');
+      debugPrint('Error cargando estaciones: $e');
     }
   }
 
-  Future<void> _loadNearestFacilities() async {
+  Future<void> _loadNearestEmergencyStations() async {
     if (!_isAuthority || currentLocation == null) return;
     try {
       final user = context.read<AuthViewModel>().user;
-      final nearest = await _facilityService.findNearby(
-        latitude: currentLocation!.latitude,
-        longitude: currentLocation!.longitude,
-        profileType: user?.authorityProfileType,
-        limit: 6,
-      );
+      final profileType = user?.authorityProfileType;
+
+      final profileToTypes = {
+        'policia': ['policia'],
+        'bombero': ['bombero'],
+        'paramedico': ['hospital'],
+      };
+      
+      final allowedTypes = profileToTypes[profileType] ?? [];
+
+      if (_emergencyStations.isEmpty) {
+        final stations = await _emergencyStationService.findAll();
+        if (!mounted) return;
+        setState(() => _emergencyStations = stations);
+      }
+
+      var filteredStations = _emergencyStations;
+      if (allowedTypes.isNotEmpty) {
+        filteredStations = filteredStations.where((s) => allowedTypes.contains(s.installationType)).toList();
+      }
+
+      final stationsWithDistance = <Map<String, dynamic>>[];
+      for (final station in filteredStations) {
+        if (station.coordinates.length >= 2) {
+          final distanceMeters = Geolocator.distanceBetween(
+            currentLocation!.latitude,
+            currentLocation!.longitude,
+            station.coordinates[1],
+            station.coordinates[0],
+          );
+          stationsWithDistance.add({
+            'station': station,
+            'distance': distanceMeters,
+          });
+        }
+      }
+
+      stationsWithDistance.sort((a, b) => (a['distance'] as double).compareTo(b['distance'] as double));
+
+      final nearest = stationsWithDistance.take(6).map((item) {
+        final s = item['station'] as EmergencyStationModel;
+        final d = (item['distance'] as double).round();
+        return EmergencyStationModel(
+          id: s.id,
+          name: s.name,
+          installationType: s.installationType,
+          coordinates: s.coordinates,
+          distanceMeters: d,
+        );
+      }).toList();
+
       if (!mounted) return;
-      setState(() => _nearestFacilities = nearest);
+      setState(() => _nearestEmergencyStations = nearest);
     } catch (e) {
-      debugPrint('Error cargando instalaciones cercanas: $e');
+      debugPrint('Error cargando estaciones cercanas localmente: $e');
     }
   }
 
@@ -857,21 +902,21 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     return markers;
   }
 
-  List<Marker> _buildFacilityMarkers() {
-    if (!_showFacilities) return const [];
+  List<Marker> _buildEmergencyStationMarkers() {
+    if (!_showEmergencyStations) return const [];
 
-    return _facilities
-        .where((f) => f.latitude != 0 && f.longitude != 0)
+    return _emergencyStations
+        .where((s) => s.coordinates.length >= 2 && s.coordinates[0] != 0 && s.coordinates[1] != 0)
         .map(
-          (facility) => Marker(
-            point: LatLng(facility.latitude, facility.longitude),
+          (station) => Marker(
+            point: LatLng(station.coordinates[1], station.coordinates[0]),
             width: 40,
             height: 40,
             child: GestureDetector(
-              onTap: () => _showFacilityBottomSheet(facility),
+              onTap: () => _showEmergencyStationBottomSheet(station),
               child: Container(
                 decoration: BoxDecoration(
-                  color: facilityTypeColor(facility.type),
+                  color: emergencyStationTypeColor(station.installationType),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                   boxShadow: [
@@ -883,7 +928,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                   ],
                 ),
                 child: Icon(
-                  facilityTypeIcon(facility.type),
+                  emergencyStationTypeIcon(station.installationType),
                   color: Colors.white,
                   size: 18,
                 ),
@@ -991,13 +1036,13 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     );
   }
 
-  void _showFacilityBottomSheet(FacilityModel facility) {
+  void _showEmergencyStationBottomSheet(EmergencyStationModel station) {
     if (_isBottomSheetOpen) {
       Navigator.of(context).pop();
     }
     _isBottomSheetOpen = true;
 
-    mapController.move(LatLng(facility.latitude, facility.longitude), 16);
+    mapController.move(LatLng(station.coordinates[1], station.coordinates[0]), 16);
 
     showModalBottomSheet(
       context: context,
@@ -1010,8 +1055,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       builder: (context) {
         return Consumer<TrackingProvider>(
           builder: (context, trackingProvider, _) {
-            final trackingType = facilityTrackingType(facility.type);
-            final distanceKm = (facility.distanceMeters ?? 0) / 1000;
+            final trackingType = emergencyStationTrackingType(station.installationType);
+            final distanceKm = (station.distanceMeters ?? 0) / 1000;
 
             return SingleChildScrollView(
               child: SafeArea(
@@ -1028,13 +1073,13 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: facilityTypeColor(facility.type)
+                              color: emergencyStationTypeColor(station.installationType)
                                   .withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              facilityTypeIcon(facility.type),
-                              color: facilityTypeColor(facility.type),
+                              emergencyStationTypeIcon(station.installationType),
+                              color: emergencyStationTypeColor(station.installationType),
                               size: 26,
                             ),
                           ),
@@ -1044,7 +1089,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  facility.name,
+                                  station.name,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -1053,26 +1098,14 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  facilityTypeLabel(facility.type),
+                                  emergencyStationTypeLabel(station.installationType),
                                   style: TextStyle(
-                                    color: facilityTypeColor(facility.type),
+                                    color: emergencyStationTypeColor(station.installationType),
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (facility.address != null &&
-                                    facility.address!.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Text(
-                                      facility.address!,
-                                      style: const TextStyle(
-                                        color: Colors.white60,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                if (facility.distanceMeters != null)
+                                if (station.distanceMeters != null)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6),
                                     child: Text(
@@ -1092,10 +1125,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                         const SizedBox(height: 20),
                         _buildRouteTrackingButton(
                           trackingProvider: trackingProvider,
-                          destLat: facility.latitude,
-                          destLng: facility.longitude,
+                          destLat: station.coordinates[1],
+                          destLng: station.coordinates[0],
                           type: trackingType,
-                          description: facility.name,
+                          description: station.name,
                         ),
                       ],
                     ],
@@ -1236,8 +1269,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   IconData _vehicleIconByType(String type) {
     final t = type.toLowerCase();
     if (t.contains('polic')) return Icons.local_police_rounded;
-    if (t.contains('ambulancia') ||
-        t.contains('medic') ||
+    if (t.contains('medic') ||
         t.contains('salud') ||
         t.contains('hospital')) {
       return Icons.local_hospital_rounded;
@@ -1412,7 +1444,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
                     MarkerLayer(
                       markers: [
-                        ..._buildFacilityMarkers(),
+                        ..._buildEmergencyStationMarkers(),
                         ..._buildAlertMarkers(),
                         if (_locationFromGps) ..._buildTrackingMarkers(context),
                       ],
@@ -1499,10 +1531,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                         ),
                       ),
                       const SizedBox(height: 8),
-                      FacilitiesOverlay(
-                        nearestFacilities: _nearestFacilities,
+                      EmergencyStationsOverlay(
+                        nearestEmergencyStations: _nearestEmergencyStations,
                         profileType: context.watch<AuthViewModel>().user?.authorityProfileType,
-                        onFacilityTap: _showFacilityBottomSheet,
+                        onStationTap: _showEmergencyStationBottomSheet,
                       ),
                     ],
                   ],

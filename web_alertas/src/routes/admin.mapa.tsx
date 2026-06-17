@@ -39,15 +39,15 @@ import {
 import { useMapboxRiskZones, type RiskZone } from "@/hooks/useMapboxRiskZones";
 import { RiskZonesPanel } from "@/components/admin/RiskZonesPanel";
 import { LiveTrackingPanel } from "@/components/admin/LiveTrackingPanel";
-import { FacilitiesPanel } from "@/components/admin/FacilitiesPanel";
+import { EmergencyStationsPanel } from "@/components/admin/EmergencyStationsPanel";
 import { VerifyEvidenceDialog } from "@/components/admin/VerifyEvidenceDialog";
 import { useLiveTrackings } from "@/hooks/useLiveTrackings";
 import { useSnappedTrackings } from "@/hooks/useSnappedTrackings";
 import { useMapboxTrackings } from "@/hooks/useMapboxTrackings";
-import { useFacilities } from "@/hooks/useFacilities";
-import { useMapboxFacilities } from "@/hooks/useMapboxFacilities";
+import { useEmergencyStations } from "@/hooks/useEmergencyStations";
+import { useMapboxEmergencyStations } from "@/hooks/useMapboxEmergencyStations";
 import type { LiveTracking } from "@/domain/tracking";
-import type { EmergencyFacility } from "@/domain/types";
+import type { EmergencyStation } from "@/domain/types";
 import { getSession } from "@/api/httpClient";
 import type { Report } from "@/domain/types";
 import { normalizeReportCoordinates } from "@/lib/geo";
@@ -71,7 +71,7 @@ function MapaPage() {
   /** Unidades de autoridad en ruta (Firebase RTDB) */
   const [showLiveTracking, setShowLiveTracking] = useState(true);
   /** Instalaciones de emergencia (policía, bomberos, etc.) */
-  const [showFacilities, setShowFacilities] = useState(true);
+  const [showEmergencyStations, setShowEmergencyStations] = useState(true);
   const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null);
   const trackingMarkersRef = useRef<Map<string, any>>(new Map());
   const [verifyTarget, setVerifyTarget] = useState<Report | null>(null);
@@ -91,10 +91,10 @@ function MapaPage() {
     includeDeleted: true,
   });
   const mapReports = useMemo(() => filterReportsForMap(reports), [reports]);
-  const { facilities } = useFacilities();
+  const { emergencyStations } = useEmergencyStations();
 
   const { riskZones } = useMapboxRiskZones(mapRef, mapReports, showRiskZones);
-  useMapboxFacilities(mapRef, facilities, showFacilities);
+  useMapboxEmergencyStations(mapRef, emergencyStations, showEmergencyStations);
 
   const { trackings, error: trackingError, connected: trackingConnected } =
     useLiveTrackings(showLiveTracking);
@@ -138,9 +138,9 @@ function MapaPage() {
     });
   };
 
-  const handleFocusFacility = useCallback((facility: EmergencyFacility) => {
+  const handleFocusStation = useCallback((station: EmergencyStation) => {
     mapRef.current?.flyTo({
-      center: [facility.longitude, facility.latitude],
+      center: station.coordinates as [number, number],
       zoom: 15.5,
       pitch: 50,
       speed: 1.2,
@@ -766,9 +766,9 @@ function MapaPage() {
               </div>
             )}
 
-            {showFacilities && facilities.length > 0 && (
+            {showEmergencyStations && emergencyStations.length > 0 && (
               <div className="px-3 py-1.5 rounded-full bg-indigo-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
-                {facilities.length} instalación(es) de emergencia
+                {emergencyStations.length} estación(es) de emergencia
               </div>
             )}
             {showLiveTracking && trackings.length > 0 && (
@@ -814,11 +814,11 @@ function MapaPage() {
         </div>
 
           <div className="flex flex-col gap-4 min-w-0">
-          <FacilitiesPanel
-            facilities={facilities}
-            enabled={showFacilities}
-            onEnabledChange={setShowFacilities}
-            onFocusFacility={handleFocusFacility}
+          <EmergencyStationsPanel
+            stations={emergencyStations}
+            enabled={showEmergencyStations}
+            onEnabledChange={setShowEmergencyStations}
+            onFocusStation={handleFocusStation}
           />
           <RiskZonesPanel
             zones={riskZones}

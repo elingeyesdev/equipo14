@@ -20,8 +20,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CommentsModule } from './providers/comments.module';
 import { RoleGuard } from './guards/roles.guard';
 import { AuthorityProfileModule } from './providers/authority-profile.module';
-import { FacilitiesModule } from './providers/facilities.module';
+import { EmergencyStationModule } from './providers/emergency-station.module';
 import { TrackingsModule } from './providers/trackings.module';
+
 
 
 @Module({
@@ -49,7 +50,7 @@ import { TrackingsModule } from './providers/trackings.module';
     ImagesModule,
     ReportTypesModule,
     NotificationsModule,
-    FacilitiesModule,
+    EmergencyStationModule,
     TrackingsModule,
   ],
   controllers: [AppController],

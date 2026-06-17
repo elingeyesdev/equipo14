@@ -13,13 +13,6 @@ class EmergencyServicesScreen extends StatelessWidget {
       color: Color(0xFF506E96),
     ),
     _EmergencyService(
-      icon: Icons.local_hospital_rounded,
-      title: 'Ambulancias (SEDES)',
-      subtitle: 'Atención médica prehospitalaria',
-      phone: '160',
-      color: Color(0xFF3C8C6E),
-    ),
-    _EmergencyService(
       icon: Icons.local_fire_department_rounded,
       title: 'Bomberos',
       subtitle: 'Control y respuesta ante incendios',

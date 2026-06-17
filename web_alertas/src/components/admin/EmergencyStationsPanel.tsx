@@ -1,36 +1,36 @@
 import { Switch } from "@/components/ui/switch";
-import { facilityColor, facilityLabel } from "@/lib/facilities";
-import type { EmergencyFacility } from "@/domain/types";
+import { stationColor, stationLabel } from "@/lib/emergency-station";
+import type { EmergencyStation } from "@/domain/types";
 
-interface FacilitiesPanelProps {
-  facilities: EmergencyFacility[];
+interface EmergencyStationsPanelProps {
+  stations: EmergencyStation[];
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
-  onFocusFacility?: (facility: EmergencyFacility) => void;
+  onFocusStation?: (station: EmergencyStation) => void;
 }
 
-const TYPE_ORDER = ["policia", "bombero", "hospital", "ambulancia"];
+const TYPE_ORDER = ["policia", "bombero", "hospital"];
 
-export function FacilitiesPanel({
-  facilities,
+export function EmergencyStationsPanel({
+  stations,
   enabled,
   onEnabledChange,
-  onFocusFacility,
-}: FacilitiesPanelProps) {
+  onFocusStation,
+}: EmergencyStationsPanelProps) {
   const grouped = TYPE_ORDER.map((type) => ({
     type,
-    label: facilityLabel(type),
-    color: facilityColor(type),
-    items: facilities.filter((f) => f.type === type),
+    label: stationLabel(type),
+    color: stationColor(type),
+    items: stations.filter((s) => s.installation_type === type),
   })).filter((g) => g.items.length > 0);
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5">
       <div className="flex items-center justify-between gap-4 mb-4">
         <div>
-          <h3 className="font-display font-bold text-sm">Instalaciones de emergencia</h3>
+          <h3 className="font-display font-bold text-sm">Estaciones de emergencia</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Policía, bomberos, hospitales y ambulancias en Santa Cruz
+            Policía, bomberos y hospitales en Santa Cruz
           </p>
         </div>
         <Switch checked={enabled} onCheckedChange={onEnabledChange} />
@@ -44,16 +44,16 @@ export function FacilitiesPanel({
           >
             <span
               className="size-2 rounded-full shrink-0"
-              style={{ backgroundColor: facilityColor(type) }}
+              style={{ backgroundColor: stationColor(type) }}
             />
-            {facilityLabel(type)}
+            {stationLabel(type)}
           </span>
         ))}
       </div>
 
-      {facilities.length === 0 ? (
+      {stations.length === 0 ? (
         <p className="text-xs text-muted-foreground py-4 text-center">
-          No hay instalaciones cargadas. Reinicia el backend para ejecutar el seed.
+          No hay estaciones cargadas. Reinicia el backend para ejecutar el seed.
         </p>
       ) : (
         <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
@@ -63,11 +63,11 @@ export function FacilitiesPanel({
                 {group.label} · {group.items.length}
               </p>
               <ul className="space-y-2">
-                {group.items.map((facility) => (
-                  <li key={facility.id}>
+                {group.items.map((station) => (
+                  <li key={station.id}>
                     <button
                       type="button"
-                      onClick={() => onFocusFacility?.(facility)}
+                      onClick={() => onFocusStation?.(station)}
                       className="w-full flex items-center gap-3 rounded-xl border border-border px-3 py-2.5 text-left hover:bg-muted/50 transition-colors cursor-pointer"
                     >
                       <span
@@ -76,13 +76,8 @@ export function FacilitiesPanel({
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium truncate">
-                          {facility.name}
+                          {station.name}
                         </span>
-                        {facility.address && (
-                          <span className="block text-[10px] text-muted-foreground truncate">
-                            {facility.address}
-                          </span>
-                        )}
                       </span>
                     </button>
                   </li>

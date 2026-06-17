@@ -1,9 +1,10 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import type { Point } from 'geojson';
 import { User } from "app/models/user.entity";
 import { Image } from "./image.entity";
 import { ReportType } from "./report-types.entity";
 import { Comment } from "./comment.entity";
+import { DispatchTracking } from "./dispatch-tracking.entity";
 
 @Index(['deleted_at'])
 @Index(['expires_at'])
@@ -59,4 +60,7 @@ export class Report {
 
     @OneToMany(() => Comment, comment => comment.report)
     comments: Comment[];
+
+    @OneToOne(() => DispatchTracking, dispatchTracking => dispatchTracking.response_report)
+    dispatch_tracking: DispatchTracking;
 }

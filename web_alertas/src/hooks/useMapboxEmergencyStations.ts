@@ -1,25 +1,25 @@
 import { useCallback, useEffect } from "react";
-import type { EmergencyFacility } from "@/domain/types";
-import { clearFacilitiesOnMap, syncFacilitiesOnMap } from "@/lib/mapbox-facilities";
+import type { EmergencyStation } from "@/domain/types";
+import { clearEmergencyStationsOnMap, syncEmergencyStationsOnMap } from "@/lib/mapbox-emergency-station";
 import { bringReportMarkersToFront } from "@/lib/mapbox-reports";
 
-export function useMapboxFacilities(
+export function useMapboxEmergencyStations(
   mapRef: React.RefObject<mapboxgl.Map | null>,
-  facilities: EmergencyFacility[],
+  stations: EmergencyStation[],
   enabled: boolean,
 ) {
   const syncAll = useCallback(() => {
     const map = mapRef.current;
     if (!map?.loaded?.()) return;
 
-    if (!enabled || facilities.length === 0) {
-      clearFacilitiesOnMap(map);
+    if (!enabled || stations.length === 0) {
+      clearEmergencyStationsOnMap(map);
     } else {
-      syncFacilitiesOnMap(map, facilities);
+      syncEmergencyStationsOnMap(map, stations);
     }
 
     bringReportMarkersToFront(map);
-  }, [mapRef, enabled, facilities]);
+  }, [mapRef, enabled, stations]);
 
   useEffect(() => {
     syncAll();

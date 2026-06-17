@@ -4,8 +4,8 @@ import { ReportType } from 'app/models/report-types.entity';
 import { Role } from 'app/models/role.entity';
 import { Report } from 'app/models/report.entity';
 import { User } from 'app/models/user.entity';
-import { EmergencyFacility } from 'app/models/emergency-facility.entity';
-import { FacilityType } from 'app/enums/facility_type.enum';
+import { EmergencyStation } from 'app/models/emergency-station.entity';
+import { InstallationType } from 'app/enums/installation-type.enum';
 import { Repository } from 'typeorm';
 
 /**
@@ -139,106 +139,82 @@ export async function seedSampleReports(app: INestApplication): Promise<void> {
     console.log(`[Seed] ${samples.length} reportes de demo insertados`);
 }
 
-/** Instalaciones de emergencia en Santa Cruz (policía, bomberos, hospitales, ambulancias). */
-export async function seedEmergencyFacilities(app: INestApplication): Promise<void> {
-    const repo = app.get<Repository<EmergencyFacility>>(
-        getRepositoryToken(EmergencyFacility),
+/** Estaciones de emergencia en Santa Cruz (policía, bomberos, hospitales). */
+export async function seedEmergencyStations(app: INestApplication): Promise<void> {
+    const repo = app.get<Repository<EmergencyStation>>(
+        getRepositoryToken(EmergencyStation),
     );
 
     const count = await repo.count();
     if (count > 0) return;
 
-    const facilities: Array<{
+    const stations: Array<{
         name: string;
-        type: (typeof FacilityType)[keyof typeof FacilityType];
-        address: string;
+        installation_type: InstallationType;
         lng: number;
         lat: number;
     }> = [
         {
             name: 'Comando Departamental Policía SC',
-            type: FacilityType.Policia,
-            address: 'Av. Busch y 2do anillo',
+            installation_type: InstallationType.Policia,
             lng: -63.1821,
             lat: -17.7833,
         },
         {
             name: 'UTOP Equipetrol',
-            type: FacilityType.Policia,
-            address: 'Av. San Martín, Equipetrol',
+            installation_type: InstallationType.Policia,
             lng: -63.1968,
             lat: -17.7565,
         },
         {
             name: 'UTOP Sur',
-            type: FacilityType.Policia,
-            address: 'Av. Grigotá, zona Sur',
+            installation_type: InstallationType.Policia,
             lng: -63.175,
             lat: -17.81,
         },
         {
             name: 'Cuartel General Bomberos SC',
-            type: FacilityType.Bombero,
-            address: 'Av. Busch, centro',
+            installation_type: InstallationType.Bombero,
             lng: -63.1755,
             lat: -17.7895,
         },
         {
             name: 'Compañía Bomberos Plan 3000',
-            type: FacilityType.Bombero,
-            address: 'Av. Paurito, Plan 3000',
+            installation_type: InstallationType.Bombero,
             lng: -63.168,
             lat: -17.772,
         },
         {
             name: 'Hospital Japonés',
-            type: FacilityType.Hospital,
-            address: 'Av. Busch, 3er anillo externo',
+            installation_type: InstallationType.Hospital,
             lng: -63.1902,
             lat: -17.7598,
         },
         {
             name: 'Hospital Obrero',
-            type: FacilityType.Hospital,
-            address: 'Av. Busch y 1er anillo',
+            installation_type: InstallationType.Hospital,
             lng: -63.1765,
             lat: -17.7836,
         },
         {
             name: 'Clínica Las Américas',
-            type: FacilityType.Hospital,
-            address: 'Av. Las Américas',
+            installation_type: InstallationType.Hospital,
             lng: -63.181,
             lat: -17.783,
         },
-        {
-            name: 'CEMED Centro',
-            type: FacilityType.Ambulancia,
-            address: 'Av. Busch, centro',
-            lng: -63.185,
-            lat: -17.78,
-        },
-        {
-            name: 'SAMU Equipetrol',
-            type: FacilityType.Ambulancia,
-            address: 'Av. San Martín, Equipetrol',
-            lng: -63.192,
-            lat: -17.758,
-        },
     ];
 
-    for (const item of facilities) {
-        const facility = repo.create({
+    for (const item of stations) {
+        const station = repo.create({
             name: item.name,
-            type: item.type,
-            address: item.address,
+            installation_type: item.installation_type,
             location: {
                 type: 'Point',
                 coordinates: [item.lng, item.lat],
             },
         });
-        await repo.save(facility);
+        await repo.save(station);
     }
 
-    console.log(`[Seed] ${facilities.length} instalaciones de emergencia insertadas`);
+    console.log(`[Seed] ${stations.length} estaciones de emergencia insertadas`);
 }

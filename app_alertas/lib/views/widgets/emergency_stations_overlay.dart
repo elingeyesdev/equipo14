@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:app_alertas/core/facility_utils.dart';
-import 'package:app_alertas/models/facility_model.dart';
+import 'package:app_alertas/core/emergency_station_utils.dart';
+import 'package:app_alertas/models/emergency_station_model.dart';
 
-class FacilitiesOverlay extends StatefulWidget {
-  final List<FacilityModel> nearestFacilities;
+class EmergencyStationsOverlay extends StatefulWidget {
+  final List<EmergencyStationModel> nearestEmergencyStations;
   final String? profileType;
-  final ValueChanged<FacilityModel>? onFacilityTap;
+  final ValueChanged<EmergencyStationModel>? onStationTap;
 
-  const FacilitiesOverlay({
+  const EmergencyStationsOverlay({
     super.key,
-    required this.nearestFacilities,
+    required this.nearestEmergencyStations,
     this.profileType,
-    this.onFacilityTap,
+    this.onStationTap,
   });
 
   @override
-  State<FacilitiesOverlay> createState() => _FacilitiesOverlayState();
+  State<EmergencyStationsOverlay> createState() => _EmergencyStationsOverlayState();
 }
 
-class _FacilitiesOverlayState extends State<FacilitiesOverlay> {
+class _EmergencyStationsOverlayState extends State<EmergencyStationsOverlay> {
   bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
-    if (widget.nearestFacilities.isEmpty) {
+    if (widget.nearestEmergencyStations.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -48,8 +48,8 @@ class _FacilitiesOverlayState extends State<FacilitiesOverlay> {
                     Expanded(
                       child: Text(
                         widget.profileType != null
-                            ? 'Instalaciones cercanas · ${facilityTypeLabel(widget.profileType!)}'
-                            : 'Instalaciones de emergencia cercanas',
+                            ? 'Instalaciones cercanas · ${emergencyStationTypeLabel(widget.profileType!)}'
+                            : 'Estaciones de emergencia cercanas',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -66,16 +66,16 @@ class _FacilitiesOverlayState extends State<FacilitiesOverlay> {
                 ),
                 if (_expanded) ...[
                   const SizedBox(height: 10),
-                  ...widget.nearestFacilities.take(5).map((facility) {
-                    final distanceKm = (facility.distanceMeters ?? 0) / 1000;
+                  ...widget.nearestEmergencyStations.take(5).map((station) {
+                    final distanceKm = (station.distanceMeters ?? 0) / 1000;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(10),
-                          onTap: widget.onFacilityTap != null
-                              ? () => widget.onFacilityTap!(facility)
+                          onTap: widget.onStationTap != null
+                              ? () => widget.onStationTap!(station)
                               : null,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -86,13 +86,13 @@ class _FacilitiesOverlayState extends State<FacilitiesOverlay> {
                                   width: 28,
                                   height: 28,
                                   decoration: BoxDecoration(
-                                    color: facilityTypeColor(facility.type)
+                                    color: emergencyStationTypeColor(station.installationType)
                                         .withValues(alpha: 0.2),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    facilityTypeIcon(facility.type),
-                                    color: facilityTypeColor(facility.type),
+                                    emergencyStationTypeIcon(station.installationType),
+                                    color: emergencyStationTypeColor(station.installationType),
                                     size: 16,
                                   ),
                                 ),
@@ -102,7 +102,7 @@ class _FacilitiesOverlayState extends State<FacilitiesOverlay> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        facility.name,
+                                        station.name,
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
@@ -110,7 +110,7 @@ class _FacilitiesOverlayState extends State<FacilitiesOverlay> {
                                         ),
                                       ),
                                       Text(
-                                        '${facilityTypeLabel(facility.type)} · ${distanceKm.toStringAsFixed(1)} km · Toca para ruta',
+                                        '${emergencyStationTypeLabel(station.installationType)} · ${distanceKm.toStringAsFixed(1)} km · Toca para ruta',
                                         style: const TextStyle(
                                           color: Colors.white60,
                                           fontSize: 10,
@@ -119,7 +119,7 @@ class _FacilitiesOverlayState extends State<FacilitiesOverlay> {
                                     ],
                                   ),
                                 ),
-                                if (widget.onFacilityTap != null)
+                                if (widget.onStationTap != null)
                                   const Icon(
                                     Icons.directions_rounded,
                                     color: Color(0xFFAF6D58),

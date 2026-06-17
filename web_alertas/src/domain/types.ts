@@ -73,20 +73,11 @@ export interface Session {
   user: User;
 }
 
-export interface Zone {
-  id: number;
-  name: string;
-  color: string;
-  coordinates: number[][];
-  created_at: string;
-}
 
-export interface EmergencyFacility {
+export interface EmergencyStation {
   id: number;
   name: string;
-  type: string;
-  address: string | null;
-  latitude: number;
-  longitude: number;
+  installation_type: string;
+  coordinates: number[];
   distance_meters?: number;
 }
