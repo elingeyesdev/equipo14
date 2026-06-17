@@ -23,8 +23,8 @@ import { useReportTypes } from "@/hooks/useReportTypes";
 import { useReports } from "@/hooks/useReports";
 import { reportsService } from "@/services/reports.service";
 import { getSession } from "@/api/httpClient";
-import { findZoneNameAtPoint, normalizeReportCoordinates } from "@/lib/geo";
-import { type Zone } from "@/domain/types";
+import { findRiskZoneAtPoint, normalizeReportCoordinates } from "@/lib/geo";
+import { type RiskZone } from "@/lib/risk-zones";
 import { toast } from "sonner";
 
 interface CreateAlertSheetProps {
@@ -32,7 +32,7 @@ interface CreateAlertSheetProps {
   onOpenChange: (open: boolean) => void;
   /** Ubicación inicial (p. ej. desde clic en mapa principal) */
   initialLocation?: MapLocation | null;
-  demarcatedZones?: Zone[];
+  riskZones?: RiskZone[];
   onCreated?: () => void;
 }
 
@@ -40,7 +40,7 @@ export function CreateAlertSheet({
   open,
   onOpenChange,
   initialLocation = null,
-  demarcatedZones = [],
+  riskZones = [],
   onCreated,
 }: CreateAlertSheetProps) {
   const { reportTypes, isLoading: loadingTypes } = useReportTypes({ enabled: open });
@@ -61,13 +61,13 @@ export function CreateAlertSheet({
 
   useEffect(() => {
     if (!location) return;
-    const name = findZoneNameAtPoint(
+    const matchingZone = findRiskZoneAtPoint(
       location.longitude,
       location.latitude,
-      demarcatedZones,
+      riskZones,
     );
-    if (name) setZone(name);
-  }, [location, demarcatedZones]);
+    if (matchingZone) setZone(matchingZone.name);
+  }, [location, riskZones]);
 
   const handleLocationChange = (loc: MapLocation) => {
     const norm = normalizeReportCoordinates([loc.longitude, loc.latitude]);

@@ -5,7 +5,6 @@ export interface Filters {
   category: string;
   status: string;
   zone: string;
-  zoneId: string;
   from: string;
   to: string;
   typeId: string;
@@ -16,7 +15,6 @@ export const DEFAULT_FILTERS: Filters = {
   category: "Todos",
   status: "Todos",
   zone: "Todas",
-  zoneId: "",
   from: "",
   to: "",
   typeId: "",
@@ -37,7 +35,6 @@ export function countActiveFilters(filters: Filters): number {
   if (filters.category && filters.category !== "Todos") count++;
   if (filters.status && filters.status !== "Todos") count++;
   if (filters.zone && filters.zone !== "Todas") count++;
-  if (filters.zoneId) count++;
   if (filters.from) count++;
   if (filters.to) count++;
   if (filters.typeId) count++;

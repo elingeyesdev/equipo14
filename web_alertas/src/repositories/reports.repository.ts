@@ -7,7 +7,6 @@ export const reportsRepository = {
     category?: string;
     status?: string;
     zone?: string;
-    zoneId?: string;
     search?: string;
     from?: string;
     to?: string;
@@ -33,9 +32,7 @@ export const reportsRepository = {
       const backendStatus = statusMap[filters.status];
       if (backendStatus) params.append("status", backendStatus);
     }
-    if (filters.zoneId) {
-      params.append("zoneId", filters.zoneId);
-    } else if (filters.zone && filters.zone !== "Todas") {
+    if (filters.zone && filters.zone !== "Todas") {
       params.append("zone", filters.zone);
     }
     if (filters.search) params.append("search", filters.search);

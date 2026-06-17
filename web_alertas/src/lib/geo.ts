@@ -105,3 +105,48 @@ export function circlePolygon(
   }
   return coords;
 }
+
+/**
+ * Haversine formula to compute distance between two coordinates in km
+ */
+export function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+interface RiskZoneLike {
+  name: string;
+  lng: number;
+  lat: number;
+  radiusKm: number;
+  riskIndex: number;
+}
+
+/**
+ * Find the containing risk zone with the highest risk index at a given point.
+ */
+export function findRiskZoneAtPoint(
+  lng: number,
+  lat: number,
+  zones: RiskZoneLike[],
+): RiskZoneLike | null {
+  let best: RiskZoneLike | null = null;
+  let bestIndex = -1;
+  for (const zone of zones) {
+    const dist = getDistanceKm(lat, lng, zone.lat, zone.lng);
+    if (dist <= zone.radiusKm && zone.riskIndex > bestIndex) {
+      best = zone;
+      bestIndex = zone.riskIndex;
+    }
+  }
+  return best;
+}

@@ -24,11 +24,6 @@ export class FilterReportsQuery {
     @IsString()
     zone?: string;
 
-    @ApiPropertyOptional({ description: 'ID de zona demarcada (polígono en mapa)' })
-    @IsOptional()
-    @IsNumberString()
-    zoneId?: string;
-
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()

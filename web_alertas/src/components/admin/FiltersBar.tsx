@@ -2,7 +2,6 @@ import { Search, SlidersHorizontal, Calendar, X } from "lucide-react";
 import { useFilters, type Filters } from "@/context/FilterContext";
 import { useReports } from "@/hooks/useReports";
 import { useReportTypes } from "@/hooks/useReportTypes";
-import { useZones } from "@/hooks/useZones";
 import { categories } from "@/lib/admin-mock";
 
 interface FiltersBarProps {
@@ -17,7 +16,6 @@ export function FiltersBar({ onClose }: FiltersBarProps) {
 
   // Fetch report types for specific type selector
   const { reportTypes = [] } = useReportTypes();
-  const { zones = [] } = useZones();
 
   // Fetch active filtered reports to show correct total count
   const { reports: filteredReports = [] } = useReports({
@@ -135,29 +133,6 @@ export function FiltersBar({ onClose }: FiltersBarProps) {
           </select>
         </label>
 
-        <label className="block">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Zona demarcada
-          </span>
-          <select
-            value={filters.zoneId}
-            onChange={(e) =>
-              setFilters((prev) => ({
-                ...prev,
-                zoneId: e.target.value,
-                zone: "Todas",
-              }))
-            }
-            className="mt-1.5 w-full h-10 px-3 rounded-lg bg-background border border-border text-sm text-foreground focus:outline-none focus:border-primary appearance-none cursor-pointer"
-          >
-            <option value="">Todas (mapa)</option>
-            {zones.map((z) => (
-              <option key={z.id} value={String(z.id)}>
-                {z.name}
-              </option>
-            ))}
-          </select>
-        </label>
 
         <label className="block">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -169,7 +144,6 @@ export function FiltersBar({ onClose }: FiltersBarProps) {
               setFilters((prev) => ({
                 ...prev,
                 zone: e.target.value,
-                zoneId: "",
               }))
             }
             className="mt-1.5 w-full h-10 px-3 rounded-lg bg-background border border-border text-sm text-foreground focus:outline-none focus:border-primary appearance-none cursor-pointer"

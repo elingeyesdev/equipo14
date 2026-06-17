@@ -18,7 +18,6 @@ import { JwtStrategy } from './guards/strategies/jwt.strategy';
 import { JwtGuard } from './guards/jwt.guard';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CommentsModule } from './providers/comments.module';
-import { ZonesModule } from './providers/zones.module';
 import { RoleGuard } from './guards/roles.guard';
 import { AuthorityProfileModule } from './providers/authority-profile.module';
 import { FacilitiesModule } from './providers/facilities.module';
@@ -50,7 +49,6 @@ import { TrackingsModule } from './providers/trackings.module';
     ImagesModule,
     ReportTypesModule,
     NotificationsModule,
-    ZonesModule,
     FacilitiesModule,
     TrackingsModule,
   ],

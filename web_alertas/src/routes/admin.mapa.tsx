@@ -36,8 +36,6 @@ import {
   attachMapResizeObserver,
   burstMapResize,
 } from "@/lib/mapbox";
-import { useZones } from "@/hooks/useZones";
-import { useMapboxZoneLayers } from "@/hooks/useMapboxZoneLayers";
 import { useMapboxRiskZones, type RiskZone } from "@/hooks/useMapboxRiskZones";
 import { RiskZonesPanel } from "@/components/admin/RiskZonesPanel";
 import { LiveTrackingPanel } from "@/components/admin/LiveTrackingPanel";
@@ -52,10 +50,9 @@ import type { LiveTracking } from "@/domain/tracking";
 import type { EmergencyFacility } from "@/domain/types";
 import { getSession } from "@/api/httpClient";
 import type { Report } from "@/domain/types";
-import { circlePolygon, ZONE_RADIUS_KM, normalizeReportCoordinates } from "@/lib/geo";
+import { normalizeReportCoordinates } from "@/lib/geo";
 import { syncReportMarkersLayer, bringReportMarkersToFront } from "@/lib/mapbox-reports";
 import { filterReportsForMap } from "@/lib/report-visibility";
-import { getZoneColorMap } from "@/lib/mapbox-zones";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/mapa")({
@@ -69,13 +66,6 @@ function MapaPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pickOnMainMap, setPickOnMainMap] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<MapLocation | null>(null);
-  const [demarcateActive, setDemarcateActive] = useState(false);
-  const [saveZoneOpen, setSaveZoneOpen] = useState(false);
-  const [pendingRing, setPendingRing] = useState<number[][] | null>(null);
-  /** Zonas por nombre con área de 2 km visible (un círculo por zona) */
-  const [activeRadiusZones, setActiveRadiusZones] = useState<Set<string>>(new Set());
-  /** Zonas guardadas en BD con su área visible */
-  const [visibleDemarcatedIds, setVisibleDemarcatedIds] = useState<Set<number>>(new Set());
   /** Capa de índice de riesgo (círculos verde → rojo) */
   const [showRiskZones, setShowRiskZones] = useState(true);
   /** Unidades de autoridad en ruta (Firebase RTDB) */
@@ -93,10 +83,7 @@ function MapaPage() {
   const markersRef = useRef<any[]>([]);
   const draftMarkerRef = useRef<any>(null);
   const pickOnMainMapRef = useRef(pickOnMainMap);
-  const demarcateActiveRef = useRef(demarcateActive);
-
   pickOnMainMapRef.current = pickOnMainMap;
-  demarcateActiveRef.current = demarcateActive;
 
   const { filters, activeCount } = useFilters();
   const { reports = [], isLoading, verifyReport, isVerifying, deleteReport, refetch } = useReports({
@@ -104,10 +91,8 @@ function MapaPage() {
     includeDeleted: true,
   });
   const mapReports = useMemo(() => filterReportsForMap(reports), [reports]);
-  const { zones, createZone, deleteZone, isDeleting, refetch: refetchZones } = useZones();
   const { facilities } = useFacilities();
 
-  useMapboxZoneLayers(mapRef, zones, visibleDemarcatedIds, activeRadiusZones, mapReports);
   const { riskZones } = useMapboxRiskZones(mapRef, mapReports, showRiskZones);
   useMapboxFacilities(mapRef, facilities, showFacilities);
 
@@ -162,51 +147,9 @@ function MapaPage() {
     });
   }, []);
 
-  const toggleRadiusZone = (zoneName: string, enabled: boolean) => {
-    setActiveRadiusZones((prev) => {
-      const next = new Set(prev);
-      if (enabled) next.add(zoneName);
-      else next.delete(zoneName);
-      return next;
-    });
-  };
 
-  const toggleDemarcatedZone = (zoneId: number, enabled: boolean) => {
-    setVisibleDemarcatedIds((prev) => {
-      const next = new Set(prev);
-      if (enabled) next.add(zoneId);
-      else next.delete(zoneId);
-      return next;
-    });
-  };
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map?.getLayer?.("zone-radius-fill")) return;
 
-    const onZoneClick = (e: { features?: { properties?: { id?: number; name?: string } }[] }) => {
-      const name = e.features?.[0]?.properties?.name;
-      if (name) {
-        toast.info(`Zona demarcada «${name}»`);
-      }
-    };
-    const onEnter = () => {
-      map.getCanvas().style.cursor = "pointer";
-    };
-    const onLeave = () => {
-      map.getCanvas().style.cursor = "";
-    };
-
-    map.on("click", "zone-radius-fill", onZoneClick);
-    map.on("mouseenter", "zone-radius-fill", onEnter);
-    map.on("mouseleave", "zone-radius-fill", onLeave);
-
-    return () => {
-      map.off("click", "zone-radius-fill", onZoneClick);
-      map.off("mouseenter", "zone-radius-fill", onEnter);
-      map.off("mouseleave", "zone-radius-fill", onLeave);
-    };
-  }, [zones]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -334,14 +277,7 @@ function MapaPage() {
         });
 
         mapInstance.on("click", (e: any) => {
-          if (demarcateActiveRef.current) {
-            const { lng, lat } = e.lngLat;
-            setPendingRing(circlePolygon(lng, lat, ZONE_RADIUS_KM));
-            setSaveZoneOpen(true);
-            setDemarcateActive(false);
-            toast.success(`Área de ${ZONE_RADIUS_KM} km definida. Asigna un nombre.`);
-            return;
-          }
+
           if (!pickOnMainMapRef.current) return;
           const { lng, lat } = e.lngLat;
           const loc = { latitude: lat, longitude: lng };
@@ -512,7 +448,7 @@ function MapaPage() {
     const map = mapRef.current;
     if (!map?.loaded?.()) return;
     bringReportMarkersToFront(map);
-  }, [activeRadiusZones, visibleDemarcatedIds, zones]);
+  }, []);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -713,7 +649,7 @@ function MapaPage() {
           {/* Mapa Real Mapbox 3D */}
           <div
           className={`relative w-full h-[min(72vh,720px)] min-h-[520px] bg-card border rounded-2xl overflow-hidden transition-colors ${
-            pickOnMainMap || demarcateActive
+            pickOnMainMap
               ? "border-primary ring-2 ring-primary/30"
               : "border-border"
           }`}
@@ -721,7 +657,7 @@ function MapaPage() {
           <div
             ref={mapContainerRef}
             className={`absolute inset-0 w-full h-full min-w-0 ${
-              pickOnMainMap || demarcateActive ? "cursor-crosshair" : ""
+              pickOnMainMap ? "cursor-crosshair" : ""
             }`}
           />
 
@@ -829,11 +765,7 @@ function MapaPage() {
                 Clic en el mapa para ubicar la alerta
               </div>
             )}
-            {demarcateActive && (
-              <div className="px-3 py-1.5 rounded-full bg-violet-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
-                Clic en el mapa · área de {ZONE_RADIUS_KM} km
-              </div>
-            )}
+
             {showFacilities && facilities.length > 0 && (
               <div className="px-3 py-1.5 rounded-full bg-indigo-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
                 {facilities.length} instalación(es) de emergencia
@@ -962,21 +894,9 @@ function MapaPage() {
         isAdmin={isAdmin}
       />
 
-      <SaveZoneDialog
-        open={saveZoneOpen}
-        onOpenChange={setSaveZoneOpen}
-        coordinates={pendingRing}
-        onSave={async (name, color, coordinates) => {
-          await createZone({ name, color, coordinates });
-          toast.success(`Zona «${name}» guardada`);
-          setPendingRing(null);
-          refetchZones();
-        }}
-      />
-
       <CreateAlertSheet
         open={createOpen}
-        demarcatedZones={zones}
+        riskZones={riskZones}
         onOpenChange={(open) => {
           setCreateOpen(open);
           if (!open) {
