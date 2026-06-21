@@ -51,6 +51,7 @@ class TrackingProvider extends ChangeNotifier {
   int? _nearestStationId;
   LatLng? _nearestStationCoords;
   int? _dispatchId;
+  String? _profileType;
 
   // Subscriptions & Timers
   StreamSubscription<PositionWithBearing>? _positionSubscription;
@@ -74,6 +75,7 @@ class TrackingProvider extends ChangeNotifier {
   int? get nearestStationId => _nearestStationId;
   LatLng? get nearestStationCoords => _nearestStationCoords;
   int? get dispatchId => _dispatchId;
+  String? get profileType => _profileType;
 
   static const double _arrivalThresholdMeters = 20.0;
 
@@ -191,6 +193,7 @@ class TrackingProvider extends ChangeNotifier {
       'description': _incidentType ?? '',
       'route': routeCoordinates,
       'status': status,
+      'profileType': _profileType,
     });
 
     if (routeCoordinates.length >= 2 &&
@@ -215,6 +218,7 @@ class TrackingProvider extends ChangeNotifier {
     int? reportId,
     int? nearestStationId,
     LatLng? nearestStationCoords,
+    String? profileType,
   }) async {
     if (_isFollowingRoute) {
       await stopRouteTracking();
@@ -228,6 +232,7 @@ class TrackingProvider extends ChangeNotifier {
     _userId = userId;
     _nearestStationId = nearestStationId;
     _nearestStationCoords = nearestStationCoords;
+    _profileType = profileType;
     _hasArrived = false;
     _routePoints = [];
     _locationError = null;
@@ -292,6 +297,7 @@ class TrackingProvider extends ChangeNotifier {
     int? reportId,
     int? nearestStationId,
     LatLng? nearestStationCoords,
+    String? profileType,
   }) async {
     if (_isFollowingRoute) return;
 
@@ -305,6 +311,7 @@ class TrackingProvider extends ChangeNotifier {
     _reportId = reportId ?? _reportId;
     _nearestStationId = nearestStationId ?? _nearestStationId;
     _nearestStationCoords = nearestStationCoords ?? _nearestStationCoords;
+    _profileType = profileType;
     _isFollowingRoute = true;
     _hasArrived = false;
     if (!keepExistingRoute) {

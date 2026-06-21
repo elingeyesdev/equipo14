@@ -1,6 +1,8 @@
 import 'package:app_alertas/models/user_model.dart';
 import 'package:app_alertas/services/auth_service.dart';
 import 'package:app_alertas/services/secure_storage_service.dart';
+import 'package:app_alertas/services/reports_socket_service.dart';
+import 'package:app_alertas/services/tracking_service.dart';
 
 class AuthRepository {
 
@@ -73,6 +75,8 @@ class AuthRepository {
   Future<void> logout() async {
     await _authService.logout();
     await _storage.clearTokens();
+    ReportsSocketService().disconnect();
+    TrackingService().disconnect();
   }
 
   Future<bool> isLoggedIn() async {

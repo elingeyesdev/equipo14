@@ -31,6 +31,20 @@ export class TrackingsService {
         }
     }
 
+    async getTracking(userId: string): Promise<any | null> {
+        try {
+            const valStr = await this.redisClient.hGet(this.redisKey, userId);
+            if (!valStr) return null;
+            return {
+                id: userId,
+                ...JSON.parse(valStr),
+            };
+        } catch (error) {
+            this.logger.error(`Error al obtener el tracking para el usuario ${userId}: ${error.message}`);
+            return null;
+        }
+    }
+
     async getAllTrackings(): Promise<any[]> {
         try {
             const allTrackings = await this.redisClient.hGetAll(this.redisKey);

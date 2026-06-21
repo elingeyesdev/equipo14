@@ -86,14 +86,24 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () async {
-                      final alertVM = context.read<AlertViewModel>();
-                      await auth.logout();
-                      alertVM.clear();
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
 
-                      if (context.mounted) {
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
+                      try {
+                        final alertVM = context.read<AlertViewModel>();
+                        await auth.logout();
+                        alertVM.clear();
+                      } catch (e) {
+                        debugPrint('Error durring logout: $e');
+                      } finally {
+                        if (context.mounted) {
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        }
                       }
                     },
                     child: const Padding(

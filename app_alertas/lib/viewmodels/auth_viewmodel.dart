@@ -3,6 +3,8 @@ import 'package:app_alertas/models/user_model.dart';
 import 'package:app_alertas/repositories/auth_repository.dart';
 import 'package:app_alertas/services/auth_service.dart';
 import 'package:app_alertas/services/secure_storage_service.dart';
+import 'package:app_alertas/services/reports_socket_service.dart';
+import 'package:app_alertas/services/tracking_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repository;
@@ -36,6 +38,8 @@ class AuthViewModel extends ChangeNotifier {
         final token = await _repository.refreshSession();
         if (token != null) {
           _user = await _repository.getProfile();
+          ReportsSocketService().connect();
+          TrackingService().connect();
         } else {
           await logout();
         }
@@ -62,6 +66,8 @@ class AuthViewModel extends ChangeNotifier {
         password: password,
       );
       _user = loggedUser;
+      ReportsSocketService().connect();
+      TrackingService().connect();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -87,6 +93,8 @@ class AuthViewModel extends ChangeNotifier {
         roleId: roleId,
       );
       _user = registeredUser;
+      ReportsSocketService().connect();
+      TrackingService().connect();
     } finally {
       _isLoading = false;
       notifyListeners();

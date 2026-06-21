@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/icon/avispate.webp',
+                                'assets/icon/avispame.png',
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -104,12 +104,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 48),
 
-                        // Campo de teléfono/usuario
+                        // Campo de teléfono
                         TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                           decoration: const InputDecoration(
-                            hintText: 'Teléfono o Usuario',
+                            hintText: ' Teléfono',
                             prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
                           ),
                           validator: (value) {

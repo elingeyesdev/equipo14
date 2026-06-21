@@ -39,7 +39,7 @@ export class ReportsService {
         }
 
         const expires = new Date();
-        expires.setHours(expires.getHours() + 24);
+        expires.setHours(expires.getHours() + 2);
 
         const createReport = createReportRequest.toReport();
 

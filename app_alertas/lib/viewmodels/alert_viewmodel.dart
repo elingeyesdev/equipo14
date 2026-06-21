@@ -1,13 +1,24 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:app_alertas/models/alert_model.dart';
 import 'package:app_alertas/repositories/alert_repository.dart';
+import 'package:app_alertas/services/reports_socket_service.dart';
 
 class AlertViewModel extends ChangeNotifier {
   final AlertRepository _repository;
+  StreamSubscription? _reportsSub;
 
   AlertViewModel({AlertRepository? repository})
-      : _repository = repository ?? AlertRepository();
+      : _repository = repository ?? AlertRepository() {
+    _initSocketListener();
+  }
+
+  void _initSocketListener() {
+    _reportsSub = ReportsSocketService().streamNewReports().listen((newAlert) {
+      addAlertLocally(newAlert);
+    });
+  }
 
   List<AlertModel> _alerts = [];
   List<AlertModel> get alerts => _alerts;
@@ -220,5 +231,11 @@ class AlertViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _reportsSub?.cancel();
+    super.dispose();
   }
 }

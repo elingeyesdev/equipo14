@@ -14,7 +14,6 @@ import 'package:latlong2/latlong.dart';
 import 'dart:math' as math;
 import 'package:app_alertas/views/create_alert_screen.dart';
 import 'package:app_alertas/views/main_navigation_screen.dart';
-import 'package:app_alertas/services/reports_socket_service.dart';
 import 'dart:async';
 
 class RecentActivityScreen extends StatefulWidget {
@@ -32,29 +31,16 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
   final _locationService = const LocationService();
   int _currentLoadId = 0;
 
-  // Reports Socket
-  final _reportsSocketService = ReportsSocketService();
-  StreamSubscription? _reportsSub;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAlerts();
     });
-
-    _reportsSub = _reportsSocketService.streamNewReports().listen((newAlert) {
-      if (mounted) {
-        final alertVM = context.read<AlertViewModel>();
-        alertVM.addAlertLocally(newAlert);
-      }
-    });
   }
 
   @override
   void dispose() {
-    _reportsSub?.cancel();
-    _reportsSocketService.dispose();
     super.dispose();
   }
 

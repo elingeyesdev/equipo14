@@ -36,9 +36,7 @@ export class TrackingsGateway implements OnGatewayConnection, OnGatewayDisconnec
         if (userId) {
             await this.trackingsService.deleteTracking(userId);
             this.socketUserMap.delete(client.id);
-            // transmitir la lista de trackings actualizada
-            const trackings = await this.trackingsService.getAllTrackings();
-            this.server.emit('trackings', trackings);
+            this.server.emit('tracking_stopped', { userId });
             console.log(`Limpieza realizada para el tracking del usuario ${userId} al desconectarse`);
         }
     }
@@ -66,8 +64,10 @@ export class TrackingsGateway implements OnGatewayConnection, OnGatewayDisconnec
 
         await this.trackingsService.saveTracking(userId, trackingData);
 
-        const trackings = await this.trackingsService.getAllTrackings();
-        this.server.emit('trackings', trackings);
+        const tracking = await this.trackingsService.getTracking(userId);
+        if (tracking) {
+            this.server.emit('tracking_started', tracking);
+        }
     }
 
     @SubscribeMessage('stopTracking')
@@ -85,7 +85,6 @@ export class TrackingsGateway implements OnGatewayConnection, OnGatewayDisconnec
         this.socketUserMap.delete(client.id);
         await this.trackingsService.deleteTracking(userId);
 
-        const trackings = await this.trackingsService.getAllTrackings();
-        this.server.emit('trackings', trackings);
+        this.server.emit('tracking_stopped', { userId });
     }
 }

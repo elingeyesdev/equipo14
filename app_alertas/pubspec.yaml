@@ -69,9 +69,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/icon/avispate.webp
+  image_path: assets/icon/avispame.png
   adaptive_icon_background: "#262624"
-  adaptive_icon_foreground: assets/icon/avispate.webp
+  adaptive_icon_foreground: assets/icon/avispame.png
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

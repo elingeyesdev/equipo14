@@ -20,7 +20,6 @@ import 'package:app_alertas/viewmodels/risk_zone_provider.dart';
 import 'package:app_alertas/views/widgets/risk_zone_overlay.dart';
 import 'package:app_alertas/views/alert_card.dart';
 import 'package:app_alertas/services/tracking_service.dart';
-import 'package:app_alertas/services/reports_socket_service.dart';
 import 'package:app_alertas/services/emergency_station_service.dart';
 import 'package:app_alertas/services/route_corridor_monitor_service.dart';
 import 'package:app_alertas/core/emergency_station_utils.dart';
@@ -60,8 +59,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   StreamSubscription? _trackingSub;
 
   // Reports Socket
-  final _reportsSocketService = ReportsSocketService();
-  StreamSubscription? _reportsSub;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
   List<Map<String, dynamic>> _activeVehicles = [];
   String? _selectedVehicleId;
@@ -77,7 +74,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
   // Animación de pulso para vehículos de tracking
   AnimationController? _pulseController;
-  Animation<double>? _pulseAnimation;
   Animation<double>? _userCenterPulseAnimation;
 
   void _onTrackingProviderUpdate() {
@@ -107,6 +103,17 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     } else {
       _dialogShown = false;
     }
+  }
+
+  void _onAlertsChanged() {
+    if (!mounted) return;
+    final alertVM = context.read<AlertViewModel>();
+    setState(() {
+      _alerts = alertVM.alerts;
+    });
+    context.read<RiskZoneProvider>().updateFromAlerts(
+      filterAlertsForMap(alertVM.alerts),
+    );
   }
 
   void _animateBearing(double newBearing) {
@@ -151,7 +158,9 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   }) async {
     final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
 
-    final userId = context.read<AuthViewModel>().user?.id;
+    final user = context.read<AuthViewModel>().user;
+    final userId = user?.id;
+    final profileType = user?.authorityProfileType;
     if (userId == null || userId.isEmpty) {
       _showRouteMessage('Sesión inválida. Vuelve a iniciar sesión como autoridad.');
       return;
@@ -173,6 +182,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       reportId: reportId,
       nearestStationId: nearestStationId,
       nearestStationCoords: nearestStationCoords,
+      profileType: profileType,
     );
 
     if (!mounted) return;
@@ -233,7 +243,9 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     int? reportId,
   }) async {
     final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
-    final userId = context.read<AuthViewModel>().user?.id ?? 'unknown';
+    final user = context.read<AuthViewModel>().user;
+    final userId = user?.id ?? 'unknown';
+    final profileType = user?.authorityProfileType;
 
     final isSameDestination = trackingProvider.isSameIncident(lat, lng);
 
@@ -260,6 +272,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         reportId: reportId,
         nearestStationId: nearestStationId,
         nearestStationCoords: nearestStationCoords,
+        profileType: profileType,
       );
       if (trackingProvider.currentLocation != null) {
         mapController.move(trackingProvider.currentLocation!, 17);
@@ -504,12 +517,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    _pulseAnimation = Tween<double>(begin: 0.82, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _pulseController!,
-        curve: Curves.easeInOut,
-      ),
-    );
     _userCenterPulseAnimation = Tween<double>(begin: 14.0, end: 18.0).animate(
       CurvedAnimation(
         parent: _pulseController!,
@@ -568,22 +575,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       }
     });
 
-    _reportsSub = _reportsSocketService.streamNewReports().listen((newAlert) {
-      if (mounted) {
-        final alertVM = context.read<AlertViewModel>();
-        alertVM.addAlertLocally(newAlert);
-        
-        final exists = _alerts.any((a) => a.id == newAlert.id);
-        if (!exists) {
-          setState(() {
-            _alerts = [newAlert, ..._alerts];
-          });
-          context.read<RiskZoneProvider>().updateFromAlerts(
-            filterAlertsForMap(_alerts),
-          );
-        }
-      }
-    });
+    context.read<AlertViewModel>().addListener(_onAlertsChanged);
   }
 
   @override
@@ -593,10 +585,11 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
       trackingProvider.removeListener(_onTrackingProviderUpdate);
     } catch (_) {}
+    try {
+      context.read<AlertViewModel>().removeListener(_onAlertsChanged);
+    } catch (_) {}
     _serviceStatusSub?.cancel();
     _trackingSub?.cancel();
-    _reportsSub?.cancel();
-    _reportsSocketService.dispose();
     unawaited(RouteCorridorMonitorService.instance.stop());
     _vehicleAnimController?.dispose();
     _pulseController?.dispose();
@@ -849,40 +842,34 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     for (final vehicle in _activeVehicles) {
       final lat = vehicle['latitude'] as double;
       final lng = vehicle['longitude'] as double;
-      final type = vehicle['type'] as String? ?? 'Desconocido';
       final isSelected = vehicle['id'] == _selectedVehicleId;
+      final profileType = vehicle['profileType'] as String?;
 
       markers.add(
         Marker(
           point: LatLng(lat, lng),
-          width: 50,
-          height: 50,
-          child: ScaleTransition(
-            scale: _pulseAnimation ?? const AlwaysStoppedAnimation(1.0),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedVehicleId = vehicle['id'] as String;
-                });
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.green : const Color(0xFF3B82F6),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  _vehicleIconByType(type),
-                  color: Colors.white,
-                  size: 22,
-                ),
+          width: 48,
+          height: 48,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedVehicleId = vehicle['id'] as String;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: isSelected
+                  ? BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.green.withValues(alpha: 0.25),
+                      border: Border.all(color: Colors.green, width: 2),
+                    )
+                  : null,
+              child: Image.asset(
+                _vehicleAssetByProfileType(profileType),
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
               ),
             ),
           ),
@@ -979,6 +966,19 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         return 'assets/icon/hospital.png';
       default:
         return 'assets/icon/policia.png';
+    }
+  }
+
+  String _vehicleAssetByProfileType(String? profileType) {
+    switch (profileType?.toLowerCase()) {
+      case 'policia':
+        return 'assets/icon/coche-de-policia.png';
+      case 'bombero':
+        return 'assets/icon/camion-de-bomberos.png';
+      case 'paramedico':
+        return 'assets/icon/ambulancia.png';
+      default:
+        return 'assets/icon/coche-de-policia.png';
     }
   }
 
@@ -1314,20 +1314,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       return Icons.medical_services_rounded;
     }
     return Icons.warning_amber_rounded;
-  }
-
-  IconData _vehicleIconByType(String type) {
-    final t = type.toLowerCase();
-    if (t.contains('polic')) return Icons.local_police_rounded;
-    if (t.contains('medic') ||
-        t.contains('salud') ||
-        t.contains('hospital')) {
-      return Icons.local_hospital_rounded;
-    }
-    if (t.contains('bombero') || t.contains('incendio')) {
-      return Icons.local_fire_department_rounded;
-    }
-    return Icons.directions_car_rounded;
   }
 
   Color _colorByType(String type) {
