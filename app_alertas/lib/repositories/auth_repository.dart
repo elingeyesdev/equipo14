@@ -117,4 +117,28 @@ class AuthRepository {
   Future<UserModel> getProfile() async {
     return await _authService.getMe();
   }
+
+  Future<UserModel> updateProfile({
+    required String id,
+    required String firstName,
+    required String lastName,
+  }) async {
+    return await _authService.updateProfile(
+      id: id,
+      firstName: firstName,
+      lastName: lastName,
+    );
+  }
+
+  Future<void> changePassword({
+    required String id,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _authService.changePassword(
+      id: id,
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+  }
 }

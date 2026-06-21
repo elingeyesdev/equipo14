@@ -142,8 +142,8 @@ class _LocationPickerMapState extends State<LocationPickerMap> with TickerProvid
                 ),
               ),
               children: [
-                // Capa de tiles Mapbox dark
-                MapboxConfig.darkTileLayer(),
+                // Capa de tiles Mapbox adaptiva
+                MapboxConfig.tileLayer(context),
 
                 // Círculo del área permitida (100 m)
                 CircleLayer(
@@ -241,18 +241,29 @@ class _LocationPickerMapState extends State<LocationPickerMap> with TickerProvid
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF262624).withValues(alpha: 0.88),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF262624).withValues(alpha: 0.88)
+                      : Colors.white.withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(10),
+                  boxShadow: Theme.of(context).brightness == Brightness.light
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : null,
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.touch_app_rounded, color: Color(0xFFAF6D58), size: 12),
-                    SizedBox(width: 8),
+                    const Icon(Icons.touch_app_rounded, color: Color(0xFFAF6D58), size: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Toca el mapa para ubicar el incidente (máx. 100 m)',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 10,
                         ),
                       ),
@@ -305,7 +316,8 @@ class _LocationPickerMapState extends State<LocationPickerMap> with TickerProvid
               right: 10,
               child: FloatingActionButton.small(
                 heroTag: 'center_picker_location_btn',
-                backgroundColor: const Color(0xFF30302E),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
                 onPressed: () {
                   _mapController.move(widget.userLocation, 17.5);
                 },
@@ -321,8 +333,8 @@ class _LocationPickerMapState extends State<LocationPickerMap> with TickerProvid
                       child: Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.onSurface,
                           shape: BoxShape.circle,
                         ),
                       ),

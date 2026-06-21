@@ -113,4 +113,45 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> updateProfile({
+    required String firstName,
+    required String lastName,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      if (_user == null) return;
+      final updatedUser = await _repository.updateProfile(
+        id: _user!.id,
+        firstName: firstName,
+        lastName: lastName,
+      );
+      _user = updatedUser;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      if (_user == null) return;
+      await _repository.changePassword(
+        id: _user!.id,
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

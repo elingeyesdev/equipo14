@@ -69,11 +69,14 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Widget _buildNavItem(int index, IconData activeIcon, IconData inactiveIcon, String label, {bool isCoffee = false}) {
     final isSelected = currentIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final Color itemColor;
     if (isCoffee) {
       itemColor = isSelected ? const Color(0xFFB45F4B) : const Color(0xFFB45F4B).withValues(alpha: 0.65);
     } else {
-      itemColor = isSelected ? Colors.white : Colors.white.withValues(alpha: 0.38);
+      itemColor = isSelected
+          ? (isDark ? Colors.white : Colors.black87)
+          : (isDark ? Colors.white.withValues(alpha: 0.38) : Colors.black.withValues(alpha: 0.38));
     }
 
     return Expanded(
@@ -145,10 +148,14 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
       bottomNavigationBar: Container(
         height: 60 + MediaQuery.paddingOf(context).bottom,
         decoration: BoxDecoration(
-          color: const Color(0xFF262624),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF262624)
+              : Colors.white,
           border: Border(
             top: BorderSide(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.12),
               width: 0.5,
             ),
           ),

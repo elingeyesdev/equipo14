@@ -22,11 +22,11 @@ class RiskZoneOverlay extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF30302E).withValues(alpha: 0.94),
+              color: Theme.of(context).cardTheme.color?.withValues(alpha: 0.94) ?? const Color(0xFF30302E).withValues(alpha: 0.94),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.08),
                   blurRadius: 8,
                   spreadRadius: 1,
                   offset: const Offset(0, 4),
@@ -39,8 +39,8 @@ class RiskZoneOverlay extends StatelessWidget {
               children: [
                 Text(
                   pct != null ? 'Riesgo · $pct% ($level)' : 'Zonas de riesgo',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -77,11 +77,11 @@ class RiskZoneOverlay extends StatelessWidget {
                   ),
                 ] else
                   const SizedBox(height: 4),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Bajo', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w600)),
-                    Text('Alto', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w600)),
+                    Text('Bajo', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.w600)),
+                    Text('Alto', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -96,12 +96,12 @@ class RiskZoneOverlay extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: provider.enabled
                               ? const Color(0xFF3C8C6E)
-                              : Colors.white.withValues(alpha: 0.06),
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
                             color: provider.enabled
                                 ? const Color(0xFF3C8C6E)
-                                : Colors.white.withValues(alpha: 0.25),
+                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
                             width: 1.5,
                           ),
                         ),
@@ -113,7 +113,7 @@ class RiskZoneOverlay extends StatelessWidget {
                       Text(
                         provider.enabled ? 'Zonas activas' : 'Zonas desactivadas',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),

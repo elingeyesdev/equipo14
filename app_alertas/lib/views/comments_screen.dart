@@ -176,11 +176,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
         children: [
           CircleAvatar(
             radius: isReply ? 14 : 18,
-            backgroundColor: Colors.grey.shade800,
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade800
+                : Colors.grey.shade300,
             child: Text(
               initials,
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: isReply ? 10 : 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -195,8 +197,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   children: [
                     Text(
                       fullName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -205,7 +207,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     Text(
                       _formatTimeAgo(comment.createdAt),
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                     ),
@@ -214,8 +216,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   comment.text,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                   ),
                 ),
@@ -228,7 +230,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       child: Text(
                         'Responder',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           fontSize: 13,
                           fontWeight: FontWeight.normal,
                         ),
@@ -247,13 +249,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           Container(
                             width: 32,
                             height: 1,
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'ver ${comment.repliesCount} respuestas más',
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.5),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                               fontSize: 13,
                               fontWeight: FontWeight.normal,
                             ),
@@ -281,7 +283,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
         : commentVM.comments;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF262624),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -293,17 +294,17 @@ class _CommentsScreenState extends State<CommentsScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     "Respuestas",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.normal,
                       letterSpacing: -0.3,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -321,7 +322,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           child: Center(
                             child: Text(
                               'No hay respuestas aún.',
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                             ),
                           ),
                         ),
@@ -373,13 +374,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
                                                   Container(
                                                     width: 32,
                                                     height: 1,
-                                                    color: Colors.white.withValues(alpha: 0.2),
+                                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Text(
                                                     'ocultar respuestas',
                                                     style: TextStyle(
-                                                      color: Colors.white.withValues(alpha: 0.5),
+                                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                                       fontSize: 13,
                                                       fontWeight: FontWeight.normal,
                                                     ),
@@ -399,9 +400,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
           ),
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1C),
+              color: Theme.of(context).cardTheme.color ?? const Color(0xFF1E1E1C),
               border: Border(
-                top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                top: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.1),
+                ),
               ),
             ),
             child: SafeArea(
@@ -413,20 +418,30 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.03),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.03)
+                            : Colors.black.withValues(alpha: 0.03),
                         border: Border(
-                          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+                          bottom: BorderSide(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : Colors.black.withValues(alpha: 0.05),
+                          ),
                         ),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.reply_rounded, color: Colors.white.withValues(alpha: 0.5), size: 16),
+                          Icon(
+                            Icons.reply_rounded,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            size: 16,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Respondiendo a: ${_replyingToCommentText ?? ""}',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 fontSize: 13,
                               ),
                               maxLines: 1,
@@ -436,7 +451,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: _cancelReply,
-                            child: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.5), size: 18),
+                            child: Icon(
+                              Icons.close,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              size: 18,
+                            ),
                           ),
                         ],
                       ),
@@ -450,7 +469,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: _focusNode.hasFocus 
@@ -462,7 +483,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         child: TextField(
                           focusNode: _focusNode,
                           controller: _commentController,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                           decoration: InputDecoration(
                             filled: false,
                             fillColor: Colors.transparent,
@@ -472,7 +493,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                             disabledBorder: InputBorder.none,
                             errorBorder: InputBorder.none,
                             hintText: 'Añadir una respuesta...',
-                            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                            hintStyle: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           ),
@@ -482,19 +505,19 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     ),
                     const SizedBox(width: 8),
                     _isPosting
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
+                        ? Padding(
+                            padding: const EdgeInsets.all(12),
                             child: SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: Theme.of(context).primaryColor,
                               ),
                             ),
                           )
                         : IconButton(
-                            icon: const Icon(Icons.send_rounded, color: Colors.white),
+                            icon: Icon(Icons.send_rounded, color: Theme.of(context).primaryColor),
                             onPressed: _postComment,
                           ),
                   ],

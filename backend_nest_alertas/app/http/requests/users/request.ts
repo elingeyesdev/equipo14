@@ -130,3 +130,16 @@ export class UpdateLocationRequest {
     @IsNumber()
     longitude: number;
 }
+
+export class UpdatePasswordRequest {
+    @ApiProperty()
+    @IsString()
+    current_password: string;
+
+    @ApiProperty()
+    @IsString()
+    @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
+    @MaxLength(20, { message: 'La contraseña no debe exceder los 20 caracteres' })
+    @Matches(/^\S+$/, { message: 'La contraseña no debe contener espacios' })
+    new_password: string;
+}

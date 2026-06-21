@@ -74,19 +74,19 @@ class ProfilePageState extends State<ProfilePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             "Perfil",
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.normal,
                               letterSpacing: -0.3,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.menu,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                               size: 28,
                             ),
                             padding: EdgeInsets.zero,
@@ -109,15 +109,21 @@ class ProfilePageState extends State<ProfilePage> {
                           Container(
                             width: 80,
                             height: 80,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Color(0xFF30302E),
+                              color: Theme.of(context).cardTheme.color ?? const Color(0xFF30302E),
+                              border: Border.all(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withOpacity(0.05)
+                                    : Colors.black.withOpacity(0.05),
+                                width: 1,
+                              ),
                             ),
                             child: Center(
                               child: Text(
                                 initials,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 28,
                                   fontWeight: FontWeight.w300,
                                   letterSpacing: 1.5,
@@ -132,30 +138,19 @@ class ProfilePageState extends State<ProfilePage> {
                               children: [
                                 Text(
                                   fullName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     _StatItem(
                                       value: myAlerts.length.toString(),
                                       label: 'Reportes',
                                     ),
-                                    _StatItem(
-                                      value: user.phone,
-                                      label: 'Teléfono',
-                                    ),
-                                    if (user.roleName != null)
-                                      _StatItem(
-                                        value: user.roleName!,
-                                        label: 'Rol',
-                                      ),
                                   ],
                                 ),
                               ],
@@ -166,12 +161,12 @@ class ProfilePageState extends State<ProfilePage> {
 
                       const SizedBox(height: 56),
 
-                      const Text(
+                      Text(
                         "Mis Reportes",
                         style: TextStyle(
                           fontSize: 20,
                           letterSpacing: -0.3,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -208,10 +203,15 @@ class ProfilePageState extends State<ProfilePage> {
                   padding: const EdgeInsets.only(bottom: 24),
                   sliver: Skeletonizer.sliver(
                     enabled: loading && alertVM.myAlerts.isEmpty,
-                    effect: const ShimmerEffect(
-                      baseColor: Color(0xFF2C2C2A),
-                      highlightColor: Color(0xFF30302E),
-                    ),
+                    effect: Theme.of(context).brightness == Brightness.dark
+                        ? const ShimmerEffect(
+                            baseColor: Color(0xFF2C2C2A),
+                            highlightColor: Color(0xFF30302E),
+                          )
+                        : ShimmerEffect(
+                            baseColor: Colors.grey.shade300,
+                            highlightColor: Colors.grey.shade100,
+                          ),
                     child: SliverGrid(
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -266,8 +266,8 @@ class ProfilePageState extends State<ProfilePage> {
                             fit: StackFit.expand,
                             children: [
                               Container(
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF30302E),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).cardTheme.color ?? const Color(0xFF30302E),
                                 ),
                                 clipBehavior: Clip.hardEdge,
                                 child: Column(
@@ -286,10 +286,12 @@ class ProfilePageState extends State<ProfilePage> {
                                                     ),
                                                   ),
                                             )
-                                          : const Center(
+                                          : Center(
                                               child: Icon(
                                                 Icons.warning_amber_rounded,
-                                                color: Colors.white54,
+                                                color: Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white54
+                                                    : Colors.black54,
                                                 size: 32,
                                               ),
                                             ),
@@ -299,14 +301,18 @@ class ProfilePageState extends State<ProfilePage> {
                                         vertical: 6,
                                         horizontal: 2,
                                       ),
-                                      color: const Color(0xFF2C2C2A),
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? const Color(0xFF2C2C2A)
+                                          : Colors.grey.shade100,
                                       child: Text(
                                         alert.type.toUpperCase(),
                                         textAlign: TextAlign.center,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white70,
+                                        style: TextStyle(
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white70
+                                              : Colors.black87,
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 0.5,
@@ -350,8 +356,8 @@ class _StatItem extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),

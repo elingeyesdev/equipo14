@@ -44,28 +44,28 @@ class EmergencyServicesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Scaffold(
-      backgroundColor: const Color(0xFF262624),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 20, 24, 0),
+              padding: const EdgeInsets.fromLTRB(12, 2, 24, 0),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: Icon(Icons.arrow_back, color: onSurface),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     "Servicios de Emergencia",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.normal,
                       letterSpacing: -0.3,
-                      color: Colors.white,
+                      color: onSurface,
                     ),
                   ),
                 ],
@@ -104,7 +104,9 @@ class EmergencyServicesScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               itemCount: _services.length,
               separatorBuilder: (context, index) => Divider(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.08),
                 height: 24,
                 thickness: 0.5,
               ),
@@ -173,8 +175,8 @@ class _EmergencyCard extends StatelessWidget {
               children: [
                 Text(
                   service.title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -183,7 +185,7 @@ class _EmergencyCard extends StatelessWidget {
                 Text(
                   service.subtitle,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     fontSize: 12.5,
                   ),
                 ),

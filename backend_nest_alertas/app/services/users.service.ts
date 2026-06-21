@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt'
 
 import { UserResponse } from '../http/requests/users/response';
-import { CreateAuthorityUserRequest, CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from 'app/http/requests/users/request';
+import { CreateAuthorityUserRequest, CreateUserRequest, UpdateLocationRequest, UpdateUserRequest, UpdatePasswordRequest } from 'app/http/requests/users/request';
 import { Role } from 'app/models/role.entity';
 import { AuthorityProfileService } from './authority-profile.service';
 
@@ -86,7 +86,10 @@ export class UsersService {
     }
 
     async update(id: string, updateUserDto: UpdateUserRequest){
-        const user = await this.usersRepository.findOneBy({ id });
+        const user = await this.usersRepository.findOne({
+            where: { id },
+            relations: ['role', 'authority_profile'],
+        });
         
         if(!user){
             throw new NotFoundException(`El user con ID ${id} no se encontro`)
@@ -119,6 +122,27 @@ export class UsersService {
         
         await this.usersRepository.save(user);
         return { message: "Ubicación actualizada correctamente" };
+    }
+
+    async updatePassword(id: string, updatePasswordDto: UpdatePasswordRequest) {
+        const user = await this.usersRepository.findOne({
+            where: { id }
+        });
+
+        if(!user){
+            throw new NotFoundException(`El user con ID ${id} no se encontro`)
+        }
+
+        const isMatch = await bcrypt.compare(updatePasswordDto.current_password, user.password);
+        if(!isMatch) {
+            throw new BadRequestException("La contraseña actual es incorrecta");
+        }
+
+        const hashPassword = await bcrypt.hash(updatePasswordDto.new_password, 12);
+        user.password = hashPassword;
+        await this.usersRepository.save(user);
+
+        return { message: "contrasena actualizada correctamente" };
     }
 
     async remove(id: string){

@@ -83,14 +83,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        const Text(
+                        Text(
                           'Bienvenido',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -1,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 8),

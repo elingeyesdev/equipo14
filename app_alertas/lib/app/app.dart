@@ -14,6 +14,8 @@ import 'package:app_alertas/viewmodels/comment_viewmodel.dart';
 import 'package:app_alertas/viewmodels/tracking_provider.dart';
 import 'package:app_alertas/viewmodels/risk_zone_provider.dart';
 
+import 'package:app_alertas/viewmodels/theme_viewmodel.dart';
+
 /// Raíz de la app (MaterialApp + tema + pantalla inicial).
 class App extends StatefulWidget {
   const App({super.key});
@@ -86,6 +88,9 @@ class _AppState extends State<App> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ThemeViewModel>(
+          create: (_) => ThemeViewModel(),
+        ),
         ChangeNotifierProvider<AuthViewModel>.value(value: _authProvider),
         ChangeNotifierProvider<AlertTypeViewModel>(
           create: (_) => AlertTypeViewModel()..fetchAlertTypes(),
@@ -103,12 +108,14 @@ class _AppState extends State<App> {
           create: (_) => RiskZoneProvider()..loadPreference(),
         ),
       ],
-      child: Consumer<AuthViewModel>(
-        builder: (context, auth, _) {
+      child: Consumer2<AuthViewModel, ThemeViewModel>(
+        builder: (context, auth, themeVM, _) {
           return MaterialApp(
             navigatorKey: App.navigatorKey,
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.darkTheme,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeVM.themeMode,
             home: !auth.isInitialized
                 ? const Scaffold(
                     body: Center(child: CircularProgressIndicator()),

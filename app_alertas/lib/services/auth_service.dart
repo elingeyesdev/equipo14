@@ -77,6 +77,21 @@ class AuthService {
     return UserModel.fromJson(response.data);
   }
 
+  Future<UserModel> updateProfile({
+    required String id,
+    required String firstName,
+    required String lastName,
+  }) async {
+    final response = await _dio.patch(
+      '/users/$id',
+      data: {
+        'first_name': firstName,
+        'last_name': lastName,
+      },
+    );
+    return UserModel.fromJson(response.data);
+  }
+
   Future<void> logout() async {
     try {
       // Llamada al backend para invalidar la sesión
@@ -84,5 +99,19 @@ class AuthService {
     } catch (_) {
       // Se ignora el error de red para asegurar que se borre localmente
     }
+  }
+
+  Future<void> changePassword({
+    required String id,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _dio.patch(
+      '/users/$id/password',
+      data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      },
+    );
   }
 }

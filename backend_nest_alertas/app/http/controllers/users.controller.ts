@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { UsersService } from '../../services/users.service';
-import { CreateAuthorityUserRequest, CreateUserRequest, UpdateLocationRequest, UpdateUserRequest } from '../requests/users/request';
+import { CreateAuthorityUserRequest, CreateUserRequest, UpdateLocationRequest, UpdateUserRequest, UpdatePasswordRequest } from '../requests/users/request';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from 'app/decorators/roles.decorator';
 import { UserResponse } from '../requests/users/response';
@@ -39,6 +39,11 @@ export class UsersController {
     @Patch(':id/location')
     updateLocation(@Param('id') id: string, @Body() body: UpdateLocationRequest) {
         return this.usersService.updateLocation(id, body);
+    }
+
+    @Patch(':id/password')
+    updatePassword(@Param('id') id: string, @Body() updatePasswordDto: UpdatePasswordRequest) {
+        return this.usersService.updatePassword(id, updatePasswordDto);
     }
 
     @Delete(':id')

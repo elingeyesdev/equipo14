@@ -156,6 +156,7 @@ class _AlertCardState extends State<AlertCard> {
   Widget build(BuildContext context) {
     final color = _alertColor(widget.alert.type);
     final isAuthority = context.read<AuthViewModel>().user?.roleId == 2;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     // Contribuciones: tamaño de la lista de imágenes menos 1 (la del creador)
     final contributions = widget.alert.images.isEmpty ? 0 : widget.alert.images.length - 1;
@@ -228,8 +229,8 @@ class _AlertCardState extends State<AlertCard> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               widget.alert.zone ?? 'Zona no especificada',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.3,
@@ -245,7 +246,7 @@ class _AlertCardState extends State<AlertCard> {
             child: Text(
               widget.alert.description,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.75),
+                color: onSurface.withValues(alpha: 0.75),
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -261,7 +262,7 @@ class _AlertCardState extends State<AlertCard> {
               _timeAgo(widget.alert.createdAt) +
                   (contributions > 0 ? '  •  contribuciones: $contributions' : ''),
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
+                color: onSurface.withValues(alpha: 0.6),
                 fontSize: 10,
                 fontWeight: FontWeight.normal,
               ),
@@ -305,14 +306,14 @@ class _AlertCardState extends State<AlertCard> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.chat, color: Colors.white, size: 16),
-                      label: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      icon: Icon(Icons.chat, color: onSurface, size: 16),
+                      label: Text('RESPONDER', style: TextStyle(color: onSurface, fontWeight: FontWeight.bold, fontSize: 13)),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
-                          side: const BorderSide(color: Colors.white, width: 1.0),
+                          side: BorderSide(color: onSurface, width: 1.0),
                         ),
                       ),
                     ),
@@ -322,17 +323,17 @@ class _AlertCardState extends State<AlertCard> {
                     Expanded(
                       child: TextButton.icon(
                         onPressed: widget.onContribute,
-                        icon: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 16),
-                        label: const Text('APORTAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        icon: Icon(Icons.add_a_photo_rounded, color: onSurface, size: 16),
+                        label: Text('APORTAR', style: TextStyle(color: onSurface, fontWeight: FontWeight.bold, fontSize: 13)),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           backgroundColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
-                            side: const BorderSide(color: Colors.white, width: 1.0),
-                          ),
+                            side: BorderSide(color: onSurface, width: 1.0),
                         ),
                       ),
+                    ),
                     ),
                   ],
                 ],
@@ -359,14 +360,14 @@ class _AlertCardState extends State<AlertCard> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.chat, color: Colors.white, size: 16),
-                      label: const Text('RESPONDER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      icon: Icon(Icons.chat, color: onSurface, size: 16),
+                      label: Text('RESPONDER', style: TextStyle(color: onSurface, fontWeight: FontWeight.bold, fontSize: 13)),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
-                          side: const BorderSide(color: Colors.white, width: 1.0),
+                          side: BorderSide(color: onSurface, width: 1.0),
                         ),
                       ),
                     ),
@@ -375,14 +376,14 @@ class _AlertCardState extends State<AlertCard> {
                   Expanded(
                     child: TextButton.icon(
                       onPressed: widget.onTap,
-                      icon: const Icon(Icons.explore, color: Colors.white, size: 16),
-                      label: const Text('NAVEGAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      icon: Icon(Icons.explore, color: onSurface, size: 16),
+                      label: Text('NAVEGAR', style: TextStyle(color: onSurface, fontWeight: FontWeight.bold, fontSize: 13)),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
-                          side: const BorderSide(color: Colors.white, width: 1.0),
+                          side: BorderSide(color: onSurface, width: 1.0),
                         ),
                       ),
                     ),

@@ -1,4 +1,3 @@
-import 'package:app_alertas/core/report_visibility.dart';
 import 'package:app_alertas/core/config/mapbox_config.dart';
 import 'package:app_alertas/core/utils/role_utils.dart';
 import 'dart:io';
@@ -111,9 +110,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     setState(() {
       _alerts = alertVM.alerts;
     });
-    context.read<RiskZoneProvider>().updateFromAlerts(
-      filterAlertsForMap(alertVM.alerts),
-    );
+    context.read<RiskZoneProvider>().updateFromAlerts(alertVM.alerts);
   }
 
   void _animateBearing(double newBearing) {
@@ -326,7 +323,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     // 5. Open image selector bottom sheet
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: const Color(0xFF262624),
+      backgroundColor: Theme.of(context).cardTheme.color,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -335,13 +332,13 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.white),
-              title: const Text('Cámara', style: TextStyle(color: Colors.white)),
+              leading: Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.onSurface),
+              title: Text('Cámara', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.white),
-              title: const Text('Galería', style: TextStyle(color: Colors.white)),
+              leading: Icon(Icons.photo_library, color: Theme.of(context).colorScheme.onSurface),
+              title: Text('Galería', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
           ],
@@ -803,9 +800,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       
       if (!mounted) return;
       setState(() => _alerts = alertVM.alerts);
-      await context.read<RiskZoneProvider>().updateFromAlerts(
-        filterAlertsForMap(alertVM.alerts),
-      );
+      await context.read<RiskZoneProvider>().updateFromAlerts(alertVM.alerts);
     } catch (e) {
       debugPrint('Error al cargar alertas: $e');
     } finally {
@@ -1113,7 +1108,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF262624),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1156,8 +1151,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                               children: [
                                 Text(
                                   station.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -1176,8 +1171,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                                     padding: const EdgeInsets.only(top: 6),
                                     child: Text(
                                       'A ${distanceKm.toStringAsFixed(1)} km de tu ubicación',
-                                      style: const TextStyle(
-                                        color: Colors.white54,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                         fontSize: 11,
                                       ),
                                     ),
@@ -1206,7 +1201,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   }
 
   List<Marker> _buildAlertMarkers() {
-    return filterAlertsForMap(_alerts)
+    return _alerts
         .where((a) => a.coordinates.length >= 2)
         .map((alert) {
           final point = _toLatLng(alert.coordinates);
@@ -1240,7 +1235,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     _isBottomSheetOpen = true;
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF262624),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1362,7 +1357,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                     },
                   ),
                   children: [
-                    MapboxConfig.darkTileLayer(),
+                    MapboxConfig.tileLayer(context),
                     Consumer<RiskZoneProvider>(
                       builder: (context, riskZones, _) {
                         return CircleLayer(
@@ -1536,7 +1531,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF30302E).withValues(alpha: 0.92),
+                            color: Theme.of(context).cardTheme.color?.withValues(alpha: 0.92) ?? const Color(0xFF30302E).withValues(alpha: 0.92),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
@@ -1552,9 +1547,9 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Vista autoridad · ${filterAlertsForMap(_alerts).length} en mapa · ${_alerts.length} total',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                'Vista autoridad · ${_alerts.length} total',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 12,
                                 ),
                               ),
@@ -1582,7 +1577,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         children: [
           FloatingActionButton(
             heroTag: 'center_location_btn',
-            backgroundColor: const Color(0xFF30302E),
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             onPressed: _centerOnUser,
             child: Center(
               child: Container(
@@ -1596,8 +1592,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                   child: Container(
                     width: 10,
                     height: 10,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurface,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -1608,8 +1604,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
           const SizedBox(height: 12),
           FloatingActionButton(
             heroTag: 'refresh_alerts_btn',
-            backgroundColor: const Color(0xFF30302E),
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             onPressed: () {
               _centerOnUser();
               _loadAlerts();

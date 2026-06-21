@@ -16,10 +16,14 @@ class HomeScreen extends StatelessWidget {
       // IMPORTANTE: Al usar un Scaffold sin AppBar, el body por defecto 
       // se extiende automáticamente detrás de la barra de estado.
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
+        value: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent, // Barra transparente
-          statusBarIconBrightness: Brightness.light, // Iconos blancos (Android)
-          statusBarBrightness: Brightness.dark, // Iconos blancos (iOS)
+          statusBarIconBrightness: Theme.of(context).brightness == Brightness.dark
+              ? Brightness.light
+              : Brightness.dark, // Iconos adaptivos (Android)
+          statusBarBrightness: Theme.of(context).brightness == Brightness.dark
+              ? Brightness.dark
+              : Brightness.light, // Iconos adaptivos (iOS)
         ),
         child: SingleChildScrollView(
           // Eliminamos cualquier padding por defecto que el scroll views pueda meter arriba
@@ -50,27 +54,27 @@ class HomeScreen extends StatelessWidget {
                     // Cabecera Principal
                     RichText(
                       text: TextSpan(
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           height: 1.2,
                         ),
                         children: [
                           const TextSpan(text: '¿Qué está\n'),
                           TextSpan(
                             text: 'sucediendo?',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 54),
                     // Etiqueta
-                    const Text(
+                    Text(
                       'Crea un reporte',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 16,
                       ),
                     ),
@@ -94,13 +98,17 @@ class HomeScreen extends StatelessWidget {
                         width: double.infinity,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : const Color(0xFF30302E),
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Icon(
                             Icons.camera_alt_rounded,
-                            color: Colors.black,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.black
+                                : Colors.white,
                             size: 26,
                           ),
                         ),
@@ -136,16 +144,16 @@ class HomeScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.map_rounded,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     size: 24,
                                   ),
                                   const Spacer(),
-                                  const Text(
+                                  Text(
                                     'Navegar',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 15,
                                     ),
                                   ),
@@ -171,16 +179,16 @@ class HomeScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.question_answer_rounded,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     size: 24,
                                   ),
                                   const Spacer(),
-                                  const Text(
+                                  Text(
                                     'Reportes',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 15,
                                     ),
                                   ),
@@ -207,10 +215,10 @@ class HomeScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   '¡Mantente informado!',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -219,7 +227,7 @@ class HomeScreen extends StatelessWidget {
                                 Text(
                                   'Consulta reportes locales y recibe alertas sobre incidentes cercanos.',
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.7),
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                     fontSize: 12,
                                     height: 1.4,
                                   ),

@@ -596,9 +596,9 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF262624),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Column(
@@ -609,7 +609,9 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white24
+                          : Colors.black26,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -619,12 +621,12 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                     size: 48,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     '¿Es el mismo incidente?',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -649,10 +651,12 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                             Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF30302E),
+                                color: Theme.of(context).cardTheme.color,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.05),
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white.withValues(alpha: 0.05)
+                                      : Colors.black.withValues(alpha: 0.05),
                                 ),
                               ),
                               child: ListTile(
@@ -673,8 +677,8 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                                   alert.description,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -732,7 +736,9 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                         _createActualAlert();
                       },
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.white70,
+                        foregroundColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.black87,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: const Text('No es ninguno de estos, crear nuevo'),
@@ -750,10 +756,10 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
 
   Widget _buildMiniMap(AlertModel alert) {
     if (_position == null || alert.coordinates.length < 2) {
-      return const Center(
+      return Center(
         child: Text(
           'Ubicación no disponible',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
       );
     }
@@ -770,7 +776,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
         ),
       ),
       children: [
-        MapboxConfig.darkTileLayer(),
+        MapboxConfig.tileLayer(context),
         MarkerLayer(
           markers: [
             Marker(
@@ -898,7 +904,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
     final typesError = alertTypeVM.error;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF262624),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -909,7 +915,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
                       onPressed: () {
                         if (Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
@@ -917,13 +923,13 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                       },
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       "Nueva alerta",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.normal,
                         letterSpacing: -0.3,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -952,13 +958,29 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                   child: Container(
                     width: double.infinity,
                     height: MediaQuery.of(context).size.width,
-                    color: const Color(0xFF2C2C2A),
-                    child: const Column(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF2C2C2A)
+                        : const Color(0xFFEEEEEE),
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.photo_library, size: 40, color: Colors.white54),
-                        SizedBox(height: 8),
-                        Text('Cargar imagen', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                        Icon(
+                          Icons.photo_library,
+                          size: 40,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white54
+                              : Colors.black54,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Cargar imagen',
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white54
+                                : Colors.black54,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -974,14 +996,14 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                     TextField(
                       controller: _descriptionController,
                       maxLines: null,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
                       decoration: InputDecoration(
                         hintText: 'Agregar una descripcion...',
                         filled: false,
                         fillColor: Colors.transparent,
                         hintStyle: TextStyle(
                           fontSize: 16,
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         border: InputBorder.none,
                       ),
@@ -997,21 +1019,28 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
                         child: Skeletonizer(
                           enabled: isLoadingTypes,
-                          effect: const ShimmerEffect(
-                            baseColor: Color(0xFF2C2C2A),
-                            highlightColor: Color(0xFF30302E),
+                          effect: ShimmerEffect(
+                            baseColor: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF2C2C2A)
+                                : const Color(0xFFE0E0E0),
+                            highlightColor: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF30302E)
+                                : const Color(0xFFF5F5F5),
                           ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             decoration: BoxDecoration(
-                              border: Border.all(color: Color(0xFFAF6D58)),
+                              border: Border.all(color: const Color(0xFFAF6D58)),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<AlertTypeModel>(
                                 isExpanded: true,
-                                hint: Text(isLoadingTypes ? 'Cargando tipos...' : 'Tipo de incidente', style: const TextStyle(color: Colors.white54)),
-                                dropdownColor: const Color(0xFF30302E),
+                                hint: Text(
+                                  isLoadingTypes ? 'Cargando tipos...' : 'Tipo de incidente',
+                                  style: TextStyle(color: Theme.of(context).hintColor),
+                                ),
+                                dropdownColor: Theme.of(context).cardTheme.color,
                                 value: _selectedType,
                                 icon: const Icon(
                                   Icons.keyboard_arrow_down,
@@ -1019,9 +1048,12 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                                 ),
                                 items: alertTypes.isEmpty
                                     ? [
-                                        const DropdownMenuItem<AlertTypeModel>(
+                                        DropdownMenuItem<AlertTypeModel>(
                                           value: null,
-                                          child: Text('Cargando...'),
+                                          child: Text(
+                                            'Cargando...',
+                                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                                          ),
                                         )
                                       ]
                                     : alertTypes.map((type) {
@@ -1029,8 +1061,8 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                                           value: type,
                                           child: Text(
                                             type.name,
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.onSurface,
                                               fontSize: 16,
                                             ),
                                           ),
@@ -1047,14 +1079,20 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
 
                     Skeletonizer(
                       enabled: _isLoadingLocation,
-                      effect: const ShimmerEffect(
-                        baseColor: Color(0xFF2C2C2A),
-                        highlightColor: Color(0xFF30302E),
+                      effect: ShimmerEffect(
+                        baseColor: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF2C2C2A)
+                            : const Color(0xFFE0E0E0),
+                        highlightColor: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF30302E)
+                            : const Color(0xFFF5F5F5),
                       ),
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF30302E),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF30302E)
+                              : const Color(0xFFF1F1F1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -1071,16 +1109,16 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                                 children: [
                                   Text(
                                     _isLoadingLocation ? 'Obteniendo ubicación...' : _locationTitle,
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   Text(
                                     _isLoadingLocation ? 'Por favor espere...' : _locationSubtitle,
-                                    style: const TextStyle(
-                                      color: Colors.grey,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -1111,14 +1149,20 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                     else if (_isLoadingLocation)
                       Skeletonizer(
                         enabled: true,
-                        effect: const ShimmerEffect(
-                          baseColor: Color(0xFF2C2C2A),
-                          highlightColor: Color(0xFF30302E),
+                        effect: ShimmerEffect(
+                          baseColor: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF2C2C2A)
+                              : const Color(0xFFE0E0E0),
+                          highlightColor: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF30302E)
+                              : const Color(0xFFF5F5F5),
                         ),
                         child: Container(
                           height: 240,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF30302E),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF30302E)
+                                : const Color(0xFFF1F1F1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
@@ -1127,7 +1171,9 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                       Container(
                         height: 80,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF30302E),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF30302E)
+                              : const Color(0xFFF1F1F1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Center(
