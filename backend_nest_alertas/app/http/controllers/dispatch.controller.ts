@@ -10,6 +10,7 @@ export class DispatchController {
 
     @Post()
     create(@Body() dto: CreateDispatchRequest) {
+        console.log('aqui')
         return this.dispatchService.create(dto.reportId, dto.destinationId, dto.userId);
     }
 

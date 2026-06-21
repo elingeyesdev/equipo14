@@ -8,10 +8,7 @@ import { ImagesService } from './images.service';
 import { ReportCoinicdenceResponse, ReportResponse } from 'app/http/requests/reports/response';
 import { ReportType } from 'app/models/report-types.entity';
 import { NotificationsService } from './notifications.service';
-import {
-    FilterReportsQuery,
-    REPORT_CATEGORY_TYPE_IDS,
-} from '../http/requests/reports/filter-query';
+import { ReportsGateway } from 'app/gateways/reports.gateway';
 
 @Injectable()
 export class ReportsService {
@@ -26,7 +23,7 @@ export class ReportsService {
 
         private imagesServices: ImagesService,
         private notificationsService: NotificationsService,
-
+        private readonly reportsGateway: ReportsGateway,
     ){}
 
     async create(createReportRequest: CreateReportRequest, file: Express.Multer.File){
@@ -72,7 +69,11 @@ export class ReportsService {
         console.timeEnd('upload');
 
         console.timeEnd('total');
-        return ReportResponse.FromReportToResponse(savedReport);
+        const reportResponse = ReportResponse.FromReportToResponse(savedReport);
+
+        this.reportsGateway.sendNewReportNotification(reportResponse);
+
+        return reportResponse;
     }
 
     async addImage(reportId: number, userId: string, file: Express.Multer.File){
@@ -148,64 +149,13 @@ export class ReportsService {
         return ReportResponse.FromReportListToResponse(reports)
     }
 
-    async findAll(
-        filters?: FilterReportsQuery,
-        user?: { role?: { name?: string } },
-    ) {
-        const qb = this.reportsRepository
-            .createQueryBuilder('report')
-            .leftJoinAndSelect('report.creator', 'creator')
-            .leftJoinAndSelect('report.type', 'type')
-            .leftJoinAndSelect('report.images', 'images')
-            .leftJoinAndSelect('images.uploadedBy', 'uploadedBy');
-
-        const role = user?.role?.name?.toLowerCase();
-        const isStaff = role === 'admin' || role === 'autoridad';
-        if (filters?.includeDeleted === 'true' && isStaff) {
-            qb.withDeleted();
-        }
-
-        if (filters?.typeId) {
-            qb.andWhere('type.id = :typeId', { typeId: Number(filters.typeId) });
-        }
-
-        if (filters?.category && REPORT_CATEGORY_TYPE_IDS[filters.category]) {
-            qb.andWhere('type.id IN (:...categoryIds)', {
-                categoryIds: REPORT_CATEGORY_TYPE_IDS[filters.category],
-            });
-        }
-
-        if (filters?.status === 'verified') {
-            qb.andWhere('report.verified = true');
-        } else if (filters?.status === 'pending') {
-            qb.andWhere('report.verified = false');
-        }
-
-        if (filters?.zone && filters.zone !== 'all') {
-            qb.andWhere('TRIM(report.zone) = :zone', { zone: filters.zone.trim() });
-        }
-
-        if (filters?.from) {
-            qb.andWhere('report.created_at >= :from', {
-                from: new Date(`${filters.from}T00:00:00`),
-            });
-        }
-
-        if (filters?.to) {
-            qb.andWhere('report.created_at <= :to', {
-                to: new Date(`${filters.to}T23:59:59`),
-            });
-        }
-
-        if (filters?.search?.trim()) {
-            const q = `%${filters.search.trim().toLowerCase()}%`;
-            qb.andWhere(
-                `(LOWER(report.description) LIKE :q OR LOWER(report.zone) LIKE :q OR LOWER(type.name) LIKE :q OR CAST(report.id AS TEXT) LIKE :q)`,
-                { q },
-            );
-        }
-
-        const reports = await qb.orderBy('report.created_at', 'DESC').getMany();
+    async findAll() {
+        const reports = await this.reportsRepository.find({
+            relations: ['creator', 'images', 'images.uploadedBy', 'type'],
+            order: {
+                created_at: 'DESC'
+            }
+        })
         return ReportResponse.FromReportListToResponse(reports);
     }
 

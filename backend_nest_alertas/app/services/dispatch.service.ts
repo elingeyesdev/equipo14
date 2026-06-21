@@ -20,20 +20,20 @@ export class DispatchService {
         private readonly userRepository: Repository<User>,
     ) {}
 
-    async create(reportId: number, destinationId: number, userId: string): Promise<Dispatch> {
+    async create(reportId: number, destinationId: number, userId: string) {
         const report = await this.reportRepository.findOne({ where: { id: reportId } });
         if (!report) {
-            throw new NotFoundException(`Reporte con ID ${reportId} no encontrado`);
+            throw new NotFoundException(`Reporte no encontrado`);
         }
 
         const destination = await this.stationRepository.findOne({ where: { id: destinationId } });
         if (!destination) {
-            throw new NotFoundException(`Estación de emergencia con ID ${destinationId} no encontrada`);
+            throw new NotFoundException(`Estacion de emergencia no encontrada`);
         }
 
         const user = await this.userRepository.findOne({ where: { id: userId } });
         if (!user) {
-            throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
+            throw new NotFoundException(`Usuario no encontrado`);
         }
 
         const dispatch = new Dispatch();
@@ -45,7 +45,7 @@ export class DispatchService {
         return this.dispatchRepository.save(dispatch);
     }
 
-    async updateState(id: number, state: StateType): Promise<Dispatch> {
+    async updateState(id: number, state: StateType) {
         const dispatch = await this.dispatchRepository.findOne({ where: { id } });
         if (!dispatch) {
             throw new NotFoundException(`Despacho con ID ${id} no encontrado`);

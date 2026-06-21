@@ -15,6 +15,7 @@ import {
   Trash2,
   RefreshCw,
   Loader2,
+  Clock,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -52,8 +53,34 @@ import { getSession } from "@/api/httpClient";
 import type { Report } from "@/domain/types";
 import { normalizeReportCoordinates } from "@/lib/geo";
 import { syncReportMarkersLayer, bringReportMarkersToFront } from "@/lib/mapbox-reports";
+import { riskIndexToColor } from "@/lib/risk-zones";
 import { filterReportsForMap } from "@/lib/report-visibility";
 import { toast } from "sonner";
+
+function getZoneColorMap(reports: Report[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  const zoneStats: Record<string, { totalWeight: number; count: number }> = {};
+
+  reports.forEach((r) => {
+    const name = r.zone?.trim() || "Zona desconocida";
+    if (!zoneStats[name]) {
+      zoneStats[name] = { totalWeight: 0, count: 0 };
+    }
+    let w = r.weight || 1;
+    if (r.verified) w *= 1.25;
+    zoneStats[name].totalWeight += w;
+    zoneStats[name].count += 1;
+  });
+
+  const STANDARD_MAX_SCORE = 22.0;
+
+  Object.entries(zoneStats).forEach(([name, stats]) => {
+    const riskIndex = Math.max(0, Math.min(1, stats.totalWeight / STANDARD_MAX_SCORE));
+    map[name] = riskIndexToColor(riskIndex);
+  });
+
+  return map;
+}
 
 export const Route = createFileRoute("/admin/mapa")({
   component: MapaPage,
@@ -73,6 +100,7 @@ function MapaPage() {
   /** Instalaciones de emergencia (policía, bomberos, etc.) */
   const [showEmergencyStations, setShowEmergencyStations] = useState(true);
   const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null);
+  const [expandedPanel, setExpandedPanel] = useState<"stations" | "zones" | "tracking" | null>("zones");
   const trackingMarkersRef = useRef<Map<string, any>>(new Map());
   const [verifyTarget, setVerifyTarget] = useState<Report | null>(null);
 
@@ -627,31 +655,93 @@ function MapaPage() {
   ];
 
   return (
-    <div>
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+    <div className="flex flex-col gap-6">
+      {/* Cabecera del Panel */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-2">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-3">
-            Operaciones · Tiempo real
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-2.5">
+            Monitoreo · Tiempo Real
           </p>
           <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight mb-2">
-            Mapa de incidentes 3D
+            Reportes en vivo
           </h1>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            Reportes georreferenciados sobre Santa Cruz. Las zonas de riesgo se calculan en
-            círculos verde → rojo según la densidad de incidentes. Las autoridades en ruta se
-            ven en tiempo real (línea azul + ícono móvil).
+          <p className="text-muted-foreground text-sm max-w-2xl leading-relaxed">
+            Gestión y georreferenciación de incidentes urbanos en Santa Cruz. Revisa alertas activas,
+            estaciones de emergencia y unidades en ruta.
           </p>
+        </div>
+        
+        {/* Acciones principales arriba a la derecha */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <FilterButton activeCount={activeCount} onClick={() => setFiltersOpen(true)} />
+          <Button
+            onClick={() => {
+              setPendingLocation(null);
+              setCreateOpen(true);
+            }}
+            className="rounded-xl gap-2 font-bold cursor-pointer"
+          >
+            <PlusCircle className="size-4" />
+            Nueva alerta
+          </Button>
+          <Button
+            onClick={handleRefresh}
+            variant="secondary"
+            className="rounded-xl gap-2 border border-border cursor-pointer"
+          >
+            <RefreshCw className="size-4" />
+            Actualizar
+          </Button>
         </div>
       </div>
 
-      <div className="min-w-0 flex flex-col gap-4">
-        <div className="grid lg:grid-cols-[1fr_minmax(280px,340px)] gap-4 items-start">
-          {/* Mapa Real Mapbox 3D */}
-          <div
-          className={`relative w-full h-[min(72vh,720px)] min-h-[520px] bg-card border rounded-2xl overflow-hidden transition-colors ${
+      {/* Fila Superior de KPIs (Reales y Estilo Personalizado con Degradados) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {cards.map((c) => {
+          let cardStyle = "";
+          if (c.label === "Total") {
+            cardStyle = "bg-gradient-to-br from-cyan-500 to-blue-600 text-white";
+          } else if (c.label === "Verificados") {
+            cardStyle = "bg-gradient-to-br from-orange-500 to-amber-500 text-white";
+          } else {
+            // Pendientes
+            cardStyle = "bg-gradient-to-br from-indigo-500 to-purple-600 text-white";
+          }
+
+          return (
+            <div
+              key={c.label}
+              className={`relative overflow-hidden rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 hover:scale-[1.02] ${cardStyle}`}
+            >
+              {/* Decorative background shapes mimicking NexaVerse design */}
+              <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none select-none overflow-hidden">
+                <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-white/[0.09]" />
+                <div className="absolute right-4 -top-8 w-28 h-28 rounded-full bg-white/[0.06]" />
+                <div className="absolute -right-2 top-8 w-12 h-12 rounded-full bg-white/[0.04]" />
+              </div>
+
+              {/* Card Content */}
+              <div className="relative z-10">
+                <div className="text-xs uppercase tracking-widest text-white/80 font-bold mb-2">
+                  {c.label}
+                </div>
+                <div className="font-display text-4xl font-extrabold tracking-tight">
+                  {c.value}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Grilla Principal: Mapa + Paneles de Control */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Mapa Real Mapbox 3D */}
+        <div
+          className={`relative lg:col-span-8 w-full h-[min(68vh,640px)] min-h-[500px] bg-card border rounded-3xl overflow-hidden transition-colors shadow-lg ${
             pickOnMainMap
               ? "border-primary ring-2 ring-primary/30"
-              : "border-border"
+              : "border-border/40"
           }`}
         >
           <div
@@ -756,28 +846,28 @@ function MapaPage() {
 
           {/* Overlay top info */}
           <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border text-[10px] font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border/40 text-[10px] font-bold uppercase tracking-widest shadow-md">
               <Radio className="size-3 text-primary animate-pulse" />
               Vista activa · {mapReports.length} en mapa · {reports.length} total
             </div>
             {pickOnMainMap && (
-              <div className="px-3 py-1.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
+              <div className="px-3 py-1.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-md">
                 Clic en el mapa para ubicar la alerta
               </div>
             )}
 
             {showEmergencyStations && emergencyStations.length > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-indigo-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
+              <div className="px-3 py-1.5 rounded-full bg-indigo-600/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
                 {emergencyStations.length} estación(es) de emergencia
               </div>
             )}
             {showLiveTracking && trackings.length > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
+              <div className="px-3 py-1.5 rounded-full bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
                 {trackings.length} unidad(es) en ruta · calles Mapbox
               </div>
             )}
             {showRiskZones && riskZones.length > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-emerald-600/90 text-white text-[10px] font-bold uppercase tracking-wider">
+              <div className="px-3 py-1.5 rounded-full bg-emerald-600/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
                 {riskZones.length} zona(s) de riesgo · verde → rojo
               </div>
             )}
@@ -787,21 +877,21 @@ function MapaPage() {
             <button
               onClick={handleZoomIn}
               title="Acercar"
-              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border grid place-items-center hover:bg-card transition-colors cursor-pointer"
+              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
             >
               <ZoomIn className="size-4" />
             </button>
             <button
               onClick={handleZoomOut}
               title="Alejar"
-              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border grid place-items-center hover:bg-card transition-colors cursor-pointer"
+              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
             >
               <Minus className="size-4" />
             </button>
             <button
               onClick={handleToggle3D}
               title="Alternar Vista 3D / 2D"
-              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border grid place-items-center hover:bg-card transition-colors cursor-pointer"
+              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
             >
               <Maximize2 className="size-4" />
             </button>
@@ -813,18 +903,23 @@ function MapaPage() {
           </div>
         </div>
 
-          <div className="flex flex-col gap-4 min-w-0">
+        {/* Paneles de control lateral derecho */}
+        <div className="lg:col-span-4 flex flex-col gap-4 min-w-0">
           <EmergencyStationsPanel
             stations={emergencyStations}
             enabled={showEmergencyStations}
             onEnabledChange={setShowEmergencyStations}
             onFocusStation={handleFocusStation}
+            isExpanded={expandedPanel === "stations"}
+            onToggleExpand={() => setExpandedPanel(prev => prev === "stations" ? null : "stations")}
           />
           <RiskZonesPanel
             zones={riskZones}
             enabled={showRiskZones}
             onEnabledChange={setShowRiskZones}
             onFocusZone={handleFocusRiskZone}
+            isExpanded={expandedPanel === "zones"}
+            onToggleExpand={() => setExpandedPanel(prev => prev === "zones" ? null : "zones")}
           />
           <LiveTrackingPanel
             trackings={trackings}
@@ -835,45 +930,14 @@ function MapaPage() {
             selectedId={selectedTrackingId}
             onSelect={setSelectedTrackingId}
             onFocus={handleFocusTracking}
+            isExpanded={expandedPanel === "tracking"}
+            onToggleExpand={() => setExpandedPanel(prev => prev === "tracking" ? null : "tracking")}
           />
-          </div>
         </div>
-        
-        <div className="flex flex-wrap items-center justify-end gap-2 mt-4">
-          <FilterButton activeCount={activeCount} onClick={() => setFiltersOpen(true)} />
-          <Button
-            onClick={() => {
-              setPendingLocation(null);
-              setCreateOpen(true);
-            }}
-            className="rounded-xl gap-2 font-bold cursor-pointer"
-          >
-            <PlusCircle className="size-4" />
-            Nueva alerta
-          </Button>
-          <Button
-            onClick={handleRefresh}
-            variant="secondary"
-            className="rounded-xl gap-2 border border-border cursor-pointer"
-          >
-            <RefreshCw className="size-4" />
-            Actualizar
-          </Button>
-        </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          {cards.map((c) => (
-            <div key={c.label} className="bg-card border border-border rounded-2xl p-6">
-              <div className="font-display text-4xl font-bold text-primary mb-1 leading-none">
-                {c.value}
-              </div>
-              <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-                {c.label}
-              </div>
-            </div>
-          ))}
-        </div>
-
+      {/* Tabla inferior expandida y limpia */}
+      <div className="mt-4">
         <DataTable
           columns={reportColumns}
           data={reports}

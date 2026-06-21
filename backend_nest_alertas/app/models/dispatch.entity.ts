@@ -19,15 +19,12 @@ export class Dispatch {
     })
     state: StateType;
 
-    @OneToOne(() => Report, report => report.dispatch)
-    @JoinColumn({ name: 'response_report_id' })
+    @ManyToOne(() => Report, report => report.dispatches)
     response_report: Report;
 
-    @OneToOne(() => EmergencyStation, station => station.dispatch)
-    @JoinColumn({ name: 'destination_id' })
+    @ManyToOne(() => EmergencyStation, station => station.dispatches)
     destination: EmergencyStation;
 
     @ManyToOne(() => User, user => user.dispatches)
-    @JoinColumn({ name: 'attended_by_id' })
     attended_by: User;
 }

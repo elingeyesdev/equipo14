@@ -28,6 +28,14 @@ class AlertViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addAlertLocally(AlertModel alert) {
+    final exists = _alerts.any((a) => a.id == alert.id);
+    if (!exists) {
+      _alerts.insert(0, alert);
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchAlerts({bool includeDeleted = false}) async {
     _isLoading = true;
     _error = null;

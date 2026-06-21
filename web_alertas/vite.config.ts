@@ -14,6 +14,8 @@ export default defineConfig({
   },
   vite: {
     server: {
+      port: 8080,
+      strictPort: true,
       proxy: {
         // Misma origen en el navegador → sin CORS; reenvía al Nest local
         "/api": {

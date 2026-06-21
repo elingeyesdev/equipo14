@@ -7,7 +7,6 @@ import { User } from 'app/models/user.entity';
 import { EmergencyStation } from 'app/models/emergency-station.entity';
 import { InstallationType } from 'app/enums/installation-type.enum';
 import { Repository } from 'typeorm';
-
 /**
  * Inserta los tipos de reporte por defecto si la tabla está vacía.
  * Se llama una vez al arrancar la app (bootstrap/app.ts).
@@ -19,12 +18,12 @@ export async function seedReportTypes(app: INestApplication): Promise<void> {
     if (count > 0) return; // Ya hay datos, no sobrescribir
 
     await repo.save([
-        { id: 1, name: 'Robo a mano armada', base_weight: 10 },
-        { id: 2, name: 'Incendio estructural', base_weight: 15 },
+        { id: 1, name: 'Robo a mano armada', base_weight: 9 },
+        { id: 2, name: 'Incendio estructural', base_weight: 10 },
         { id: 3, name: 'Accidente de tránsito', base_weight: 8 },
-        { id: 4, name: 'Hurto', base_weight: 5 },
-        { id: 5, name: 'Incendio forestal', base_weight: 12 },
-        { id: 6, name: 'Emergencia médica', base_weight: 12 },
+        { id: 4, name: 'Hurto', base_weight: 4 },
+        { id: 5, name: 'Incendio forestal', base_weight: 8 },
+        { id: 6, name: 'Emergencia médica', base_weight: 9 },
         { id: 7, name: 'Obstrucción de vía', base_weight: 3 },
     ]);
 
@@ -57,7 +56,7 @@ export async function seedSampleReports(app: INestApplication): Promise<void> {
 
     const user =
         (await userRepo.findOne({ where: { phone: '64474075' }, relations: ['role'] })) ??
-        (await userRepo.findOne({ relations: ['role'] }));
+        (await userRepo.findOne({ where: {}, relations: ['role'] }));
     if (!user) {
         console.log('[Seed] Sin usuarios: omitiendo reportes de demo');
         return;

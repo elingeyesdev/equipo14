@@ -61,6 +61,6 @@ export class Report {
     @OneToMany(() => Comment, comment => comment.report)
     comments: Comment[];
 
-    @OneToOne(() => Dispatch, dispatch => dispatch.response_report)
-    dispatch: Dispatch;
+    @OneToMany(() => Dispatch, dispatch => dispatch.response_report)
+    dispatches: Dispatch[];
 }

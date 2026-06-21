@@ -9,12 +9,14 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { ThemeToggle } from "@/components/ThemeToggle";
+import avispateLogo from "@/assets/avispate.webp";
+
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Acceso · Alertas" },
-      { name: "description", content: "Acceso al panel de autoridades de Alertas." },
+      { title: "Acceso · Avispáte" },
+      { name: "description", content: "Acceso al panel de autoridades de Avispáte." },
     ],
   }),
   component: LoginPage,
@@ -64,11 +66,9 @@ function LoginPage() {
             backgroundSize: "48px 48px",
           }}
         />
-        <Link to="/" className="relative flex items-center gap-2">
-          <div className="size-9 rounded-lg bg-primary grid place-items-center">
-            <ShieldCheck className="size-5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
-          <span className="font-display font-bold text-xl tracking-tight">ALERTAS</span>
+        <Link to="/" className="relative flex items-center gap-2.5">
+          <img src={avispateLogo} alt="Logo de Avispáte" className="size-9 object-contain" />
+          <span className="font-display font-bold text-xl tracking-tight">Avispáte</span>
         </Link>
         <div className="relative">
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-4">
@@ -91,11 +91,9 @@ function LoginPage() {
       {/* Formulario */}
       <main className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
-          <Link to="/" className="lg:hidden inline-flex items-center gap-2 mb-10">
-            <div className="size-9 rounded-lg bg-primary grid place-items-center">
-              <ShieldCheck className="size-5 text-primary-foreground" strokeWidth={2.5} />
-            </div>
-            <span className="font-display font-bold text-xl tracking-tight">ALERTAS</span>
+          <Link to="/" className="lg:hidden inline-flex items-center gap-2.5 mb-10">
+            <img src={avispateLogo} alt="Logo de Avispáte" className="size-9 object-contain" />
+            <span className="font-display font-bold text-xl tracking-tight">Avispáte</span>
           </Link>
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-3">
             Iniciar sesión

@@ -32,6 +32,8 @@ import { AdminApiBanner } from "@/components/admin/AdminApiBanner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { reportTypesRepository } from "@/repositories/reportTypes.repository";
 import { useQuery } from "@tanstack/react-query";
+import avispateLogo from "@/assets/avispate.webp";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -144,15 +146,13 @@ function AdminSidebar({ session, onLogout }: { session: Session; onLogout: () =>
       <SidebarHeader className="border-b border-sidebar-border">
         <div className={`flex items-center px-2 py-2 min-w-0 ${collapsed ? "justify-center" : "justify-between"}`}>
           {!collapsed && (
-            <Link to="/" className="flex items-center gap-2 min-w-0 overflow-hidden">
-              <div className="size-9 rounded-lg bg-primary grid place-items-center shrink-0">
-                <ShieldCheck className="size-5 text-primary-foreground" strokeWidth={2.5} />
-              </div>
+            <Link to="/" className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+              <img src={avispateLogo} alt="Logo de Avispáte" className="size-9 object-contain shrink-0" />
               <div className="min-w-0 flex flex-col leading-tight animate-in fade-in slide-in-from-left-2 duration-300">
                 <span className="font-display font-bold text-base tracking-tight truncate">
-                  ALERTAS
+                  Avispáte
                 </span>
-                <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
                   Admin
                 </span>
               </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import avispateLogo from "@/assets/avispate.webp";
 
 const STORAGE_KEY = "alertas:splash-seen";
 const DURATION = 2600;
@@ -69,14 +69,14 @@ export function SplashIntro() {
             className="absolute size-28 rounded-full border border-primary/20 splash-ring"
             style={{ animationDelay: "0.8s" }}
           />
-          <div className="relative size-20 rounded-2xl bg-primary grid place-items-center splash-logo shadow-2xl shadow-primary/40 splash-pulse">
-            <ShieldCheck className="size-10 text-primary-foreground" strokeWidth={2.5} />
+          <div className="relative size-20 rounded-2xl bg-card grid place-items-center splash-logo shadow-2xl shadow-primary/25 splash-pulse border-none">
+            <img src={avispateLogo} alt="Logo de Avispáte" className="size-12 object-contain" />
           </div>
         </div>
 
         <div className="flex flex-col items-center gap-3 splash-text">
           <span className="font-display font-bold text-4xl tracking-tight text-foreground splash-title">
-            {"ALERTAS".split("").map((c, i) => (
+            {"AVISPÁTE".split("").map((c, i) => (
               <span
                 key={i}
                 className="inline-block splash-letter"

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { CreateCommentRequest } from "app/http/requests/comments/request";
 import { CommentResponse } from "app/http/requests/comments/response";
@@ -51,6 +51,10 @@ export class CommentsService{
 
         if (!parentComment){
             throw new NotFoundException("Comentario no encontrado")
+        }
+
+        if (parentComment.parent_comment != null){
+            throw new BadRequestException("No se puede responder una respuesta")
         }
 
         const creator = await this.usersRepository.findOne({where: {id: createCommentRequest.creatorId}})

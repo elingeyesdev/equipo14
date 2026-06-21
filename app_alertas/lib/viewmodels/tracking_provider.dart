@@ -50,6 +50,7 @@ class TrackingProvider extends ChangeNotifier {
   int? _reportId;
   int? _nearestStationId;
   LatLng? _nearestStationCoords;
+  int? _dispatchId;
 
   // Subscriptions & Timers
   StreamSubscription<PositionWithBearing>? _positionSubscription;
@@ -69,8 +70,10 @@ class TrackingProvider extends ChangeNotifier {
   String? get incidentDescription => _incidentDescription;
   String? get incidentType => _incidentType;
   int? get reportId => _reportId;
+  String? get userId => _userId;
   int? get nearestStationId => _nearestStationId;
   LatLng? get nearestStationCoords => _nearestStationCoords;
+  int? get dispatchId => _dispatchId;
 
   static const double _arrivalThresholdMeters = 20.0;
 
@@ -185,7 +188,7 @@ class TrackingProvider extends ChangeNotifier {
       'incidentLongitude': _incidentLongitude,
       if (_reportId != null) 'reportId': _reportId,
       'type': _incidentType ?? '',
-      'description': _incidentDescription ?? '',
+      'description': _incidentType ?? '',
       'route': routeCoordinates,
       'status': status,
     });
@@ -268,6 +271,18 @@ class TrackingProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _updateDispatchState(String state) async {
+    if (_dispatchId == null) return;
+    try {
+      await dioClient.dio.patch('/dispatches/$_dispatchId/state', data: {
+        'state': state,
+      });
+      debugPrint('Despacho $_dispatchId actualizado a estado $state');
+    } catch (e) {
+      debugPrint('Error actualizando estado del despacho $_dispatchId: $e');
+    }
+  }
+
   Future<void> startRouteTracking({
     required double latitude,
     required double longitude,
@@ -305,7 +320,10 @@ class TrackingProvider extends ChangeNotifier {
           'destinationId': _nearestStationId,
           'userId': userId,
         });
-        debugPrint('Despacho persistido en PostgreSQL con éxito: ${response.data}');
+        if (response.data != null && response.data['id'] != null) {
+          _dispatchId = response.data['id'] as int;
+        }
+        debugPrint('Despacho persistido en PostgreSQL con ID: $_dispatchId');
       } catch (e) {
         debugPrint('Error al persistir despacho en PostgreSQL: $e');
       }
@@ -393,16 +411,36 @@ class TrackingProvider extends ChangeNotifier {
       await _trackingService.stopTracking(_userId!);
     }
 
+    // Si se detiene manualmente antes de llegar a la estación final, se cancela en la BD
+    if (!_hasArrived && _dispatchId != null) {
+      unawaited(_updateDispatchState('cancelado'));
+    }
+
+    _dispatchId = null;
     notifyListeners();
   }
 
   void _checkArrival(LatLng position) {
-    if (_hasArrived || _incidentLatitude == null || _incidentLongitude == null) return;
+    if (_hasArrived) return;
 
-    final distance = _distanceInMeters(position, LatLng(_incidentLatitude!, _incidentLongitude!));
+    // Destino final es la estación de emergencia. Si no está disponible, se asume el incidente.
+    final LatLng? finalDestination = _nearestStationCoords ??
+        ((_incidentLatitude != null && _incidentLongitude != null)
+            ? LatLng(_incidentLatitude!, _incidentLongitude!)
+            : null);
+
+    if (finalDestination == null) return;
+
+    final distance = _distanceInMeters(position, finalDestination);
     if (distance <= _arrivalThresholdMeters) {
       _hasArrived = true;
       notifyListeners();
+
+      // Completar el despacho en base de datos
+      if (_dispatchId != null) {
+        unawaited(_updateDispatchState('completado'));
+      }
+
       stopRouteTracking();
     }
   }
@@ -416,6 +454,10 @@ class TrackingProvider extends ChangeNotifier {
     if (_userId != null && !_isFollowingRoute) {
       await _trackingService.stopTracking(_userId!);
     }
+    // Cancelar despacho si se planificó pero se limpia antes de iniciar
+    if (_dispatchId != null) {
+      unawaited(_updateDispatchState('cancelado'));
+    }
     _incidentLatitude = null;
     _incidentLongitude = null;
     _incidentDescription = null;
@@ -424,6 +466,7 @@ class TrackingProvider extends ChangeNotifier {
     _userId = null;
     _nearestStationId = null;
     _nearestStationCoords = null;
+    _dispatchId = null;
     _routePoints = [];
     _hasArrived = false;
     _bearing = 0.0;

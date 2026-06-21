@@ -18,15 +18,16 @@ import 'package:app_alertas/viewmodels/tracking_provider.dart';
 import 'package:app_alertas/core/risk_zones.dart';
 import 'package:app_alertas/viewmodels/risk_zone_provider.dart';
 import 'package:app_alertas/views/widgets/risk_zone_overlay.dart';
-import 'package:app_alertas/views/widgets/emergency_stations_overlay.dart';
 import 'package:app_alertas/views/alert_card.dart';
 import 'package:app_alertas/services/tracking_service.dart';
+import 'package:app_alertas/services/reports_socket_service.dart';
 import 'package:app_alertas/services/emergency_station_service.dart';
 import 'package:app_alertas/services/route_corridor_monitor_service.dart';
 import 'package:app_alertas/core/emergency_station_utils.dart';
 import 'package:app_alertas/models/emergency_station_model.dart';
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 class MapScreen extends StatefulWidget {
   final AlertModel? initialAlert;
@@ -57,6 +58,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   // Tracking
   final _trackingService = TrackingService();
   StreamSubscription? _trackingSub;
+
+  // Reports Socket
+  final _reportsSocketService = ReportsSocketService();
+  StreamSubscription? _reportsSub;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
   List<Map<String, dynamic>> _activeVehicles = [];
   String? _selectedVehicleId;
@@ -73,6 +78,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   // Animación de pulso para vehículos de tracking
   AnimationController? _pulseController;
   Animation<double>? _pulseAnimation;
+  Animation<double>? _userCenterPulseAnimation;
 
   void _onTrackingProviderUpdate() {
     if (!mounted) return;
@@ -504,6 +510,12 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         curve: Curves.easeInOut,
       ),
     );
+    _userCenterPulseAnimation = Tween<double>(begin: 14.0, end: 18.0).animate(
+      CurvedAnimation(
+        parent: _pulseController!,
+        curve: Curves.easeInOut,
+      ),
+    );
     _pulseController!.repeat(reverse: true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -555,6 +567,23 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         });
       }
     });
+
+    _reportsSub = _reportsSocketService.streamNewReports().listen((newAlert) {
+      if (mounted) {
+        final alertVM = context.read<AlertViewModel>();
+        alertVM.addAlertLocally(newAlert);
+        
+        final exists = _alerts.any((a) => a.id == newAlert.id);
+        if (!exists) {
+          setState(() {
+            _alerts = [newAlert, ..._alerts];
+          });
+          context.read<RiskZoneProvider>().updateFromAlerts(
+            filterAlertsForMap(_alerts),
+          );
+        }
+      }
+    });
   }
 
   @override
@@ -566,6 +595,8 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     } catch (_) {}
     _serviceStatusSub?.cancel();
     _trackingSub?.cancel();
+    _reportsSub?.cancel();
+    _reportsSocketService.dispose();
     unawaited(RouteCorridorMonitorService.instance.stop());
     _vehicleAnimController?.dispose();
     _pulseController?.dispose();
@@ -867,27 +898,35 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     if (userLoc == null) return markers;
 
     if (isTrackingActive) {
-      final isFollowingRoute = trackingProvider.isFollowingRoute;
-      final incidentType = trackingProvider.incidentType ?? '';
       markers.add(
         Marker(
           point: userLoc,
-          width: 30,
-          height: 30,
+          width: 24,
+          height: 24,
           child: Transform.rotate(
             angle: _animatedBearing * math.pi / 180,
             child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFAF6D58),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: Icon(
-                isFollowingRoute
-                    ? _vehicleIconByType(incidentType)
-                    : Icons.my_location_rounded,
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                size: 14,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _userCenterPulseAnimation!,
+                  builder: (context, child) {
+                    final size = _userCenterPulseAnimation!.value;
+                    return Container(
+                      width: size,
+                      height: size,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFAF6D58),
+                        shape: BoxShape.circle,
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -897,18 +936,30 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       markers.add(
         Marker(
           point: userLoc,
-          width: 30,
-          height: 30,
+          width: 24,
+          height: 24,
           child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFAF6D58),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: const Icon(
-              Icons.my_location_rounded,
+            width: 24,
+            height: 24,
+            decoration: const BoxDecoration(
               color: Colors.white,
-              size: 14,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: AnimatedBuilder(
+                animation: _userCenterPulseAnimation!,
+                builder: (context, child) {
+                  final size = _userCenterPulseAnimation!.value;
+                  return Container(
+                    width: size,
+                    height: size,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFAF6D58),
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -916,6 +967,19 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     }
 
     return markers;
+  }
+
+  String _emergencyStationAsset(String type) {
+    switch (type.toLowerCase()) {
+      case 'policia':
+        return 'assets/icon/policia.png';
+      case 'bombero':
+        return 'assets/icon/bombero.png';
+      case 'hospital':
+        return 'assets/icon/hospital.png';
+      default:
+        return 'assets/icon/policia.png';
+    }
   }
 
   List<Marker> _buildEmergencyStationMarkers() {
@@ -926,28 +990,15 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         .map(
           (station) => Marker(
             point: LatLng(station.coordinates[1], station.coordinates[0]),
-            width: 40,
-            height: 40,
+            width: 24,
+            height: 24,
             child: GestureDetector(
               onTap: () => _showEmergencyStationBottomSheet(station),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: emergencyStationTypeColor(station.installationType),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  emergencyStationTypeIcon(station.installationType),
-                  color: Colors.white,
-                  size: 18,
-                ),
+              child: Image.asset(
+                _emergencyStationAsset(station.installationType),
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
               ),
             ),
           ),
@@ -985,7 +1036,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(24),
           ),
           elevation: 0,
         ),
@@ -1071,7 +1122,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       builder: (context) {
         return Consumer<TrackingProvider>(
           builder: (context, trackingProvider, _) {
-            final trackingType = emergencyStationTrackingType(station.installationType);
             final distanceKm = (station.distanceMeters ?? 0) / 1000;
 
             return SingleChildScrollView(
@@ -1137,16 +1187,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                           ),
                         ],
                       ),
-                      if (_isAuthority) ...[
-                        const SizedBox(height: 20),
-                        _buildRouteTrackingButton(
-                          trackingProvider: trackingProvider,
-                          destLat: station.coordinates[1],
-                          destLng: station.coordinates[0],
-                          type: trackingType,
-                          description: station.name,
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -1176,20 +1216,15 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
           return Marker(
             point: point,
-            width: 48,
-            height: 48,
+            width: 24,
+            height: 28,
             alignment: Alignment.topCenter, // The point of the pin is at the bottom
             child: GestureDetector(
               onTap: () => _showAlertBottomSheet(alert),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(Icons.location_on, color: color, size: 48),
-                  Positioned(
-                    top: 8,
-                    child: Icon(_iconByType(alert.type), color: Colors.white, size: 20),
-                  ),
-                ],
+              child: AlertMapPin(
+                color: color,
+                iconData: _iconByType(alert.type),
+                size: 24.0,
               ),
             ),
           );
@@ -1249,7 +1284,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     ).then((_) {
       _isBottomSheetOpen = false;
       if (!mounted) return;
-      // Only cancel pre-tracking if we are not actively tracking/navigating!
       final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);
       if (!trackingProvider.isFollowingRoute) {
         _cancelRouteAndTracking();
@@ -1508,10 +1542,6 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (showRiskZone) ...[
-                      const RiskZoneOverlay(),
-                      if (_isAuthority) const SizedBox(height: 8),
-                    ],
                     if (_isAuthority) ...[
                       Center(
                         child: Container(
@@ -1547,17 +1577,17 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                         ),
                       ),
                       const SizedBox(height: 8),
-                      EmergencyStationsOverlay(
-                        nearestEmergencyStations: _nearestEmergencyStations,
-                        profileType: context.watch<AuthViewModel>().user?.authorityProfileType,
-                        onStationTap: _showEmergencyStationBottomSheet,
-                      ),
+                    ],
+                    if (showRiskZone) ...[
+                      const RiskZoneOverlay(),
                     ],
                   ],
                 );
               },
             ),
           ),
+
+
 
         ],
       ),
@@ -1567,9 +1597,27 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
           FloatingActionButton(
             heroTag: 'center_location_btn',
             backgroundColor: const Color(0xFF30302E),
-            foregroundColor: const Color(0xFFAF6D58),
             onPressed: _centerOnUser,
-            child: const Icon(Icons.my_location_rounded),
+            child: Center(
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFAF6D58).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           FloatingActionButton(
@@ -1585,5 +1633,109 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
         ],
       ),
     );
+  }
+}
+
+class AlertMapPin extends StatelessWidget {
+  final Color color;
+  final IconData iconData;
+  final double size;
+
+  const AlertMapPin({
+    super.key,
+    required this.color,
+    required this.iconData,
+    this.size = 48.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size * 1.16, // Height is slightly larger than width to accommodate the pin tip
+      child: CustomPaint(
+        painter: TeardropPinPainter(color: color),
+        child: Container(
+          padding: EdgeInsets.only(bottom: size * 0.16), // Shift icon upward to center it in the circular head
+          child: Center(
+            child: Icon(
+              iconData,
+              color: Colors.white,
+              size: size * 0.52,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TeardropPinPainter extends CustomPainter {
+  final Color color;
+
+  TeardropPinPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final width = size.width;
+    final height = size.height;
+    final r = width / 2;
+
+    // Define the teardrop path
+    final path = ui.Path();
+    path.moveTo(width / 2, height);
+    
+    // Bottom point is at (width/2, height).
+    // Curve to the right edge (width, r)
+    path.cubicTo(
+      width * 0.85, height * 0.82,
+      width, height * 0.64,
+      width, r,
+    );
+    
+    // Top circle arc from (width, r) to (0, r)
+    path.arcToPoint(
+      Offset(0, r),
+      radius: Radius.circular(r),
+      clockwise: false,
+    );
+    
+    // Curve from left edge (0, r) back to the bottom point
+    path.cubicTo(
+      0, height * 0.64,
+      width * 0.15, height * 0.82,
+      width / 2, height,
+    );
+    
+    path.close();
+
+    // Draw shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.25)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    
+    canvas.save();
+    canvas.translate(0, 2);
+    canvas.drawPath(path, shadowPaint);
+    canvas.restore();
+
+    // Draw white background of the pin
+    final bgPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, bgPaint);
+
+    // Draw the inner circle
+    final innerCircleRadius = r * 0.82;
+    final innerCirclePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawCircle(Offset(width / 2, r), innerCircleRadius, innerCirclePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant TeardropPinPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }

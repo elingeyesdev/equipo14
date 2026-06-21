@@ -34,10 +34,6 @@ export function TiltPhone() {
       className="relative w-full max-w-md mx-auto cursor-grab active:cursor-grabbing"
       style={{ perspective: "1100px" }}
     >
-      <div
-        aria-hidden
-        className="absolute inset-6 -z-10 rounded-[3rem] bg-primary/20 blur-3xl"
-      />
       <div style={style} className={active ? "" : "animate-float"}>
         <img
           src={phoneMock}

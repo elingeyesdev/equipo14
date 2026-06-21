@@ -1,4 +1,4 @@
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import type { Point } from 'geojson';
 import { InstallationType } from 'app/enums/installation-type.enum';
 import { Dispatch } from './dispatch.entity';
@@ -24,6 +24,6 @@ export class EmergencyStation {
     })
     location: Point;
 
-    @OneToOne(() => Dispatch, dispatch => dispatch.destination)
-    dispatch: Dispatch;
+    @OneToMany(() => Dispatch, dispatch => dispatch.destination)
+    dispatches: Dispatch[];
 }

@@ -55,9 +55,12 @@ class LocationPickerMap extends StatefulWidget {
   State<LocationPickerMap> createState() => _LocationPickerMapState();
 }
 
-class _LocationPickerMapState extends State<LocationPickerMap> {
+class _LocationPickerMapState extends State<LocationPickerMap> with TickerProviderStateMixin {
   late LatLng _selectedPoint;
   final _mapController = MapController();
+
+  AnimationController? _pulseController;
+  Animation<double>? _userCenterPulseAnimation;
 
   bool get _isInsideRadius =>
       haversineDistanceMeters(_selectedPoint, widget.userLocation) <=
@@ -90,6 +93,24 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
     super.initState();
     // El marcador comienza en la posición del usuario
     _selectedPoint = widget.userLocation;
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _userCenterPulseAnimation = Tween<double>(begin: 20.0, end: 26.0).animate(
+      CurvedAnimation(
+        parent: _pulseController!,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _pulseController!.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController?.dispose();
+    super.dispose();
   }
 
   void _onMapTap(TapPosition tapPos, LatLng latLng) {
@@ -147,15 +168,27 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                       width: 30,
                       height: 30,
                       child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFAF6D58),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.my_location_rounded,
+                        width: 30,
+                        height: 30,
+                        decoration: const BoxDecoration(
                           color: Colors.white,
-                          size: 14,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: AnimatedBuilder(
+                            animation: _userCenterPulseAnimation!,
+                            builder: (context, child) {
+                              final size = _userCenterPulseAnimation!.value;
+                              return Container(
+                                width: size,
+                                height: size,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFAF6D58),
+                                  shape: BoxShape.circle,
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -270,24 +303,30 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
             Positioned(
               bottom: 50,
               right: 10,
-              child: GestureDetector(
-                onTap: () {
+              child: FloatingActionButton.small(
+                heroTag: 'center_picker_location_btn',
+                backgroundColor: const Color(0xFF30302E),
+                onPressed: () {
                   _mapController.move(widget.userLocation, 17.5);
                 },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF30302E),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1),
+                child: Center(
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFAF6D58).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
                     ),
-                  ),
-                  child: const Icon(
-                    Icons.my_location_rounded,
-                    color: Color(0xFFAF6D58),
-                    size: 20,
+                    child: Center(
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

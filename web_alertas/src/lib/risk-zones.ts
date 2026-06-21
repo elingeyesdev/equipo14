@@ -46,8 +46,7 @@ function isAccidentReport(report: Report): boolean {
 
 function reportRiskWeight(report: Report): number {
   let w = report.weight || 1;
-  if (isAccidentReport(report)) w *= 1.6;
-  if (!report.verified) w *= 1.15;
+  if (report.verified) w *= 1.25;
   return w;
 }
 
@@ -119,7 +118,6 @@ export function buildRiskZonesFromReports(reports: Report[]): RiskZone[] {
   }
 
   const zones: RiskZone[] = [];
-  let maxScore = 0;
 
   buckets.forEach((bucket, key) => {
     if (bucket.n === 0) return;
@@ -127,7 +125,6 @@ export function buildRiskZonesFromReports(reports: Report[]): RiskZone[] {
     const lat = bucket.latSum / bucket.n;
     const accidentCount = bucket.reports.filter(isAccidentReport).length;
     const riskScore = bucket.reports.reduce((sum, r) => sum + reportRiskWeight(r), 0);
-    maxScore = Math.max(maxScore, riskScore);
 
     zones.push({
       id: key,
@@ -144,11 +141,13 @@ export function buildRiskZonesFromReports(reports: Report[]): RiskZone[] {
     });
   });
 
-  if (maxScore <= 0) return zones;
+  if (zones.length === 0) return zones;
+
+  const STANDARD_MAX_SCORE = 22.0;
 
   return zones
     .map((z) => {
-      const riskIndex = z.riskScore / maxScore;
+      const riskIndex = Math.max(0, Math.min(1, z.riskScore / STANDARD_MAX_SCORE));
       return {
         ...z,
         riskIndex,

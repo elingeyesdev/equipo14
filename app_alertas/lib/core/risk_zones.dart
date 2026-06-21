@@ -86,8 +86,7 @@ bool _isAccidentReport(AlertModel report) {
 
 double _reportRiskWeight(AlertModel report) {
   var w = report.weight > 0 ? report.weight : 1.0;
-  if (_isAccidentReport(report)) w *= 1.6;
-  if (!report.verified) w *= 1.15;
+  if (report.verified) w *= 1.25;
   return w;
 }
 
@@ -168,7 +167,6 @@ List<RiskZone> buildRiskZonesFromAlerts(List<AlertModel> alerts) {
   }
 
   final zones = <RiskZone>[];
-  var maxScore = 0.0;
 
   buckets.forEach((key, bucket) {
     if (bucket.n == 0) return;
@@ -176,7 +174,6 @@ List<RiskZone> buildRiskZonesFromAlerts(List<AlertModel> alerts) {
     final lat = bucket.latSum / bucket.n;
     final accidentCount = bucket.reports.where(_isAccidentReport).length;
     final riskScore = bucket.reports.fold<double>(0, (sum, r) => sum + _reportRiskWeight(r));
-    maxScore = math.max(maxScore, riskScore);
 
     zones.add(
       RiskZone(
@@ -194,11 +191,13 @@ List<RiskZone> buildRiskZonesFromAlerts(List<AlertModel> alerts) {
     );
   });
 
-  if (maxScore <= 0) return zones;
+  if (zones.isEmpty) return zones;
+
+  const double standardMaxScore = 22.0;
 
   return zones
       .map((z) {
-        final riskIndex = z.riskScore / maxScore;
+        final riskIndex = (z.riskScore / standardMaxScore).clamp(0.0, 1.0);
         return RiskZone(
           id: z.id,
           name: z.name,
