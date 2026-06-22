@@ -3,11 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../models/user.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt'
-
 import { UserResponse } from '../http/requests/users/response';
 import { CreateAuthorityUserRequest, CreateUserRequest, UpdateLocationRequest, UpdateUserRequest, UpdatePasswordRequest } from 'app/http/requests/users/request';
 import { Role } from 'app/models/role.entity';
 import { AuthorityProfileService } from './authority-profile.service';
+import { MailService } from './mail.service';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +17,7 @@ export class UsersService {
         private usersRepository: Repository<User>,
         @InjectRepository(Role)
         private rolesRepository: Repository<Role>,
+        private mailService: MailService,
     ) {}
 
     async create(createUserRequest: CreateUserRequest){
@@ -55,6 +56,12 @@ export class UsersService {
         const newAuthProfile = await this.authProfileService.create(createAuthProfile, newUser)
 
         newUser.authority_profile = newAuthProfile
+
+        await this.mailService.sendUserCredentials(
+            createAuthUserRequest.gmail,
+            createAuthUserRequest.phone,
+            createAuthUserRequest.password,
+        );
 
         return UserResponse.FromUserToResponse(newUser)
     }

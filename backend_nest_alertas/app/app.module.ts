@@ -10,6 +10,7 @@ import appConfig from 'config/app.config';
 import jwtConfig from 'config/jwt.config';
 import databaseConfig from 'config/database.config';
 import redisConfig from 'config/redis.config';
+import mailConfig from 'config/mail.config';
 import { ReportTypesModule } from './providers/report-types.module';
 import { AuthModule } from './providers/auth.module';
 import { RolesModule } from './providers/roles.module';
@@ -23,6 +24,7 @@ import { RoleGuard } from './guards/roles.guard';
 import { AuthorityProfileModule } from './providers/authority-profile.module';
 import { EmergencyStationModule } from './providers/emergency-station.module';
 import { DispatchModule } from './providers/dispatch.module';
+import { MailModule } from './providers/mail.module';
 
 
 
@@ -31,7 +33,7 @@ import { DispatchModule } from './providers/dispatch.module';
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, jwtConfig, redisConfig]
+      load: [appConfig, databaseConfig, jwtConfig, redisConfig, mailConfig]
     }),
     //configuracion dinamica mediante otros servicios, en nuestro caso los config
     //el forRoot usado antes configura todo aqui directamente con valores estaticos
@@ -53,6 +55,7 @@ import { DispatchModule } from './providers/dispatch.module';
     NotificationsModule,
     EmergencyStationModule,
     DispatchModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService,{

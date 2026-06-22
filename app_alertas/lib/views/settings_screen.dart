@@ -43,7 +43,7 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
