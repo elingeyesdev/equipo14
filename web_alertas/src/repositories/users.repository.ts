@@ -37,5 +37,13 @@ export const usersRepository = {
 
   remove: async (id: string): Promise<{ message: string }> => {
     return httpClient.delete<{ message: string }>(`/users/${id}`);
+  },
+
+  sendMail: async (id: string, subject: string, content: string): Promise<{ message: string }> => {
+    return httpClient.post<{ message: string }>(`/mail/${id}`, { subject, content });
+  },
+
+  updateAuthorityProfile: async (userId: string, data: { ci?: string; gmail?: string; profile_type?: string }): Promise<any> => {
+    return httpClient.patch<any>(`/authority-profile/${userId}`, data);
   }
 };

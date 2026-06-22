@@ -48,8 +48,16 @@ export const reportsRepository = {
     return httpClient.get<Report>(`/reports/${id}`);
   },
 
+  findAllWithDeleted: async (): Promise<Report[]> => {
+    return httpClient.get<Report[]>("/reports/with-deleted");
+  },
+
   verify: async (id: number): Promise<Report> => {
     return httpClient.patch<Report>(`/reports/${id}/verify`);
+  },
+
+  reactivate: async (id: number): Promise<{ message: string }> => {
+    return httpClient.patch<{ message: string }>(`/reports/${id}/reactivate`);
   },
 
   remove: async (id: number): Promise<{ message: string }> => {

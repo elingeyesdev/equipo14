@@ -49,6 +49,14 @@ export interface ReportVerifier {
   last_name: string;
 }
 
+export type StateReport = "activo" | "resuelto" | "vencido" | "eliminado";
+
+export interface ReportDispatch {
+  attended_by: User | null;
+  recorded_at: string;
+  state: string;
+}
+
 export interface Report {
   id: number;
   creator: string;
@@ -62,9 +70,11 @@ export interface Report {
   expires_at: string;
   zone: string;
   images: ReportImage[];
+  status: StateReport;
   verified_at?: string | null;
   verified_by?: ReportVerifier | null;
   distinct_contributors?: number;
+  dispatches?: ReportDispatch[];
 }
 
 export interface Session {

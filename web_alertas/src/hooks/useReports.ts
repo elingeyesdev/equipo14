@@ -27,6 +27,13 @@ export function useReports(filters: any = {}, options: { enabled?: boolean } = {
     },
   });
 
+  const reactivateMutation = useMutation<{ message: string }, Error, number>({
+    mutationFn: (id) => reportsRepository.reactivate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+
   const createMutation = useMutation<Report, Error, FormData>({
     mutationFn: (formData) => reportsRepository.create(formData),
     onSuccess: () => {
@@ -47,7 +54,60 @@ export function useReports(filters: any = {}, options: { enabled?: boolean } = {
     deleteReport: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
 
+    reactivateReport: reactivateMutation.mutateAsync,
+    isReactivating: reactivateMutation.isPending,
+
     createReport: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
+  };
+}
+
+export function useReportsWithDeleted(options: { enabled?: boolean } = {}) {
+  const queryClient = useQueryClient();
+
+  const reportsQuery = useQuery<Report[], Error>({
+    queryKey: ["reports", "with-deleted"],
+    queryFn: () => reportsRepository.findAllWithDeleted(),
+    enabled: options.enabled !== false,
+    retry: 1,
+    refetchOnWindowFocus: true,
+  });
+
+  const verifyMutation = useMutation<Report, Error, number>({
+    mutationFn: (id) => reportsRepository.verify(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+
+  const deleteMutation = useMutation<{ message: string }, Error, number>({
+    mutationFn: (id) => reportsRepository.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+
+  const reactivateMutation = useMutation<{ message: string }, Error, number>({
+    mutationFn: (id) => reportsRepository.reactivate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+
+  return {
+    reports: reportsQuery.data || [],
+    isLoading: reportsQuery.isLoading,
+    isError: reportsQuery.isError,
+    error: reportsQuery.error,
+    refetch: reportsQuery.refetch,
+
+    verifyReport: verifyMutation.mutateAsync,
+    isVerifying: verifyMutation.isPending,
+
+    deleteReport: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
+
+    reactivateReport: reactivateMutation.mutateAsync,
+    isReactivating: reactivateMutation.isPending,
   };
 }

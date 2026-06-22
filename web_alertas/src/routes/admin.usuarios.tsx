@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Trash2, PlusCircle, Copy, Check } from "lucide-react";
+import { Trash2, PlusCircle, Copy, Check, Mail, Edit3 } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { toast } from "sonner";
 import { roleBadgeClass, roleLabel } from "@/lib/roles";
 import { CreateAuthoritySheet } from "@/components/admin/CreateAuthoritySheet";
+import { SendMailSheet } from "@/components/admin/SendMailSheet";
+import { EditAuthorityProfileSheet } from "@/components/admin/EditAuthorityProfileSheet";
+import { ActionConfirmDialog } from "@/components/admin/ActionConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/admin/DataTable";
 import {
@@ -25,19 +28,21 @@ function UsuariosPage() {
   const { users = [], isLoading, deleteUser, isDeleting, refetch } = useUsers();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [mailUser, setMailUser] = useState<User | null>(null);
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [searchId, setSearchId] = useState("");
   const [copiedUuid, setCopiedUuid] = useState(false);
 
   const baseUsers = users.filter((u) => u.role?.name?.toLowerCase() !== "admin");
 
-  const handleDeleteUser = async (id: string) => {
-    if (!window.confirm("¿Estás seguro que deseas eliminar este usuario?")) return;
-    try {
-      await deleteUser(id);
-      toast.success("Usuario eliminado.");
-      if (selectedUser?.id === id) setSelectedUser(null);
-    } catch (err: any) {
-      toast.error(err.message || "Error al eliminar usuario");
-    }
+  const filteredUsers = baseUsers.filter((u) => {
+    if (!searchId.trim()) return true;
+    return u.id.toLowerCase().includes(searchId.trim().toLowerCase());
+  });
+
+  const handleDeleteUser = (id: string) => {
+    setDeleteTargetId(id);
   };
 
   const copyUserUuid = async () => {
@@ -120,7 +125,31 @@ function UsuariosPage() {
       enableSorting: false,
       meta: { className: "text-right" },
       cell: ({ row }) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {row.original.authority_profile && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditUser(row.original);
+                }}
+                title="Editar perfil"
+                className="size-8 rounded-none border border-border hover:border-primary hover:text-primary grid place-items-center transition-colors cursor-pointer"
+              >
+                <Edit3 className="size-3.5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMailUser(row.original);
+                }}
+                title="Enviar correo"
+                className="size-8 rounded-none border border-border hover:border-primary hover:text-primary grid place-items-center transition-colors cursor-pointer"
+              >
+                <Mail className="size-3.5" />
+              </button>
+            </>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -177,13 +206,26 @@ function UsuariosPage() {
           </div>
         ))}
       </div>
+      <div className="mb-6 max-w-sm">
+        <label htmlFor="search-id" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5 block">
+          Buscar por ID
+        </label>
+        <input
+          id="search-id"
+          type="text"
+          placeholder="Ingresa el UUID del usuario..."
+          value={searchId}
+          onChange={(e) => setSearchId(e.target.value)}
+          className="w-full bg-background border border-border px-3 py-2 text-xs focus:outline-none focus:border-primary rounded-none font-mono"
+        />
+      </div>
 
       <DataTable
         columns={columns}
-        data={baseUsers}
+        data={filteredUsers}
         isLoading={isLoading}
         emptyMessage="Ningún usuario encontrado."
-        footerText={`${baseUsers.length} usuarios mostrados · clic en fila para ver UUID`}
+        footerText={`${filteredUsers.length} usuarios mostrados · clic en fila para ver UUID`}
         onRowClick={setSelectedUser}
       />
 
@@ -248,6 +290,40 @@ function UsuariosPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={() => refetch?.()}
+      />
+
+      <SendMailSheet
+        user={mailUser}
+        onOpenChange={(open) => !open && setMailUser(null)}
+      />
+
+      <EditAuthorityProfileSheet
+        user={editUser}
+        onOpenChange={(open) => !open && setEditUser(null)}
+      />
+
+      <ActionConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => !open && setDeleteTargetId(null)}
+        onConfirm={async () => {
+          if (deleteTargetId) {
+            try {
+              await deleteUser(deleteTargetId);
+              toast.success("Usuario eliminado.");
+              if (selectedUser?.id === deleteTargetId) setSelectedUser(null);
+            } catch (err: any) {
+              toast.error(err.message || "Error al eliminar usuario");
+            } finally {
+              setDeleteTargetId(null);
+            }
+          }
+        }}
+        isLoading={isDeleting}
+        title="¿Eliminar usuario?"
+        description="Esta acción no se puede deshacer. Se eliminará permanentemente la cuenta de usuario del sistema."
+        confirmText="Eliminar"
+        variant="destructive"
+        icon={<Trash2 className="size-5 text-destructive" />}
       />
     </div>
   );

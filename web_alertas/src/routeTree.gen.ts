@@ -17,8 +17,6 @@ import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminTipo_reporteRouteImport } from './routes/admin.tipo_reporte'
 import { Route as AdminRolesRouteImport } from './routes/admin.roles'
 import { Route as AdminReportesRouteImport } from './routes/admin.reportes'
-import { Route as AdminPanelRouteImport } from './routes/admin.panel'
-import { Route as AdminMetricasRouteImport } from './routes/admin.metricas'
 import { Route as AdminMapaRouteImport } from './routes/admin.mapa'
 
 const LoginRoute = LoginRouteImport.update({
@@ -61,16 +59,6 @@ const AdminReportesRoute = AdminReportesRouteImport.update({
   path: '/reportes',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminPanelRoute = AdminPanelRouteImport.update({
-  id: '/panel',
-  path: '/panel',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminMetricasRoute = AdminMetricasRouteImport.update({
-  id: '/metricas',
-  path: '/metricas',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminMapaRoute = AdminMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -82,8 +70,6 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/mapa': typeof AdminMapaRoute
-  '/admin/metricas': typeof AdminMetricasRoute
-  '/admin/panel': typeof AdminPanelRoute
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/tipo_reporte': typeof AdminTipo_reporteRoute
@@ -94,8 +80,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin/mapa': typeof AdminMapaRoute
-  '/admin/metricas': typeof AdminMetricasRoute
-  '/admin/panel': typeof AdminPanelRoute
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/tipo_reporte': typeof AdminTipo_reporteRoute
@@ -108,8 +92,6 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/mapa': typeof AdminMapaRoute
-  '/admin/metricas': typeof AdminMetricasRoute
-  '/admin/panel': typeof AdminPanelRoute
   '/admin/reportes': typeof AdminReportesRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/tipo_reporte': typeof AdminTipo_reporteRoute
@@ -123,8 +105,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/mapa'
-    | '/admin/metricas'
-    | '/admin/panel'
     | '/admin/reportes'
     | '/admin/roles'
     | '/admin/tipo_reporte'
@@ -135,8 +115,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/admin/mapa'
-    | '/admin/metricas'
-    | '/admin/panel'
     | '/admin/reportes'
     | '/admin/roles'
     | '/admin/tipo_reporte'
@@ -148,8 +126,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/mapa'
-    | '/admin/metricas'
-    | '/admin/panel'
     | '/admin/reportes'
     | '/admin/roles'
     | '/admin/tipo_reporte'
@@ -221,20 +197,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportesRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/panel': {
-      id: '/admin/panel'
-      path: '/panel'
-      fullPath: '/admin/panel'
-      preLoaderRoute: typeof AdminPanelRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/metricas': {
-      id: '/admin/metricas'
-      path: '/metricas'
-      fullPath: '/admin/metricas'
-      preLoaderRoute: typeof AdminMetricasRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/mapa': {
       id: '/admin/mapa'
       path: '/mapa'
@@ -247,8 +209,6 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminMapaRoute: typeof AdminMapaRoute
-  AdminMetricasRoute: typeof AdminMetricasRoute
-  AdminPanelRoute: typeof AdminPanelRoute
   AdminReportesRoute: typeof AdminReportesRoute
   AdminRolesRoute: typeof AdminRolesRoute
   AdminTipo_reporteRoute: typeof AdminTipo_reporteRoute
@@ -258,8 +218,6 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminMapaRoute: AdminMapaRoute,
-  AdminMetricasRoute: AdminMetricasRoute,
-  AdminPanelRoute: AdminPanelRoute,
   AdminReportesRoute: AdminReportesRoute,
   AdminRolesRoute: AdminRolesRoute,
   AdminTipo_reporteRoute: AdminTipo_reporteRoute,

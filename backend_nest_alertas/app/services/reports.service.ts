@@ -161,6 +161,17 @@ export class ReportsService {
         return ReportResponse.FromReportListToResponse(reports);
     }
 
+    async findAllWithDeleted() {
+        const reports = await this.reportsRepository.find({
+            relations: ['creator', 'images', 'images.uploadedBy', 'type', 'dispatches', 'dispatches.attended_by'],
+            withDeleted: true,
+            order: {
+                created_at: 'DESC'
+            }
+        });
+        return ReportResponse.FromReportListToResponse(reports);
+    }
+
     async findNearby(latitude: number, longitude: number, radius: number) {
         const reports = await this.reportsRepository
             .createQueryBuilder('report')

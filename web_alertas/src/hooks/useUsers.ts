@@ -28,6 +28,27 @@ export function useUsers(options: { enabled?: boolean } = {}) {
     },
   });
 
+  const sendMailMutation = useMutation<
+    { message: string },
+    Error,
+    { id: string; subject: string; content: string }
+  >({
+    mutationFn: ({ id, subject, content }) =>
+      usersRepository.sendMail(id, subject, content),
+  });
+
+  const updateAuthorityProfileMutation = useMutation<
+    any,
+    Error,
+    { userId: string; data: { ci?: string; gmail?: string; profile_type?: string } }
+  >({
+    mutationFn: ({ userId, data }) =>
+      usersRepository.updateAuthorityProfile(userId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+
   return {
     users: usersQuery.data || [],
     isLoading: usersQuery.isLoading,
@@ -40,5 +61,11 @@ export function useUsers(options: { enabled?: boolean } = {}) {
 
     deleteUser: deleteUserMutation.mutateAsync,
     isDeleting: deleteUserMutation.isPending,
+
+    sendMail: sendMailMutation.mutateAsync,
+    isSendingMail: sendMailMutation.isPending,
+
+    updateAuthorityProfile: updateAuthorityProfileMutation.mutateAsync,
+    isUpdatingAuthorityProfile: updateAuthorityProfileMutation.isPending,
   };
 }

@@ -6,7 +6,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, useState, createContext, useContext } from "react";
-import { ShieldCheck, LogOut, Map, BarChart3, Users, Tag, Shield } from "lucide-react";
+import { ShieldCheck, LogOut, Map, Users, Tag, Shield, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -50,10 +50,10 @@ export const Route = createFileRoute("/admin")({
 
 const navItems = [
   { to: "/admin/mapa", label: "Reportes en vivo", icon: Map },
-  { to: "/admin/tipo_reporte", label: "Tipos de Alertas", icon: Tag },
+  { to: "/admin/reportes", label: "Alertas", icon: FileText },
   { to: "/admin/usuarios", label: "Usuarios", icon: Users },
+  { to: "/admin/tipo_reporte", label: "Tipos de Alertas", icon: Tag },
   { to: "/admin/roles", label: "Roles", icon: Shield },
-  { to: "/admin/metricas", label: "Métricas", icon: BarChart3 },
 ] as const;
 
 function AdminLayout() {

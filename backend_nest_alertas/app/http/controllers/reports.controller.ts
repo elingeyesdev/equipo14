@@ -57,6 +57,11 @@ export class ReportsController {
         return this.reportsService.findAll();
     }
 
+    @Get('/with-deleted')
+    findAllWithDeleted() {
+        return this.reportsService.findAllWithDeleted();
+    }
+
     // este endpoint devuelve los reportes en un radio de proximo
     @Get('/nearby')
     findNearby(

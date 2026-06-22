@@ -2,6 +2,7 @@ import { ReportType } from "app/models/report-types.entity";
 import { Report } from "app/models/report.entity";
 import { ImageResponse } from "../images/response";
 import { StateReport } from "app/enums/state-report.enum";
+import { UserResponse } from "../users/response";
 
 export class ReportResponse{
     id: number;
@@ -17,6 +18,11 @@ export class ReportResponse{
     expires_at: Date;
     zone: string;
     images: ImageResponse[];   
+    dispatches?: {
+        attended_by: UserResponse | null;
+        recorded_at: Date;
+        state: string;
+    }[];
 
     static FromReportToResponse(report: Report): ReportResponse {
         const response = new ReportResponse();
@@ -35,6 +41,14 @@ export class ReportResponse{
         response.zone = report.zone ?? 'Sin zona';
         response.images = ImageResponse.FromImageListToResponse(report.images);
         
+        if (report.dispatches) {
+            response.dispatches = report.dispatches.map(d => ({
+                attended_by: d.attended_by ? UserResponse.FromUserToResponse(d.attended_by) : null,
+                recorded_at: d.recorded_at,
+                state: d.state,
+            }));
+        }
+
         return response;
     }
 
