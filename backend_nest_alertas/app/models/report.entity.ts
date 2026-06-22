@@ -5,6 +5,7 @@ import { Image } from "./image.entity";
 import { ReportType } from "./report-types.entity";
 import { Comment } from "./comment.entity";
 import { Dispatch } from "./dispatch.entity";
+import { StateReport } from "app/enums/state-report.enum";
 
 @Index(['deleted_at'])
 @Index(['expires_at'])
@@ -48,6 +49,13 @@ export class Report {
 
     @Column()
     expires_at: Date;
+
+    @Column({
+        type: 'enum',
+        enum: StateReport,
+        default: StateReport.Activo,
+    })
+    status: StateReport;
 
     @ManyToOne(() => User, user => user.reports)
     creator: User;

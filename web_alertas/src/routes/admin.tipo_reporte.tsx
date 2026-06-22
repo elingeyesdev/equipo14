@@ -9,14 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DataTable } from "@/components/admin/DataTable";
-import { FilterButton } from "@/components/admin/FilterButton";
-import {
-  applySimpleListFilters,
-  countSimpleFilters,
-  DEFAULT_SIMPLE_FILTERS,
-  SimpleListFilters,
-  type SimpleListFiltersState,
-} from "@/components/admin/SimpleListFilters";
 import type { ReportType } from "@/domain/types";
 
 export const Route = createFileRoute("/admin/tipo_reporte")({
@@ -24,26 +16,9 @@ export const Route = createFileRoute("/admin/tipo_reporte")({
 });
 
 function TipoReportePage() {
-  const { reportTypes = [], isLoading, createReportType, deleteReportType, isCreating, isDeleting } = useReportTypes();
+  const { reportTypes = [], isLoading, createReportType, deleteReportType, isCreating } = useReportTypes();
   const [createOpen, setCreateOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState<SimpleListFiltersState>(DEFAULT_SIMPLE_FILTERS);
   const [newTypeName, setNewTypeName] = useState("");
-
-  const filteredTypes = applySimpleListFilters(reportTypes, filters, (type, search) =>
-    type.name.toLowerCase().includes(search),
-  );
-
-  // Logic kept intact for future use
-  const handleDeleteType = async (id: number) => {
-    if (!window.confirm("¿Estás seguro que deseas eliminar este tipo de reporte?")) return;
-    try {
-      await deleteReportType(id);
-      toast.success("Tipo de reporte eliminado.");
-    } catch (err: any) {
-      toast.error(err.message || "Error al eliminar tipo de reporte");
-    }
-  };
 
   const handleCreateType = async (e: FormEvent) => {
     e.preventDefault();
@@ -95,8 +70,7 @@ function TipoReportePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <FilterButton activeCount={countSimpleFilters(filters)} onClick={() => setFiltersOpen(true)} />
-          <Button onClick={() => setCreateOpen(true)} className="rounded-xl gap-2 font-bold cursor-pointer">
+          <Button onClick={() => setCreateOpen(true)} className="rounded-none gap-2 font-bold cursor-pointer">
             <PlusCircle className="size-4" />
             Crear nuevo tipo
           </Button>
@@ -105,52 +79,57 @@ function TipoReportePage() {
 
       <DataTable
         columns={columns}
-        data={filteredTypes}
+        data={reportTypes}
         isLoading={isLoading}
         emptyMessage="Ningún tipo de reporte encontrado."
-        footerText={`${filteredTypes.length} tipos de alerta`}
+        footerText={`${reportTypes.length} tipos de alerta`}
       />
 
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-display flex items-center gap-2">
-              <Tag className="size-5 text-primary" />
-              Nuevo tipo de alerta
-            </SheetTitle>
-            <SheetDescription>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto border-border rounded-none bg-background">
+          <SheetHeader className="mb-0 pr-8 pb-5 border-b border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-none">
+                Catálogo
+              </span>
+            </div>
+            <SheetTitle className="font-display text-lg tracking-tight">Nuevo tipo de alerta</SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
               Crea una nueva categoría para que los ciudadanos o autoridades puedan reportar incidentes de esta índole.
             </SheetDescription>
           </SheetHeader>
-          <form onSubmit={handleCreateType} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="type-name">Nombre de la categoría</Label>
+          <form onSubmit={handleCreateType} className="space-y-0 pb-8">
+            <div className="px-0 py-4 border-b border-border space-y-2">
+              <Label htmlFor="type-name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Nombre de la categoría
+              </Label>
               <Input
                 id="type-name"
                 value={newTypeName}
                 onChange={(e) => setNewTypeName(e.target.value)}
                 required
                 placeholder="Ej. Poste caído"
-                className="rounded-xl"
+                className="rounded-none border-border"
               />
             </div>
-            <Button type="submit" disabled={isCreating} className="w-full rounded-xl font-bold gap-2 cursor-pointer mt-6">
-              {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-              Crear tipo
-            </Button>
+            <div className="pt-5">
+              <Button type="submit" disabled={isCreating} className="w-full rounded-none font-bold gap-2 cursor-pointer uppercase tracking-wider text-xs h-11">
+                {isCreating ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Creando tipo...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="size-4" />
+                    Crear tipo
+                  </>
+                )}
+              </Button>
+            </div>
           </form>
         </SheetContent>
       </Sheet>
-
-      <SimpleListFilters
-        open={filtersOpen}
-        onOpenChange={setFiltersOpen}
-        title="Filtros de tipos de alerta"
-        description="Busca categorías por nombre."
-        filters={filters}
-        onChange={setFilters}
-        resultCount={filteredTypes.length}
-      />
     </div>
   );
 }

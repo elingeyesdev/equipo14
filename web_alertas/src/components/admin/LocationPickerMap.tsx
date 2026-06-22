@@ -136,17 +136,17 @@ export function LocationPickerMap({
   return (
     <div
       className={cn(
-        "relative rounded-xl overflow-hidden border border-border min-h-[220px]",
+        "relative rounded-none overflow-hidden border border-border min-h-[220px]",
         className,
       )}
     >
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
-      <div className="absolute top-3 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-background/90 backdrop-blur border border-border text-[11px] text-muted-foreground z-10 pointer-events-none">
+      <div className="absolute top-3 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-none bg-background/90 backdrop-blur border border-border text-[11px] text-muted-foreground z-10 pointer-events-none">
         <MapPin className="size-3.5 text-primary shrink-0" />
         Haz clic en el mapa para marcar la ubicación de la alerta
       </div>
       {value && (
-        <div className="absolute bottom-3 left-3 right-3 px-3 py-2 rounded-lg bg-background/90 backdrop-blur border border-border text-[10px] font-mono z-10 pointer-events-none">
+        <div className="absolute bottom-3 left-3 right-3 px-3 py-2 rounded-none bg-background/90 backdrop-blur border border-border text-[10px] font-mono z-10 pointer-events-none">
           {value.latitude.toFixed(5)}, {value.longitude.toFixed(5)}
         </div>
       )}

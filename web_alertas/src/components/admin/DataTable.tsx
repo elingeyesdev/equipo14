@@ -47,7 +47,7 @@ export function DataTable<TData>({
   });
 
   return (
-    <div className="border border-border rounded-2xl bg-card overflow-hidden">
+    <div className="border border-border rounded-none bg-card overflow-hidden">
       <div className="overflow-x-auto">
         {isLoading ? (
           <div className="py-20 flex items-center justify-center text-xs text-muted-foreground gap-2">
@@ -70,7 +70,7 @@ export function DataTable<TData>({
                         key={header.id}
                         className={cn(
                           "text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-5 py-3 h-auto",
-                          header.column.columnDef.meta?.className as string
+                          (header.column.columnDef.meta as any)?.className
                         )}
                       >
                         {header.isPlaceholder ? null : canSort ? (
@@ -121,7 +121,7 @@ export function DataTable<TData>({
                         key={cell.id}
                         className={cn(
                           "px-5 py-3.5",
-                          cell.column.columnDef.meta?.className as string
+                          (cell.column.columnDef.meta as any)?.className
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

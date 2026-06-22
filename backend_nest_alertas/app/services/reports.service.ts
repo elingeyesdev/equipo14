@@ -9,6 +9,7 @@ import { ReportCoinicdenceResponse, ReportResponse } from 'app/http/requests/rep
 import { ReportType } from 'app/models/report-types.entity';
 import { NotificationsService } from './notifications.service';
 import { ReportsGateway } from 'app/gateways/reports.gateway';
+import { StateReport } from 'app/enums/state-report.enum';
 
 @Injectable()
 export class ReportsService {
@@ -49,8 +50,9 @@ export class ReportsService {
         createReport.weight = initialWeight;
         createReport.expires_at = expires;
         createReport.creator = user;
-        createReport.type = type
+        createReport.type = type;
         createReport.zone = createReportRequest.zone || 'Zona desconocida';
+        createReport.status = StateReport.Activo;
 
         const newReport = this.reportsRepository.create(createReport);
         const savedReport = await this.reportsRepository.save(newReport);
@@ -230,11 +232,55 @@ export class ReportsService {
     }
 
     async remove(id: string){
-        const result = await this.reportsRepository.softDelete(id);
-
-        if(result.affected === 0){
-            throw new NotFoundException(`El reporte con ID ${id} no se encontro`)
+        const report = await this.reportsRepository.findOne({
+            where: { id: Number(id) }
+        });
+        if (!report) {
+            throw new NotFoundException(`El reporte con ID ${id} no se encontro`);
         }
+
+        report.status = StateReport.Eliminado;
+        await this.reportsRepository.save(report);
+
+        await this.reportsRepository.softDelete(id);
+        
         return { message: "Reporte eliminado correctamente" };
+    }
+
+    async resolveReport(id: number) {
+        const report = await this.reportsRepository.findOne({
+            where: { id },
+        });
+
+        if (!report) {
+            throw new NotFoundException(`El reporte con ID ${id} no se encontro`);
+        }
+
+        report.status = StateReport.Resuelto;
+        await this.reportsRepository.save(report);
+
+        await this.reportsRepository.softDelete(id);
+        return { message: "Reporte resuelto correctamente" };
+    }
+
+    async reactivateReport(id: number) {
+        const report = await this.reportsRepository.findOne({
+            where: { id },
+            withDeleted: true,
+        });
+
+        if (!report) {
+            throw new NotFoundException(`El reporte con ID ${id} no se encontro`);
+        }
+
+        const expires = new Date();
+        expires.setHours(expires.getHours() + 2);
+
+        report.status = StateReport.Activo;
+        report.expires_at = expires;
+        report.deleted_at = null as any;
+
+        await this.reportsRepository.save(report);
+        return { message: "Reporte reactivado correctamente" };
     }
 }

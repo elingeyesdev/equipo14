@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { onValue, ref } from "firebase/database";
-import { getFirebaseDatabase } from "@/lib/firebase";
-import { parseLiveTracking, type LiveTracking } from "@/domain/tracking";
+import { type LiveTracking } from "@/domain/tracking";
+import { trackingSocketService } from "@/services/trackingSocket.service";
 
 export function useLiveTrackings(enabled = true) {
   const [trackings, setTrackings] = useState<LiveTracking[]>([]);
@@ -15,35 +14,22 @@ export function useLiveTrackings(enabled = true) {
       return;
     }
 
-    const db = getFirebaseDatabase();
-    const trackingsRef = ref(db, "trackings");
+    // Connect if not already connected
+    trackingSocketService.connect();
 
-    const unsubscribe = onValue(
-      trackingsRef,
-      (snapshot) => {
-        setConnected(true);
-        setError(null);
+    const unsubscribeTrackings = trackingSocketService.subscribe((updatedTrackings) => {
+      setTrackings(updatedTrackings);
+    });
 
-        if (!snapshot.exists()) {
-          setTrackings([]);
-          return;
-        }
+    const unsubscribeConnection = trackingSocketService.subscribeConnection((isConnected) => {
+      setConnected(isConnected);
+      setError(null);
+    });
 
-        const data = snapshot.val() as Record<string, Record<string, unknown>>;
-        const parsed = Object.entries(data)
-          .map(([id, value]) => parseLiveTracking(id, value ?? {}))
-          .filter((t): t is LiveTracking => t != null);
-
-        setTrackings(parsed);
-      },
-      (err) => {
-        setConnected(false);
-        setError(err.message);
-        setTrackings([]);
-      },
-    );
-
-    return () => unsubscribe();
+    return () => {
+      unsubscribeTrackings();
+      unsubscribeConnection();
+    };
   }, [enabled]);
 
   return { trackings, error, connected };

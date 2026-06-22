@@ -1,18 +1,21 @@
 import type mapboxgl from "mapbox-gl";
 import type { LiveTracking } from "@/domain/tracking";
 import { bringReportMarkersToFront } from "@/lib/mapbox-reports";
+import cochePoliciaIcon from "@/assets/coche-de-policia.png";
+import camionBomberosIcon from "@/assets/camion-de-bomberos.png";
+import ambulanciaIcon from "@/assets/ambulancia.png";
 
 export const TRACKING_ROUTES_SOURCE_ID = "tracking-routes";
 const TRACKING_ROUTES_LAYER_ID = "tracking-routes-line";
 export const TRACKING_INCIDENTS_SOURCE_ID = "tracking-incidents";
 const TRACKING_INCIDENTS_LAYER_ID = "tracking-incidents-pin";
 
-function vehicleEmoji(type?: string): string {
+function vehicleIconSrc(type?: string): string {
   const t = type?.toLowerCase() ?? "";
-  if (t.includes("incendio") || t.includes("bombero")) return "🚒";
-  if (t.includes("medic") || t.includes("salud") || t.includes("ambulancia")) return "🚑";
-  if (t.includes("polic")) return "🚓";
-  return "🚗";
+  if (t.includes("incendio") || t.includes("bombero")) return camionBomberosIcon;
+  if (t.includes("medic") || t.includes("salud") || t.includes("ambulancia") || t.includes("paramedico")) return ambulanciaIcon;
+  if (t.includes("polic")) return cochePoliciaIcon;
+  return cochePoliciaIcon;
 }
 
 function createVehicleMarkerElement(tracking: LiveTracking, selected: boolean): HTMLButtonElement {
@@ -27,11 +30,11 @@ function createVehicleMarkerElement(tracking: LiveTracking, selected: boolean): 
   const bg = selected ? "#22c55e" : "#3b82f6";
   el.innerHTML = `
     <div class="relative flex flex-col items-center transition-transform group-hover:scale-110">
-      <div class="size-11 rounded-full border-2 border-white shadow-lg grid place-items-center text-lg"
+      <div class="size-11 border-2 border-white shadow-lg grid place-items-center bg-card rounded-none"
            style="background:${bg}">
-        ${vehicleEmoji(tracking.type)}
+        <img src="${vehicleIconSrc(tracking.type)}" class="size-9 object-contain" />
       </div>
-      <span class="mt-1 px-2 py-0.5 rounded-full bg-background/90 border border-border text-[9px] font-bold uppercase tracking-wide text-foreground max-w-[120px] truncate">
+      <span class="mt-1 px-2 py-0.5 bg-background/90 border border-border text-[9px] font-bold uppercase tracking-wide text-foreground max-w-[120px] truncate rounded-none">
         ${tracking.type || "En ruta"}
       </span>
     </div>
@@ -39,9 +42,9 @@ function createVehicleMarkerElement(tracking: LiveTracking, selected: boolean): 
   return el;
 }
 
-export function syncTrackingRouteLayers(map: mapboxgl.Map, trackings: LiveTracking[]) {
+export function syncTrackingRouteLayers(map: mapboxgl.Map, trackings: LiveTracking[], selectedId: string | null) {
   const lineFeatures: GeoJSON.Feature[] = trackings
-    .filter((t) => t.route.length >= 2)
+    .filter((t) => t.id === selectedId && t.route.length >= 2)
     .map((t) => ({
       type: "Feature" as const,
       properties: {
@@ -55,7 +58,7 @@ export function syncTrackingRouteLayers(map: mapboxgl.Map, trackings: LiveTracki
     }));
 
   const incidentFeatures: GeoJSON.Feature[] = trackings
-    .filter((t) => t.incidentLatitude != null && t.incidentLongitude != null)
+    .filter((t) => t.id === selectedId && t.incidentLatitude != null && t.incidentLongitude != null)
     .map((t) => ({
       type: "Feature" as const,
       properties: {
@@ -127,7 +130,7 @@ export function clearTrackingRouteLayers(map: mapboxgl.Map) {
 
 export function syncTrackingVehicleMarkers(
   map: mapboxgl.Map,
-  mapboxgl: typeof import("mapbox-gl").default,
+  mapboxglInstance: typeof mapboxgl,
   trackings: LiveTracking[],
   markersById: Map<string, mapboxgl.Marker>,
   selectedId: string | null,
@@ -170,7 +173,7 @@ export function syncTrackingVehicleMarkers(
       });
     });
 
-    const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+    const marker = new mapboxglInstance.Marker({ element: el, anchor: "center" })
       .setLngLat(lngLat)
       .addTo(map);
 

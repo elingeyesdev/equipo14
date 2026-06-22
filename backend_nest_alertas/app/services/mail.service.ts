@@ -1,9 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from 'app/models/user.entity';
 
 @Injectable()
 export class MailService {
-    constructor(private readonly mailerService: MailerService) {}
+    constructor(
+        private readonly mailerService: MailerService,
+        @InjectRepository(User)
+        private readonly userRepository: Repository<User>,
+    ) {}
 
     async sendUserCredentials(email: string, phone: string, passwordUnencrypted: string): Promise<void> {
         try {
@@ -28,5 +35,40 @@ export class MailService {
         } catch (error) {
             console.log(`Error enviando correo a ${email}`, error);
         }
+    }
+
+    async sendMailToUser(id: string, subject: string, content: string): Promise<{ message: string }> {
+        const user = await this.userRepository.findOne({
+            where: { id },
+            relations: ['authority_profile'],
+        });
+
+        if (!user) {
+            throw new NotFoundException(`El user con ID ${id} no se encontro`);
+        }
+
+        if (!user.authority_profile || !user.authority_profile.gmail) {
+            throw new BadRequestException('El usuario no tiene una dirección de correo configurada.');
+        }
+
+        const email = user.authority_profile.gmail;
+        try {
+            await this.mailerService.sendMail({
+                to: email,
+                subject: subject,
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+                        <h2 style="color: #1a73e8; margin-top: 0;">${subject}</h2>
+                        <p>${content}</p>
+                    </div>
+                `,
+            });
+            console.log(`Correo enviado correctamente a ${email}`);
+        } catch (error) {
+            console.log(`Error enviando correo a ${email}`, error);
+            throw error;
+        }
+
+        return { message: `Correo enviado exitosamente a ${email}` };
     }
 }

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
-  Layers,
   Radio,
   MapPin,
   Plus as ZoomIn,
@@ -10,24 +10,28 @@ import {
   Check,
   X,
   PlusCircle,
-  Crosshair,
-  Circle,
   Trash2,
   RefreshCw,
-  Loader2,
+  List,
+  Shield,
   Clock,
+  Flame,
+  HeartPulse,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/admin/DataTable";
-import { type ColumnDef } from "@tanstack/react-table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 import { useReports } from "@/hooks/useReports";
 import { CreateAlertSheet } from "@/components/admin/CreateAlertSheet";
-import { SaveZoneDialog } from "@/components/admin/SaveZoneDialog";
-import { FilterButton } from "@/components/admin/FilterButton";
-import { ReportsFilterSheet } from "@/components/admin/ReportsFilterSheet";
-import { useFilters } from "@/context/FilterContext";
+import { VerifyEvidenceDialog } from "@/components/admin/VerifyEvidenceDialog";
+import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
+import { ImageCarouselDialog } from "@/components/admin/ImageCarouselDialog";
 import type { MapLocation } from "@/components/admin/LocationPickerMap";
 import {
   loadMapboxGl,
@@ -37,191 +41,149 @@ import {
   attachMapResizeObserver,
   burstMapResize,
 } from "@/lib/mapbox";
-import { useMapboxRiskZones, type RiskZone } from "@/hooks/useMapboxRiskZones";
-import { RiskZonesPanel } from "@/components/admin/RiskZonesPanel";
-import { LiveTrackingPanel } from "@/components/admin/LiveTrackingPanel";
-import { EmergencyStationsPanel } from "@/components/admin/EmergencyStationsPanel";
-import { VerifyEvidenceDialog } from "@/components/admin/VerifyEvidenceDialog";
+import { useMapboxRiskZones } from "@/hooks/useMapboxRiskZones";
+import { useEmergencyStations } from "@/hooks/useEmergencyStations";
+import { useMapboxEmergencyStations } from "@/hooks/useMapboxEmergencyStations";
 import { useLiveTrackings } from "@/hooks/useLiveTrackings";
 import { useSnappedTrackings } from "@/hooks/useSnappedTrackings";
 import { useMapboxTrackings } from "@/hooks/useMapboxTrackings";
-import { useEmergencyStations } from "@/hooks/useEmergencyStations";
-import { useMapboxEmergencyStations } from "@/hooks/useMapboxEmergencyStations";
-import type { LiveTracking } from "@/domain/tracking";
-import type { EmergencyStation } from "@/domain/types";
 import { getSession } from "@/api/httpClient";
-import type { Report } from "@/domain/types";
+import type { Report, ReportImage } from "@/domain/types";
 import { normalizeReportCoordinates } from "@/lib/geo";
 import { syncReportMarkersLayer, bringReportMarkersToFront } from "@/lib/mapbox-reports";
-import { riskIndexToColor } from "@/lib/risk-zones";
-import { filterReportsForMap } from "@/lib/report-visibility";
 import { toast } from "sonner";
-
-function getZoneColorMap(reports: Report[]): Record<string, string> {
-  const map: Record<string, string> = {};
-  const zoneStats: Record<string, { totalWeight: number; count: number }> = {};
-
-  reports.forEach((r) => {
-    const name = r.zone?.trim() || "Zona desconocida";
-    if (!zoneStats[name]) {
-      zoneStats[name] = { totalWeight: 0, count: 0 };
-    }
-    let w = r.weight || 1;
-    if (r.verified) w *= 1.25;
-    zoneStats[name].totalWeight += w;
-    zoneStats[name].count += 1;
-  });
-
-  const STANDARD_MAX_SCORE = 22.0;
-
-  Object.entries(zoneStats).forEach(([name, stats]) => {
-    const riskIndex = Math.max(0, Math.min(1, stats.totalWeight / STANDARD_MAX_SCORE));
-    map[name] = riskIndexToColor(riskIndex);
-  });
-
-  return map;
-}
+import { reportsSocketService } from "@/services/reportsSocket.service";
 
 export const Route = createFileRoute("/admin/mapa")({
   component: MapaPage,
 });
 
-function MapaPage() {
+const getCategoryMarkerConfig = (typeName?: string) => {
+  const name = typeName?.toLowerCase() || "";
+  if (name.includes("robo") || name.includes("hurto") || name.includes("asalto")) {
+    return {
+      color: "#B64D4C",
+      iconPaths: `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>`
+    };
+  }
+  if (name.includes("incendio") || name.includes("fuego")) {
+    return {
+      color: "#AA5F3C",
+      iconPaths: `<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>`
+    };
+  }
+  if (name.includes("accidente") || name.includes("vial") || name.includes("choque")) {
+    return {
+      color: "#506E96",
+      iconPaths: `<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>`
+    };
+  }
+  if (name.includes("médica") || name.includes("salud") || name.includes("enfermo")) {
+    return {
+      color: "#3C8C6E",
+      iconPaths: `<path d="M19 10h-5V5c0-.6-.4-1-1-1h-2c-.6 0-1 .4-1 1v5H5c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h5v5c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-5h5c.6 0 1-.4 1-1v-2c0-.6-.4-1-1-1z"/>`
+    };
+  }
+  return {
+    color: "#AF6D58",
+    iconPaths: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`
+  };
+};
 
+function MapaPage() {
+  const queryClient = useQueryClient();
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+  const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [pickOnMainMap, setPickOnMainMap] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<MapLocation | null>(null);
-  /** Capa de índice de riesgo (círculos verde → rojo) */
-  const [showRiskZones, setShowRiskZones] = useState(true);
-  /** Unidades de autoridad en ruta (Firebase RTDB) */
-  const [showLiveTracking, setShowLiveTracking] = useState(true);
-  /** Instalaciones de emergencia (policía, bomberos, etc.) */
-  const [showEmergencyStations, setShowEmergencyStations] = useState(true);
-  const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null);
-  const [expandedPanel, setExpandedPanel] = useState<"stations" | "zones" | "tracking" | null>("zones");
-  const trackingMarkersRef = useRef<Map<string, any>>(new Map());
   const [verifyTarget, setVerifyTarget] = useState<Report | null>(null);
-
   const [isDeletingReport, setIsDeletingReport] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [carouselOpen, setCarouselOpen] = useState(false);
+  const [carouselImages, setCarouselImages] = useState<ReportImage[]>([]);
+  const [carouselInitialIndex, setCarouselInitialIndex] = useState(0);
+  const [carouselActiveIndex, setCarouselActiveIndex] = useState(0);
+  const [alertsListOpen, setAlertsListOpen] = useState(false);
+  const [map, setMap] = useState<any>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [stationFilter, setStationFilter] = useState<"todos" | "policia" | "bombero" | "hospital">("todos");
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const draftMarkerRef = useRef<any>(null);
+  const trackingMarkersRef = useRef<Map<string, any>>(new Map());
   const pickOnMainMapRef = useRef(pickOnMainMap);
   pickOnMainMapRef.current = pickOnMainMap;
 
-  const { filters, activeCount } = useFilters();
+  // Real-time report handler via WebSockets
+  useEffect(() => {
+    const unsubscribe = reportsSocketService.subscribe((newReport) => {
+      const cache = queryClient.getQueryCache();
+      const queries = cache.findAll({ queryKey: ["reports"] });
+      
+      queries.forEach((query) => {
+        const queryKey = query.queryKey;
+        queryClient.setQueryData<Report[]>(queryKey, (oldReports = []) => {
+          if (oldReports.some((r) => r.id === newReport.id)) {
+            return oldReports;
+          }
+          return [newReport, ...oldReports];
+        });
+      });
+      
+      toast.info(`Nuevo incidente reportado: ${newReport.type?.name || "Alerta"}`);
+    });
+
+    return () => unsubscribe();
+  }, [queryClient]);
+
   const { reports = [], isLoading, verifyReport, isVerifying, deleteReport, refetch } = useReports({
-    ...filters,
     includeDeleted: true,
   });
-  const mapReports = useMemo(() => filterReportsForMap(reports), [reports]);
-  const { emergencyStations } = useEmergencyStations();
 
-  const { riskZones } = useMapboxRiskZones(mapRef, mapReports, showRiskZones);
-  useMapboxEmergencyStations(mapRef, emergencyStations, showEmergencyStations);
+  const mapReports = useMemo(
+    () => reports.filter((r) => r.coordinates && r.coordinates.length >= 2),
+    [reports],
+  );
 
-  const { trackings, error: trackingError, connected: trackingConnected } =
-    useLiveTrackings(showLiveTracking);
-  const displayTrackings = useSnappedTrackings(trackings, showLiveTracking);
+  const { emergencyStations = [], refetch: refetchStations } = useEmergencyStations();
+ 
+  const filteredStations = useMemo(() => {
+    if (stationFilter === "todos") return emergencyStations;
+    return emergencyStations.filter(
+      (s) => s.installation_type?.toLowerCase() === stationFilter,
+    );
+  }, [emergencyStations, stationFilter]);
+ 
+  // Force fresh data load on screen entry
+  useEffect(() => {
+    refetch();
+    refetchStations();
+  }, [refetch, refetchStations]);
+
+  // All layers always active as requested
+  useMapboxRiskZones(map, mapReports, true, isMapReady);
+  useMapboxEmergencyStations(map, filteredStations, true, isMapReady);
+
+  const { trackings = [] } = useLiveTrackings(true);
+  const displayTrackings = useSnappedTrackings(trackings, true);
 
   const handleSelectTracking = useCallback((id: string) => {
     setSelectedTrackingId((prev) => (prev === id ? null : id));
     setSelectedReportId(null);
   }, []);
 
-  const handleFocusTracking = useCallback((tracking: LiveTracking) => {
-    mapRef.current?.flyTo({
-      center: [tracking.longitude, tracking.latitude],
-      zoom: 15.5,
-      pitch: 50,
-      speed: 1.2,
-    });
-  }, []);
-
   useMapboxTrackings(
-    mapRef,
+    map,
     displayTrackings,
-    showLiveTracking,
+    true,
     trackingMarkersRef,
     selectedTrackingId,
     handleSelectTracking,
+    isMapReady,
   );
-
-  useEffect(() => {
-    if (trackingError) {
-      toast.error(`Tracking en vivo: ${trackingError}`);
-    }
-  }, [trackingError]);
-
-  const handleFocusRiskZone = (zone: RiskZone) => {
-    mapRef.current?.flyTo({
-      center: [zone.lng, zone.lat],
-      zoom: 13.8,
-      pitch: 50,
-      speed: 1.2,
-    });
-  };
-
-  const handleFocusStation = useCallback((station: EmergencyStation) => {
-    mapRef.current?.flyTo({
-      center: station.coordinates as [number, number],
-      zoom: 15.5,
-      pitch: 50,
-      speed: 1.2,
-    });
-  }, []);
-
-
-
-
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map?.getLayer?.("risk-zones-fill")) return;
-
-    const onRiskClick = (e: {
-      features?: { properties?: { name?: string; riskIndex?: number; reportCount?: number } }[];
-    }) => {
-      const props = e.features?.[0]?.properties;
-      if (!props?.name) return;
-      const pct = Math.round((props.riskIndex ?? 0) * 100);
-      toast.info(`Zona «${props.name}» · índice ${pct}% · ${props.reportCount ?? 0} incidentes`);
-    };
-    const onEnter = () => {
-      map.getCanvas().style.cursor = "pointer";
-    };
-    const onLeave = () => {
-      map.getCanvas().style.cursor = "";
-    };
-
-    map.on("click", "risk-zones-fill", onRiskClick);
-    map.on("mouseenter", "risk-zones-fill", onEnter);
-    map.on("mouseleave", "risk-zones-fill", onLeave);
-
-    return () => {
-      map.off("click", "risk-zones-fill", onRiskClick);
-      map.off("mouseenter", "risk-zones-fill", onEnter);
-      map.off("mouseleave", "risk-zones-fill", onLeave);
-    };
-  }, [showRiskZones, riskZones.length]);
-
-  useEffect(() => {
-    if (!mapRef.current?.loaded?.()) return;
-    void updateMarkers();
-  }, [showRiskZones, riskZones.length]);
-
-  // Hex color codes for the categories
-  const getCategoryColorHex = (type?: string) => {
-    const t = type?.toLowerCase() || "";
-    if (t.includes("robo") || t.includes("hurto") || t.includes("asalto")) return "#f43f5e"; // rose-500
-    if (t.includes("incendio") || t.includes("fuego")) return "#f97316"; // orange-500
-    if (t.includes("accidente") || t.includes("choque")) return "#f59e0b"; // amber-500
-    return "#3b82f6"; // primary blue
-  };
 
   // SSR-safe Mapbox GL initialization
   useEffect(() => {
@@ -229,29 +191,38 @@ function MapaPage() {
 
     let mapInstance: any;
     let detachResize: (() => void) | null = null;
+    let isCancelled = false;
 
     const initMap = async () => {
       try {
         const mapboxgl = await loadMapboxGl();
+        if (isCancelled) return;
 
         mapInstance = new mapboxgl.Map({
           container: mapContainerRef.current!,
           style: MAPBOX_STYLE,
           center: [SANTA_CRUZ_CENTER.lng, SANTA_CRUZ_CENTER.lat],
           zoom: 12.5,
-          pitch: 55, // 3D tilt
+          pitch: 55,
           bearing: -15,
           antialias: true,
           ...MAPBOX_MAP_OPTIONS,
         });
 
+        if (isCancelled) {
+          mapInstance.remove();
+          return;
+        }
+
         mapRef.current = mapInstance;
+        setMap(mapInstance);
 
         if (mapContainerRef.current) {
           detachResize = attachMapResizeObserver(mapInstance, mapContainerRef.current);
         }
 
         mapInstance.on("style.load", () => {
+          if (isCancelled) return;
           const layers = mapInstance.getStyle().layers;
           const labelLayerId = layers.find(
             (layer: any) => layer.type === "symbol" && layer.layout && layer.layout["text-field"]
@@ -293,19 +264,21 @@ function MapaPage() {
         });
 
         mapInstance.on("load", () => {
+          if (isCancelled) return;
           burstMapResize(mapInstance);
-          updateMarkers(mapboxgl);
+          setIsMapReady(true);
         });
 
         mapInstance.on("error", (e: { error?: Error }) => {
+          if (isCancelled) return;
           console.error("Mapbox:", e.error?.message ?? e);
           toast.error(
-            "No se pudo cargar el mapa. Revisa VITE_MAPBOX_TOKEN en .env (token pk.* válido de mapbox.com)",
+            "No se pudo cargar el mapa. Revisa VITE_MAPBOX_TOKEN en .env"
           );
         });
 
         mapInstance.on("click", (e: any) => {
-
+          if (isCancelled) return;
           if (!pickOnMainMapRef.current) return;
           const { lng, lat } = e.lngLat;
           const loc = { latitude: lat, longitude: lng };
@@ -318,7 +291,7 @@ function MapaPage() {
           } else {
             const el = document.createElement("div");
             el.innerHTML = `
-              <div class="size-4 rounded-full bg-primary border-2 border-white shadow-lg animate-pulse"></div>
+              <div class="size-4 bg-primary border-2 border-white shadow-lg animate-pulse rounded-none"></div>
             `;
             draftMarkerRef.current = new mapboxgl.Marker({ element: el })
               .setLngLat([lng, lat])
@@ -333,166 +306,104 @@ function MapaPage() {
     initMap();
 
     return () => {
+      isCancelled = true;
       detachResize?.();
       if (mapInstance) {
         mapInstance.remove();
       }
       mapRef.current = null;
+      setMap(null);
+      setIsMapReady(false);
     };
   }, []);
 
-  // Update Mapbox Markers dynamically when reports list changes
-  const updateMarkers = async (mapboxglInstance?: any) => {
-    const map = mapRef.current;
-    if (!map) return;
+  // Update Report Markers dynamically
+  useEffect(() => {
+    if (!map || !isMapReady) return;
 
-    try {
-      const mapboxgl = mapboxglInstance || (await import("mapbox-gl")).default;
+    let active = true;
 
-      // Remove existing markers
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
+    const drawMarkers = async () => {
+      try {
+        const mapboxgl = await loadMapboxGl();
+        if (!active) return;
 
-      mapReports.forEach((report) => {
-        const pos = normalizeReportCoordinates(report.coordinates);
-        if (!pos) return;
-        const [lng, lat] = pos;
+        markersRef.current.forEach((m) => m.remove());
+        markersRef.current = [];
 
-        // Custom Google Maps-style Marker Element
-        const el = document.createElement("button");
-        el.className = "marker-btn group cursor-pointer relative";
-        el.style.width = "auto";
-        el.style.height = "auto";
-        el.style.border = "none";
-        el.style.backgroundColor = "transparent";
+        mapReports.forEach((report) => {
+          const pos = normalizeReportCoordinates(report.coordinates);
+          if (!pos) return;
+          const [lng, lat] = pos;
 
-        const categoryColor = getCategoryColorHex(report.type?.name);
-        
-        el.innerHTML = `
-          <div class="relative flex flex-col items-center">
-            <svg class="w-10 h-10 transition-transform group-hover:scale-110 drop-shadow-lg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C8.13 2 5 5.13 5 9C5 13.5 12 21 12 21C12 21 19 13.5 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" fill="${categoryColor}" stroke="#ffffff" stroke-width="1.4"/>
-            </svg>
-            ${!report.verified ? `<span class="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-amber-400 border border-background animate-pulse"></span>` : ""}
-          </div>
-        `;
+          const el = document.createElement("button");
+          el.className = "marker-btn group cursor-pointer relative";
+          el.style.width = "auto";
+          el.style.height = "auto";
+          el.style.border = "none";
+          el.style.backgroundColor = "transparent";
 
-        el.addEventListener("click", (ev) => {
-          if (pickOnMainMapRef.current) {
-            ev.stopPropagation();
-            return;
-          }
-          setSelectedReportId(report.id);
-          setSelectedTrackingId(null);
-          map.flyTo({
-            center: [lng, lat],
-            zoom: 15.5,
-            pitch: 50,
-            speed: 1.2
+          const config = getCategoryMarkerConfig(report.type?.name);
+
+          el.innerHTML = `
+            <div class="relative flex flex-col items-center">
+              <svg class="w-10 h-11 transition-transform group-hover:scale-110 drop-shadow-lg" viewBox="0 0 38 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 44C29 34 38 27.5 38 19C38 8.5 29.5 0 19 0C8.5 0 0 8.5 0 19C0 27.5 9 34 19 44Z" fill="#ffffff"/>
+                <circle cx="19" cy="19" r="14" fill="${config.color}"/>
+                <svg x="10" y="10" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  ${config.iconPaths}
+                </svg>
+              </svg>
+              ${!report.verified ? `<span class="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-amber-400 border border-background animate-pulse"></span>` : ""}
+            </div>
+          `;
+
+          el.addEventListener("click", (ev) => {
+            if (pickOnMainMapRef.current) {
+              ev.stopPropagation();
+              return;
+            }
+            setSelectedReportId(report.id);
+            setSelectedTrackingId(null);
+            map.flyTo({
+              center: [lng, lat],
+              zoom: 15.5,
+              pitch: 50,
+              speed: 1.2,
+            });
           });
+
+          const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+            .setLngLat([lng, lat])
+            .addTo(map);
+
+          markersRef.current.push(marker);
         });
 
-        // Add to map anchored at the bottom (tip of the pin)
-        const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
-          .setLngLat([lng, lat])
-          .addTo(map);
-
-        markersRef.current.push(marker);
-      });
-
-      syncReportMarkersLayer(map, mapReports);
-      bringReportMarkersToFront(map);
-    } catch (e) {
-      console.error("Error drawing markers", e);
-    }
-  };
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const layerIds = ["report-markers-circles", "report-markers-pin"];
-
-    const onReportClick = (e: { features?: { properties?: { id?: number } }[] }) => {
-      const id = e.features?.[0]?.properties?.id;
-      if (id != null) {
-        setSelectedReportId(Number(id));
-        setSelectedTrackingId(null);
-        const feature = e.features?.[0];
-        const geom = feature?.geometry as { coordinates?: number[] } | undefined;
-        if (geom?.coordinates && mapRef.current) {
-          mapRef.current.flyTo({
-            center: geom.coordinates as [number, number],
-            zoom: 15.5,
-            pitch: 50,
-            speed: 1.2,
-          });
-        }
+        syncReportMarkersLayer(map, mapReports);
+        bringReportMarkersToFront(map);
+      } catch (e) {
+        console.error("Error drawing markers", e);
       }
     };
 
-    const onEnter = () => {
-      map.getCanvas().style.cursor = "pointer";
-    };
-    const onLeave = () => {
-      map.getCanvas().style.cursor = "";
-    };
-
-    const bindLayerEvents = () => {
-      for (const layerId of layerIds) {
-        if (!map.getLayer(layerId)) continue;
-        map.on("click", layerId, onReportClick);
-        map.on("mouseenter", layerId, onEnter);
-        map.on("mouseleave", layerId, onLeave);
-      }
-    };
-
-    const unbindLayerEvents = () => {
-      for (const layerId of layerIds) {
-        map.off("click", layerId, onReportClick);
-        map.off("mouseenter", layerId, onEnter);
-        map.off("mouseleave", layerId, onLeave);
-      }
-    };
-
-    const setup = () => {
-      unbindLayerEvents();
-      bindLayerEvents();
-    };
-
-    if (map.loaded?.()) {
-      setup();
-    } else {
-      map.once("load", setup);
-    }
+    void drawMarkers();
 
     return () => {
-      map.off("load", setup);
-      unbindLayerEvents();
+      active = false;
     };
-  }, []);
+  }, [map, isMapReady, mapReports]);
 
+  // Clean up markers and draft markers when map instance changes
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map?.loaded?.()) return;
-    bringReportMarkersToFront(map);
-  }, []);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-    if (mapRef.current.loaded?.()) {
-      updateMarkers();
-      return;
-    }
-    const map = mapRef.current;
-    const onLoad = () => updateMarkers();
-    map.once("load", onLoad);
     return () => {
-      map.off("load", onLoad);
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      draftMarkerRef.current?.remove();
+      draftMarkerRef.current = null;
     };
-  }, [mapReports]);
+  }, [map]);
 
-  // Verify report handler calling service/hook layer
   const handleVerify = (report: Report) => {
     setVerifyTarget(report);
   };
@@ -516,6 +427,7 @@ function MapaPage() {
     try {
       await deleteReport(id);
       toast.success("Incidente eliminado correctamente.");
+      setSelectedReportId(null);
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar reporte");
     } finally {
@@ -524,430 +436,367 @@ function MapaPage() {
   };
 
   const handleRefresh = async () => {
-    await refetch();
-    await updateMarkers();
+    await Promise.all([refetch(), refetchStations()]);
     toast.success("Mapa y datos actualizados");
   };
 
-  // Zoom/Tilt Button Handlers
   const handleZoomIn = () => {
-    mapRef.current?.zoomIn();
+    map?.zoomIn();
   };
 
   const handleZoomOut = () => {
-    mapRef.current?.zoomOut();
+    map?.zoomOut();
   };
 
   const handleToggle3D = () => {
-    if (!mapRef.current) return;
-    const currentPitch = mapRef.current.getPitch();
-    mapRef.current.easeTo({
+    if (!map) return;
+    const currentPitch = map.getPitch();
+    map.easeTo({
       pitch: currentPitch > 10 ? 0 : 55,
       bearing: currentPitch > 10 ? 0 : -15,
       duration: 1000
     });
   };
 
-  const zoneColorMap = getZoneColorMap(reports);
-  const zonesMap: Record<string, { alerts: number; verified: number; colorHex: string }> = {};
-
-  reports.forEach((r) => {
-    const zoneName = r.zone?.trim() || "Zona desconocida";
-    if (!zonesMap[zoneName]) {
-      zonesMap[zoneName] = {
-        alerts: 0,
-        verified: 0,
-        colorHex: zoneColorMap[zoneName] ?? "#3b82f6",
-      };
-    }
-    zonesMap[zoneName].alerts += 1;
-    if (r.verified) zonesMap[zoneName].verified += 1;
-  });
-
-  const activeZones = Object.entries(zonesMap).map(([name, data]) => ({
-    name,
-    ...data,
-  }));
-
   const selectedReport = reports.find((r) => r.id === selectedReportId);
   const selectedTracking = trackings.find((t) => t.id === selectedTrackingId);
 
-  const totalCount = reports.length;
-  const verifiedCount = reports.filter((r) => r.verified).length;
-  const pendingCount = totalCount - verifiedCount;
+  return (
+    <div className="relative -mx-6 -my-8 lg:-mx-10 h-screen w-[calc(100%+3rem)] lg:w-[calc(100%+5rem)] overflow-hidden bg-card border-none rounded-none">
+      <div
+        ref={mapContainerRef}
+        className={`absolute inset-0 w-full h-full min-w-0 ${
+          pickOnMainMap ? "cursor-crosshair" : ""
+        }`}
+      />
+ 
+      {/* Floating Chips for Emergency Stations Filter */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 bg-background/90 backdrop-blur border border-border/40 p-1.5 rounded-none shadow-md max-w-[calc(100%-24rem)] overflow-x-auto no-scrollbar pointer-events-auto">
+        <button
+          onClick={() => setStationFilter("todos")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-none border text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+            stationFilter === "todos"
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-transparent text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <Radio className="size-3" />
+          Todos
+        </button>
+        <button
+          onClick={() => setStationFilter("policia")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-none border text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+            stationFilter === "policia"
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-transparent text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <Shield className="size-3" />
+          Policía
+        </button>
+        <button
+          onClick={() => setStationFilter("bombero")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-none border text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+            stationFilter === "bombero"
+              ? "bg-orange-600 text-white border-orange-600"
+              : "bg-transparent text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <Flame className="size-3" />
+          Bomberos
+        </button>
+        <button
+          onClick={() => setStationFilter("hospital")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-none border text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+            stationFilter === "hospital"
+              ? "bg-emerald-600 text-white border-emerald-600"
+              : "bg-transparent text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <HeartPulse className="size-3" />
+          Hospitales
+        </button>
+      </div>
 
-  const cards = [
-    { label: "Total", value: totalCount.toString() },
-    { label: "Verificados", value: verifiedCount.toString() },
-    { label: "Pendientes", value: pendingCount.toString() },
-  ];
+      {isLoading && (
+        <div className="absolute inset-0 grid place-items-center bg-background/50 backdrop-blur-sm z-10">
+          <span className="text-xs text-muted-foreground font-mono">Cargando incidentes...</span>
+        </div>
+      )}
 
-  const reportColumns: ColumnDef<(typeof reports)[0]>[] = [
-    {
-      accessorKey: "id",
-      header: "ID",
-      cell: ({ getValue }) => (
-        <span className="font-mono text-xs text-muted-foreground">#{String(getValue())}</span>
-      ),
-    },
-    {
-      id: "type",
-      header: "Tipo",
-      accessorFn: (r) => r.type?.name ?? "",
-      cell: ({ getValue }) => <span className="font-medium">{String(getValue()) || "Desconocido"}</span>,
-    },
-    {
-      accessorKey: "description",
-      header: "Descripción",
-      cell: ({ getValue }) => (
-        <span className="text-muted-foreground max-w-[200px] truncate block">{String(getValue())}</span>
-      ),
-    },
-    {
-      accessorKey: "zone",
-      header: "Zona",
-      cell: ({ getValue }) => <span className="text-muted-foreground">{String(getValue())}</span>,
-    },
-    {
-      accessorKey: "verified",
-      header: "Estado",
-      cell: ({ getValue }) => (
-        <StatusBadge status={getValue() ? "Verificado" : "Pendiente"} />
-      ),
-    },
-    {
-      accessorKey: "created_at",
-      header: "Fecha",
-      cell: ({ getValue }) => (
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {new Date(String(getValue())).toLocaleString()}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      enableSorting: false,
-      meta: { className: "text-right" },
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1.5">
-          {!row.original.verified && (
+      {/* Selected Vehicle Float Card */}
+      {selectedTracking && (
+        <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:w-96 bg-card/95 backdrop-blur border border-blue-500/30 p-5 rounded-none shadow-2xl z-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-start justify-between mb-3">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Unidad en ruta
+            </span>
             <button
-              onClick={() => handleVerify(row.original)}
-              disabled={isVerifying}
-              title="Verificar"
-              className="size-8 rounded-lg border border-border hover:border-emerald-500 hover:text-emerald-500 grid place-items-center transition-colors cursor-pointer disabled:opacity-50"
+              onClick={() => setSelectedTrackingId(null)}
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
             >
-              <Check className="size-3.5" />
+              <X className="size-4" />
             </button>
+          </div>
+          <h4 className="font-display font-bold text-base mb-1.5">
+            {selectedTracking.type || "Autoridad en camino"}
+          </h4>
+          <p className="text-xs text-muted-foreground leading-relaxed mb-4 font-sans">
+            {selectedTracking.description || "En ruta hacia el incidente"}
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground border-t border-border pt-3 font-mono">
+            <div>LAT: {selectedTracking.latitude.toFixed(5)}</div>
+            <div>LNG: {selectedTracking.longitude.toFixed(5)}</div>
+            <div className="col-span-2 truncate">UUID: {selectedTracking.id}</div>
+            <div>RUTA: {selectedTracking.route.length} puntos</div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Report Float Card */}
+      {selectedReport && !selectedTracking && (
+        <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:w-96 bg-card/95 backdrop-blur border border-border p-5 rounded-none shadow-2xl z-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-start justify-between mb-3">
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider border ${
+                selectedReport.verified
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                  : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+              }`}
+            >
+              {selectedReport.verified ? "Verificado" : "Pendiente"}
+            </span>
+            <button
+              onClick={() => setSelectedReportId(null)}
+              className="size-6 rounded-none hover:bg-muted text-muted-foreground hover:text-foreground grid place-items-center transition-colors cursor-pointer"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          {selectedReport.images?.[0]?.url && (
+            <div
+              onClick={() => {
+                setCarouselImages(selectedReport.images);
+                setCarouselInitialIndex(0);
+                setCarouselActiveIndex(0);
+                setCarouselOpen(true);
+              }}
+              className="relative h-32 rounded-none overflow-hidden border border-border mb-3 cursor-pointer group"
+            >
+              <img
+                src={selectedReport.images[0].url}
+                alt={selectedReport.type?.name}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
+              />
+              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+                <span className="text-[10px] text-white font-bold uppercase tracking-wider bg-black/60 px-3 py-1.5 border border-white/20">
+                  Ampliar foto
+                </span>
+              </div>
+            </div>
           )}
+
+          <h4 className="font-display font-bold text-base mb-1.5">
+            {selectedReport.type?.name || "Incidente Reportado"}
+          </h4>
+          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+            {selectedReport.description}
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground border-t border-border pt-3 mb-4 font-mono">
+            <div>ZONA: {selectedReport.zone}</div>
+            <div>ID: #{selectedReport.id}</div>
+            <div>PESO: {selectedReport.weight} pts</div>
+            <div>FECHA: {new Date(selectedReport.created_at).toLocaleDateString()}</div>
+          </div>
+
+          <div className="flex gap-2">
+            {!selectedReport.verified && (
+              <Button
+                onClick={() => handleVerify(selectedReport)}
+                disabled={isVerifying}
+                size="sm"
+                className="flex-1 rounded-none font-bold gap-2 cursor-pointer"
+              >
+                <Check className="size-3.5" />
+                {isVerifying ? "Verificando..." : "Confirmar Veracidad"}
+              </Button>
+            )}
+            <Button
+              onClick={() => setDeleteTargetId(selectedReport.id)}
+              disabled={isDeletingReport}
+              variant="destructive"
+              size="sm"
+              className="rounded-none font-bold gap-2 cursor-pointer"
+            >
+              <Trash2 className="size-3.5" />
+              Eliminar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Status / Info overlays */}
+      <div className="absolute top-4 left-4 flex flex-col gap-2 z-10 pointer-events-none">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-background/90 backdrop-blur border border-border/40 text-[10px] font-bold uppercase tracking-widest shadow-md">
+          <Radio className="size-3 text-primary animate-pulse" />
+          Vista activa · {mapReports.length} en mapa
+        </div>
+        {pickOnMainMap && (
+          <div className="px-3 py-1.5 rounded-none bg-primary/95 text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-md">
+            Clic en el mapa para ubicar la alerta
+          </div>
+        )}
+      </div>
+
+      {/* Floating Action and Map Control Overlays */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        {/* Mapbox Controls */}
+        <div className="flex flex-col gap-1.5">
           <button
-            onClick={() => handleDeleteReport(row.original.id)}
-            disabled={isDeletingReport}
-            title="Eliminar"
-            className="size-8 rounded-lg border border-border hover:border-destructive hover:text-destructive grid place-items-center transition-colors cursor-pointer disabled:opacity-50"
+            onClick={handleZoomIn}
+            title="Acercar"
+            className="size-9 rounded-none bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
           >
-            <Trash2 className="size-3.5" />
+            <ZoomIn className="size-4" />
+          </button>
+          <button
+            onClick={handleZoomOut}
+            title="Alejar"
+            className="size-9 rounded-none bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
+          >
+            <Minus className="size-4" />
+          </button>
+          <button
+            onClick={handleToggle3D}
+            title="Alternar Vista 3D / 2D"
+            className="size-9 rounded-none bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
+          >
+            <Maximize2 className="size-4" />
           </button>
         </div>
-      ),
-    },
-  ];
 
-  return (
-    <div className="flex flex-col gap-6">
-      {/* Cabecera del Panel */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-2">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-2.5">
-            Monitoreo · Tiempo Real
-          </p>
-          <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight mb-2">
-            Reportes en vivo
-          </h1>
-          <p className="text-muted-foreground text-sm max-w-2xl leading-relaxed">
-            Gestión y georreferenciación de incidentes urbanos en Santa Cruz. Revisa alertas activas,
-            estaciones de emergencia y unidades en ruta.
-          </p>
-        </div>
-        
-        {/* Acciones principales arriba a la derecha */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <FilterButton activeCount={activeCount} onClick={() => setFiltersOpen(true)} />
+        <div className="flex flex-col gap-1.5 mt-2">
+          <Button
+            onClick={() => setAlertsListOpen(true)}
+            className="size-9 p-0 rounded-none gap-2 font-bold cursor-pointer shadow-md bg-background/80 hover:bg-card text-foreground border border-border"
+            variant="secondary"
+            title="Ver alertas"
+          >
+            <List className="size-4" />
+          </Button>
           <Button
             onClick={() => {
               setPendingLocation(null);
               setCreateOpen(true);
             }}
-            className="rounded-xl gap-2 font-bold cursor-pointer"
+            className="size-9 p-0 rounded-none gap-2 font-bold cursor-pointer shadow-md bg-primary hover:bg-primary/90 text-primary-foreground"
+            title="Nueva alerta"
           >
             <PlusCircle className="size-4" />
-            Nueva alerta
           </Button>
           <Button
             onClick={handleRefresh}
             variant="secondary"
-            className="rounded-xl gap-2 border border-border cursor-pointer"
+            className="size-9 p-0 rounded-none gap-2 border border-border cursor-pointer shadow-md bg-background/80 hover:bg-card text-foreground"
+            title="Actualizar"
           >
             <RefreshCw className="size-4" />
-            Actualizar
           </Button>
         </div>
       </div>
 
-      {/* Fila Superior de KPIs (Reales y Estilo Personalizado con Degradados) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {cards.map((c) => {
-          let cardStyle = "";
-          if (c.label === "Total") {
-            cardStyle = "bg-gradient-to-br from-cyan-500 to-blue-600 text-white";
-          } else if (c.label === "Verificados") {
-            cardStyle = "bg-gradient-to-br from-orange-500 to-amber-500 text-white";
-          } else {
-            // Pendientes
-            cardStyle = "bg-gradient-to-br from-indigo-500 to-purple-600 text-white";
-          }
-
-          return (
-            <div
-              key={c.label}
-              className={`relative overflow-hidden rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 hover:scale-[1.02] ${cardStyle}`}
-            >
-              {/* Decorative background shapes mimicking NexaVerse design */}
-              <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none select-none overflow-hidden">
-                <div className="absolute -right-6 -bottom-6 w-36 h-36 rounded-full bg-white/[0.09]" />
-                <div className="absolute right-4 -top-8 w-28 h-28 rounded-full bg-white/[0.06]" />
-                <div className="absolute -right-2 top-8 w-12 h-12 rounded-full bg-white/[0.04]" />
-              </div>
-
-              {/* Card Content */}
-              <div className="relative z-10">
-                <div className="text-xs uppercase tracking-widest text-white/80 font-bold mb-2">
-                  {c.label}
-                </div>
-                <div className="font-display text-4xl font-extrabold tracking-tight">
-                  {c.value}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="absolute bottom-4 left-4 flex items-center gap-2 text-[10px] text-muted-foreground z-10 pointer-events-none font-mono">
+        <MapPin className="size-3" />
+        Santa Cruz de la Sierra · Bolivia
       </div>
 
-      {/* Grilla Principal: Mapa + Paneles de Control */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Mapa Real Mapbox 3D */}
-        <div
-          className={`relative lg:col-span-8 w-full h-[min(68vh,640px)] min-h-[500px] bg-card border rounded-3xl overflow-hidden transition-colors shadow-lg ${
-            pickOnMainMap
-              ? "border-primary ring-2 ring-primary/30"
-              : "border-border/40"
-          }`}
-        >
-          <div
-            ref={mapContainerRef}
-            className={`absolute inset-0 w-full h-full min-w-0 ${
-              pickOnMainMap ? "cursor-crosshair" : ""
-            }`}
-          />
-
-          {isLoading && (
-            <div className="absolute inset-0 grid place-items-center bg-background/50 backdrop-blur-sm z-10">
-              <span className="text-xs text-muted-foreground">Cargando incidentes...</span>
+      {/* Alerts List Sheet */}
+      <Sheet open={alertsListOpen} onOpenChange={setAlertsListOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto rounded-none bg-background border-border p-0">
+          <SheetHeader className="px-5 pt-5 pb-4 border-b border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-none">
+                Registro
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {mapReports.length} incidentes
+              </span>
             </div>
-          )}
+            <SheetTitle className="font-display text-lg tracking-tight">Alertas activas</SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
+              Selecciona un incidente para visualizarlo en el mapa.
+            </SheetDescription>
+          </SheetHeader>
 
-          {/* Detail card floating */}
-          {selectedTracking && (
-            <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:w-96 bg-card/95 backdrop-blur border border-blue-500/30 p-5 rounded-xl shadow-2xl z-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="flex items-start justify-between mb-3">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  Unidad en ruta
-                </span>
+          <div className="divide-y divide-border">
+            {mapReports.length === 0 && (
+              <div className="px-5 py-10 text-center text-xs text-muted-foreground">
+                No hay incidentes registrados.
+              </div>
+            )}
+            {mapReports.map((report) => {
+              const config = getCategoryMarkerConfig(report.type?.name);
+              return (
                 <button
-                  onClick={() => setSelectedTrackingId(null)}
-                  className="text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-              <h4 className="font-display font-bold text-base mb-1.5">
-                {selectedTracking.type || "Autoridad en camino"}
-              </h4>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                {selectedTracking.description || "En ruta hacia el incidente"}
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground border-t border-border pt-3 font-mono">
-                <div>LAT: {selectedTracking.latitude.toFixed(5)}</div>
-                <div>LNG: {selectedTracking.longitude.toFixed(5)}</div>
-                <div className="col-span-2 truncate">UUID: {selectedTracking.id}</div>
-                <div>RUTA: {selectedTracking.route.length} puntos</div>
-              </div>
-            </div>
-          )}
-
-          {selectedReport && !selectedTracking && (
-            <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:w-96 bg-card/95 backdrop-blur border border-border p-5 rounded-xl shadow-2xl z-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="flex items-start justify-between mb-3">
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    selectedReport.verified
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                  key={report.id}
+                  onClick={() => {
+                    const pos = normalizeReportCoordinates(report.coordinates);
+                    if (pos) {
+                      const [lng, lat] = pos;
+                      setSelectedReportId(report.id);
+                      setSelectedTrackingId(null);
+                      setAlertsListOpen(false);
+                      map?.flyTo({
+                        center: [lng, lat],
+                        zoom: 15.5,
+                        pitch: 50,
+                        speed: 1.2,
+                      });
+                    }
+                  }}
+                  className={`w-full text-left px-5 py-3.5 hover:bg-muted/50 transition-colors cursor-pointer flex items-start gap-3 ${
+                    selectedReportId === report.id ? "bg-muted/70" : ""
                   }`}
                 >
-                  {selectedReport.verified ? "Verificado" : "Pendiente"}
-                </span>
-                <button
-                  onClick={() => setSelectedReportId(null)}
-                  className="size-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground grid place-items-center transition-colors cursor-pointer"
-                >
-                  <X className="size-4" />
+                  {/* Color indicator */}
+                  <div
+                    className="size-8 shrink-0 grid place-items-center border border-border rounded-none mt-0.5"
+                    style={{ backgroundColor: config.color }}
+                  >
+                    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: config.iconPaths }} />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-bold truncate">
+                        {report.type?.name || "Incidente"}
+                      </span>
+                      <span className={`inline-flex items-center gap-0.5 px-1.5 py-0 text-[8px] font-bold uppercase tracking-wider rounded-none border ${
+                        report.verified
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                      }`}>
+                        {report.verified ? <Shield className="size-2.5" /> : <Clock className="size-2.5" />}
+                        {report.verified ? "OK" : "Pend."}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1 mb-1">
+                      {report.description || "Sin descripción"}
+                    </p>
+                    <div className="flex items-center gap-3 text-[9px] font-mono text-muted-foreground">
+                      <span>#{report.id}</span>
+                      {report.zone && <span>{report.zone}</span>}
+                      <span>{new Date(report.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </button>
-              </div>
-
-              {selectedReport.images?.[0]?.url && (
-                <div className="relative h-32 rounded-lg overflow-hidden border border-border mb-3">
-                  <img
-                    src={selectedReport.images[0].url}
-                    alt={selectedReport.type?.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-
-              <h4 className="font-display font-bold text-base mb-1.5">
-                {selectedReport.type?.name || "Incidente Reportado"}
-              </h4>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                {selectedReport.description}
-              </p>
-
-              <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground border-t border-border pt-3 mb-4 font-mono">
-                <div>ZONA: {selectedReport.zone}</div>
-                <div>ID: #{selectedReport.id}</div>
-                <div>PESO: {selectedReport.weight} pts</div>
-                <div>FECHA: {new Date(selectedReport.created_at).toLocaleDateString()}</div>
-              </div>
-
-              {!selectedReport.verified && (
-                <Button
-                  onClick={() => handleVerify(selectedReport)}
-                  disabled={isVerifying}
-                  size="sm"
-                  className="w-full rounded-lg font-bold gap-2 cursor-pointer"
-                >
-                  <Check className="size-3.5" />
-                  {isVerifying ? "Verificando..." : "Confirmar Veracidad"}
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Overlay top info */}
-          <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur border border-border/40 text-[10px] font-bold uppercase tracking-widest shadow-md">
-              <Radio className="size-3 text-primary animate-pulse" />
-              Vista activa · {mapReports.length} en mapa · {reports.length} total
-            </div>
-            {pickOnMainMap && (
-              <div className="px-3 py-1.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-md">
-                Clic en el mapa para ubicar la alerta
-              </div>
-            )}
-
-            {showEmergencyStations && emergencyStations.length > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-indigo-600/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
-                {emergencyStations.length} estación(es) de emergencia
-              </div>
-            )}
-            {showLiveTracking && trackings.length > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
-                {trackings.length} unidad(es) en ruta · calles Mapbox
-              </div>
-            )}
-            {showRiskZones && riskZones.length > 0 && (
-              <div className="px-3 py-1.5 rounded-full bg-emerald-600/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
-                {riskZones.length} zona(s) de riesgo · verde → rojo
-              </div>
-            )}
+              );
+            })}
           </div>
-
-          <div className="absolute top-4 right-4 flex flex-col gap-1.5 z-10">
-            <button
-              onClick={handleZoomIn}
-              title="Acercar"
-              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
-            >
-              <ZoomIn className="size-4" />
-            </button>
-            <button
-              onClick={handleZoomOut}
-              title="Alejar"
-              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
-            >
-              <Minus className="size-4" />
-            </button>
-            <button
-              onClick={handleToggle3D}
-              title="Alternar Vista 3D / 2D"
-              className="size-9 rounded-lg bg-background/80 backdrop-blur border border-border/40 grid place-items-center hover:bg-card transition-colors cursor-pointer shadow-md"
-            >
-              <Maximize2 className="size-4" />
-            </button>
-          </div>
-
-          <div className="absolute bottom-4 left-4 flex items-center gap-2 text-[10px] text-muted-foreground z-10 pointer-events-none">
-            <MapPin className="size-3" />
-            Santa Cruz de la Sierra · Bolivia
-          </div>
-        </div>
-
-        {/* Paneles de control lateral derecho */}
-        <div className="lg:col-span-4 flex flex-col gap-4 min-w-0">
-          <EmergencyStationsPanel
-            stations={emergencyStations}
-            enabled={showEmergencyStations}
-            onEnabledChange={setShowEmergencyStations}
-            onFocusStation={handleFocusStation}
-            isExpanded={expandedPanel === "stations"}
-            onToggleExpand={() => setExpandedPanel(prev => prev === "stations" ? null : "stations")}
-          />
-          <RiskZonesPanel
-            zones={riskZones}
-            enabled={showRiskZones}
-            onEnabledChange={setShowRiskZones}
-            onFocusZone={handleFocusRiskZone}
-            isExpanded={expandedPanel === "zones"}
-            onToggleExpand={() => setExpandedPanel(prev => prev === "zones" ? null : "zones")}
-          />
-          <LiveTrackingPanel
-            trackings={trackings}
-            enabled={showLiveTracking}
-            onEnabledChange={setShowLiveTracking}
-            connected={trackingConnected}
-            error={trackingError}
-            selectedId={selectedTrackingId}
-            onSelect={setSelectedTrackingId}
-            onFocus={handleFocusTracking}
-            isExpanded={expandedPanel === "tracking"}
-            onToggleExpand={() => setExpandedPanel(prev => prev === "tracking" ? null : "tracking")}
-          />
-        </div>
-      </div>
-
-      {/* Tabla inferior expandida y limpia */}
-      <div className="mt-4">
-        <DataTable
-          columns={reportColumns}
-          data={reports}
-          isLoading={isLoading}
-          emptyMessage="Ningún reporte encontrado."
-          footerText={`${reports.length} incidentes en vista`}
-        />
-      </div>
-
-      <ReportsFilterSheet open={filtersOpen} onOpenChange={setFiltersOpen} />
+        </SheetContent>
+      </Sheet>
 
       <VerifyEvidenceDialog
         report={verifyTarget}
@@ -958,9 +807,30 @@ function MapaPage() {
         isAdmin={isAdmin}
       />
 
+      <DeleteConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => !open && setDeleteTargetId(null)}
+        onConfirm={async () => {
+          if (deleteTargetId !== null) {
+            await handleDeleteReport(deleteTargetId);
+            setDeleteTargetId(null);
+          }
+        }}
+        isLoading={isDeletingReport}
+      />
+
+      <ImageCarouselDialog
+        images={carouselImages}
+        initialIndex={carouselInitialIndex}
+        open={carouselOpen}
+        onOpenChange={setCarouselOpen}
+        activeIndex={carouselActiveIndex}
+        setActiveIndex={setCarouselActiveIndex}
+      />
+
       <CreateAlertSheet
         open={createOpen}
-        riskZones={riskZones}
+        riskZones={[]} // pass empty array as riskZones is not strictly needed for this layout or is fetched independently
         onOpenChange={(open) => {
           setCreateOpen(open);
           if (!open) {
@@ -978,21 +848,5 @@ function MapaPage() {
         }}
       />
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: "Verificado" | "Pendiente" }) {
-  const verified = status === "Verificado";
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-        verified
-          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-          : "bg-amber-500/10 text-amber-400 border-amber-500/30"
-      }`}
-    >
-      <span className={`size-1.5 rounded-full ${verified ? "bg-emerald-400" : "bg-amber-400"}`} />
-      {status}
-    </span>
   );
 }

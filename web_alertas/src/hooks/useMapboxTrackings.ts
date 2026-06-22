@@ -1,5 +1,4 @@
-import { useCallback, useEffect } from "react";
-import type mapboxgl from "mapbox-gl";
+import { useEffect } from "react";
 import type { LiveTracking } from "@/domain/tracking";
 import { loadMapboxGl } from "@/lib/mapbox";
 import {
@@ -10,71 +9,64 @@ import {
 } from "@/lib/mapbox-trackings";
 
 export function useMapboxTrackings(
-  mapRef: React.RefObject<mapboxgl.Map | null>,
+  map: any,
   trackings: LiveTracking[],
   enabled: boolean,
-  markersByIdRef: React.RefObject<Map<string, mapboxgl.Marker>>,
+  markersByIdRef: React.RefObject<Map<string, any>>,
   selectedId: string | null,
   onSelect: (id: string) => void,
+  isMapReady: boolean,
 ) {
-  const syncAll = useCallback(async () => {
-    const map = mapRef.current;
-    if (!map?.loaded?.()) return;
-
-    if (!enabled || trackings.length === 0) {
-      clearTrackingRouteLayers(map);
-      if (markersByIdRef.current) {
-        clearTrackingVehicleMarkers(markersByIdRef.current);
-      }
-      return;
-    }
-
-    syncTrackingRouteLayers(map, trackings);
-
-    const mapboxgl = await loadMapboxGl();
-    if (!markersByIdRef.current) return;
-    syncTrackingVehicleMarkers(
-      map,
-      mapboxgl,
-      trackings,
-      markersByIdRef.current,
-      selectedId,
-      onSelect,
-    );
-  }, [mapRef, trackings, enabled, markersByIdRef, selectedId, onSelect]);
-
   useEffect(() => {
-    void syncAll();
-  }, [syncAll]);
+    if (!map || !isMapReady) return;
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    let active = true;
 
-    const onReady = () => {
-      void syncAll();
-    };
-
-    if (map.loaded?.()) {
-      onReady();
-    } else {
-      map.once("load", onReady);
-    }
-
-    return () => {
-      map.off("load", onReady);
-    };
-  }, [mapRef, syncAll]);
-
-  useEffect(() => {
-    return () => {
-      if (markersByIdRef.current) {
-        clearTrackingVehicleMarkers(markersByIdRef.current);
-      }
-      const map = mapRef.current;
-      if (map?.loaded?.()) {
+    const sync = async () => {
+      if (!enabled || trackings.length === 0) {
         clearTrackingRouteLayers(map);
+        if (markersByIdRef.current) {
+          clearTrackingVehicleMarkers(markersByIdRef.current);
+        }
+        return;
+      }
+
+      syncTrackingRouteLayers(map, trackings, selectedId);
+
+      const mapboxgl = await loadMapboxGl();
+      if (!active) return;
+      if (markersByIdRef.current) {
+        syncTrackingVehicleMarkers(
+          map,
+          mapboxgl,
+          trackings,
+          markersByIdRef.current,
+          selectedId,
+          onSelect,
+        );
       }
     };
-  }, [mapRef, markersByIdRef]);
+
+    void sync();
+
+    return () => {
+      active = false;
+    };
+  }, [map, isMapReady, trackings, enabled, markersByIdRef, selectedId, onSelect]);
+
+  // Clean up markers and route layers when map changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (markersByIdRef.current) {
+        clearTrackingVehicleMarkers(markersByIdRef.current);
+      }
+      if (map) {
+        try {
+          clearTrackingRouteLayers(map);
+        } catch (e) {
+          // ignore if map style is already removed or unmounted
+        }
+      }
+    };
+  }, [map, markersByIdRef]);
 }

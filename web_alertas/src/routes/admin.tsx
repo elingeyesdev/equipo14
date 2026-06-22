@@ -33,6 +33,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { reportTypesRepository } from "@/repositories/reportTypes.repository";
 import { useQuery } from "@tanstack/react-query";
 import avispateLogo from "@/assets/avispate.webp";
+import { reportsSocketService } from "@/services/reportsSocket.service";
+import { trackingSocketService } from "@/services/trackingSocket.service";
 
 
 export const Route = createFileRoute("/admin")({
@@ -69,10 +71,14 @@ function AdminLayout() {
         return;
       }
       setSessionState(session);
+      reportsSocketService.connect();
+      trackingSocketService.connect();
     });
 
     return () => {
       cancelled = true;
+      reportsSocketService.disconnect();
+      trackingSocketService.disconnect();
     };
   }, [navigate]);
 
@@ -83,6 +89,8 @@ function AdminLayout() {
       // Ignored
     }
     clearSession();
+    reportsSocketService.disconnect();
+    trackingSocketService.disconnect();
     navigate({ to: "/login" });
   };
 
@@ -158,8 +166,8 @@ function AdminSidebar({ session, onLogout }: { session: Session; onLogout: () =>
               </div>
             </Link>
           )}
-          <SidebarTrigger className="shrink-0 size-7 rounded-md hover:bg-sidebar-accent transition-colors" />
-          <ThemeToggle />
+          <SidebarTrigger className="shrink-0 size-7 rounded-none hover:bg-sidebar-accent transition-colors" />
+          {!collapsed && <ThemeToggle />}
         </div>
       </SidebarHeader>
 
@@ -200,7 +208,7 @@ function AdminSidebar({ session, onLogout }: { session: Session; onLogout: () =>
             collapsed ? "justify-center" : ""
           }`}
         >
-          <div className="size-9 rounded-full bg-muted grid place-items-center text-xs font-bold uppercase shrink-0">
+          <div className="size-9 rounded-none bg-muted grid place-items-center text-xs font-bold uppercase shrink-0">
             {firstName.slice(0, 1)}{lastName.slice(0, 1)}
           </div>
           {!collapsed && (

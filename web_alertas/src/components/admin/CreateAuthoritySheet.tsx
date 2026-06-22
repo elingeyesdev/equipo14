@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Loader2, UserPlus, Copy, Check } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -7,14 +7,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -27,8 +19,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { httpClient } from "@/api/httpClient";
-import { type CreatableRoleId } from "@/lib/roles";
-import { ProfileType } from "@/domain/types";
 
 interface CreateAuthoritySheetProps {
   open: boolean;
@@ -50,11 +40,6 @@ export function CreateAuthoritySheet({
   const [gmail, setGmail] = useState("");
   const [profileType, setProfileType] = useState<string>("policia");
 
-  const [credentialsOpen, setCredentialsOpen] = useState(false);
-  const [generatedPhone, setGeneratedPhone] = useState("");
-  const [generatedPassword, setGeneratedPassword] = useState("");
-  const [copied, setCopied] = useState(false);
-
   const resetForm = () => {
     setFirstName("");
     setLastName("");
@@ -62,6 +47,11 @@ export function CreateAuthoritySheet({
     setCi("");
     setGmail("");
     setProfileType("policia");
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) resetForm();
+    onOpenChange(next);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -98,182 +88,156 @@ export function CreateAuthoritySheet({
         gmail: gmail.trim(),
         profile_type: profileType,
       });
-      
-      setGeneratedPhone(trimmedPhone);
-      setGeneratedPassword(newPassword);
+
+      toast.success("Autoridad creada con éxito. Las credenciales se han enviado al correo registrado.");
       
       resetForm();
       onOpenChange(false);
       onCreated?.();
-      
-      // Open credentials dialog
-      setCredentialsOpen(true);
-      setCopied(false);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "No se pudo crear el usuario");
+      toast.error(err instanceof Error ? err.message : "No se pudo crear la autoridad");
     } finally {
       setIsCreating(false);
     }
   };
 
-  const copyToClipboard = () => {
-    const text = `Teléfono: ${generatedPhone}\nContraseña: ${generatedPassword}`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success("Credenciales copiadas al portapapeles");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-display flex items-center gap-2">
-              <UserPlus className="size-5 text-primary" />
-              Nueva autoridad
-            </SheetTitle>
-            <SheetDescription>
-              Registra a una nueva autoridad. La contraseña se generará automáticamente.
-            </SheetDescription>
-          </SheetHeader>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-xl overflow-y-auto border-border rounded-none bg-background"
+      >
+        <SheetHeader className="mb-0 pr-8 pb-5 border-b border-border">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-none">
+              Cuentas
+            </span>
+          </div>
+          <SheetTitle className="font-display text-lg tracking-tight">Nueva autoridad</SheetTitle>
+          <SheetDescription className="text-xs text-muted-foreground">
+            Registra una nueva cuenta de autoridad en el sistema. Las credenciales se enviarán automáticamente a su correo electrónico de Gmail.
+          </SheetDescription>
+        </SheetHeader>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="auth-first-name">Nombre</Label>
-                <Input
-                  id="auth-first-name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  autoComplete="given-name"
-                  className="rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="auth-last-name">Apellido</Label>
-                <Input
-                  id="auth-last-name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  autoComplete="family-name"
-                  className="rounded-xl"
-                />
-              </div>
-            </div>
-
+        <form onSubmit={handleSubmit} className="space-y-0 pb-8">
+          {/* Nombre y Apellido */}
+          <div className="px-0 py-4 border-b border-border grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="auth-phone">Teléfono (8 dígitos)</Label>
+              <Label htmlFor="auth-first-name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Nombre
+              </Label>
               <Input
-                id="auth-phone"
-                type="tel"
-                inputMode="numeric"
-                maxLength={8}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="70000000"
+                id="auth-first-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
                 required
-                className="rounded-xl font-mono"
+                autoComplete="given-name"
+                className="rounded-none border-border"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="auth-ci">Cédula de Identidad (CI)</Label>
+              <Label htmlFor="auth-last-name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Apellido
+              </Label>
               <Input
-                id="auth-ci"
-                value={ci}
-                onChange={(e) => setCi(e.target.value)}
-                placeholder="Ej. 1234567"
+                id="auth-last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
                 required
-                className="rounded-xl"
+                autoComplete="family-name"
+                className="rounded-none border-border"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="auth-gmail">Correo Electrónico (Gmail)</Label>
-              <Input
-                id="auth-gmail"
-                type="email"
-                value={gmail}
-                onChange={(e) => setGmail(e.target.value)}
-                placeholder="ejemplo@gmail.com"
-                required
-                className="rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tipo de Perfil</Label>
-              <Select value={profileType} onValueChange={setProfileType}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Seleccionar perfil" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="policia">Policía</SelectItem>
-                  <SelectItem value="bombero">Bombero</SelectItem>
-                  <SelectItem value="paramedico">Paramédico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isCreating}
-              className="w-full rounded-xl font-bold gap-2 cursor-pointer mt-6"
-            >
-              {isCreating ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <UserPlus className="size-4" />
-              )}
-              Crear usuario
-            </Button>
-          </form>
-        </SheetContent>
-      </Sheet>
-
-      <Dialog open={credentialsOpen} onOpenChange={setCredentialsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Autoridad creada con éxito</DialogTitle>
-            <DialogDescription>
-              Comparte estas credenciales con el usuario para que pueda acceder al panel. 
-              La contraseña no podrá volver a verse después de cerrar este recuadro.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="bg-muted p-4 rounded-lg font-mono text-sm space-y-2 relative">
-            <div>
-              <span className="text-muted-foreground mr-2">Teléfono:</span>
-              <span className="font-bold">{generatedPhone}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground mr-2">Contraseña:</span>
-              <span className="font-bold">{generatedPassword}</span>
             </div>
           </div>
 
-          <DialogFooter className="sm:justify-between flex-row">
+          {/* Teléfono */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label htmlFor="auth-phone" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Teléfono (8 dígitos)
+            </Label>
+            <Input
+              id="auth-phone"
+              type="tel"
+              inputMode="numeric"
+              maxLength={8}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              placeholder="70000000"
+              required
+              className="rounded-none font-mono border-border"
+            />
+          </div>
+
+          {/* Cédula de Identidad */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label htmlFor="auth-ci" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Cédula de Identidad (CI)
+            </Label>
+            <Input
+              id="auth-ci"
+              value={ci}
+              onChange={(e) => setCi(e.target.value)}
+              placeholder="Ej. 1234567"
+              required
+              className="rounded-none border-border"
+            />
+          </div>
+
+          {/* Correo Electrónico */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label htmlFor="auth-gmail" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Correo Electrónico (Gmail)
+            </Label>
+            <Input
+              id="auth-gmail"
+              type="email"
+              value={gmail}
+              onChange={(e) => setGmail(e.target.value)}
+              placeholder="ejemplo@gmail.com"
+              required
+              className="rounded-none border-border"
+            />
+          </div>
+
+          {/* Tipo de Perfil */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Tipo de Perfil
+            </Label>
+            <Select value={profileType} onValueChange={setProfileType}>
+              <SelectTrigger className="rounded-none border-border">
+                <SelectValue placeholder="Seleccionar perfil" />
+              </SelectTrigger>
+              <SelectContent className="rounded-none">
+                <SelectItem value="policia">Policía</SelectItem>
+                <SelectItem value="bombero">Bombero</SelectItem>
+                <SelectItem value="paramedico">Paramédico</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Botón de envío */}
+          <div className="pt-5">
             <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCredentialsOpen(false)}
+              type="submit"
+              disabled={isCreating}
+              className="w-full rounded-none font-bold gap-2 cursor-pointer uppercase tracking-wider text-xs h-11"
             >
-              Cerrar
+              {isCreating ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Registrando cuenta...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="size-4" />
+                  Crear autoridad
+                </>
+              )}
             </Button>
-            <Button
-              type="button"
-              className="gap-2"
-              onClick={copyToClipboard}
-            >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              {copied ? "Copiado" : "Copiar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
   );
 }

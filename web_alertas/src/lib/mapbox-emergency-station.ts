@@ -1,71 +1,86 @@
 import type mapboxgl from "mapbox-gl";
 import type { EmergencyStation } from "@/domain/types";
-import { emergencyStationsToGeoJson } from "@/lib/emergency-station";
+import comisariaIcon from "@/assets/comisaria-de-policia.png";
+import bomberoIcon from "@/assets/bombero.png";
+import hospitalIcon from "@/assets/hospital.png";
 
-export const STATIONS_SOURCE_ID = "emergency-stations";
-const STATIONS_CIRCLE_LAYER = "emergency-stations-circle";
-const STATIONS_LABEL_LAYER = "emergency-stations-label";
-
-export function syncEmergencyStationsOnMap(map: mapboxgl.Map, stations: EmergencyStation[]) {
-  const data = emergencyStationsToGeoJson(stations);
-
-  if (!map.getSource(STATIONS_SOURCE_ID)) {
-    map.addSource(STATIONS_SOURCE_ID, { type: "geojson", data });
-    map.addLayer({
-      id: STATIONS_CIRCLE_LAYER,
-      type: "circle",
-      source: STATIONS_SOURCE_ID,
-      paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          10,
-          5,
-          14,
-          9,
-          17,
-          12,
-        ],
-        "circle-color": ["get", "color"],
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff",
-        "circle-opacity": 0.92,
-      },
-    });
-    map.addLayer({
-      id: STATIONS_LABEL_LAYER,
-      type: "symbol",
-      source: STATIONS_SOURCE_ID,
-      minzoom: 12,
-      layout: {
-        "text-field": ["concat", ["get", "label"], "\n", ["get", "name"]],
-        "text-size": 10,
-        "text-anchor": "top",
-        "text-offset": [0, 1],
-        "text-max-width": 14,
-        "text-allow-overlap": false,
-      },
-      paint: {
-        "text-color": "#f8fafc",
-        "text-halo-color": "#0f172a",
-        "text-halo-width": 1.2,
-      },
-    });
-  } else {
-    (map.getSource(STATIONS_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(data);
-  }
+function stationIconSrc(type: string): string {
+  const t = type.toLowerCase();
+  if (t === "policia") return comisariaIcon;
+  if (t === "bombero") return bomberoIcon;
+  if (t === "hospital") return hospitalIcon;
+  return comisariaIcon;
 }
 
-export function clearEmergencyStationsOnMap(map: mapboxgl.Map) {
-  for (const id of [STATIONS_LABEL_LAYER, STATIONS_CIRCLE_LAYER]) {
-    if (map.getLayer(id)) map.removeLayer(id);
-  }
-  if (map.getSource(STATIONS_SOURCE_ID)) {
-    map.removeSource(STATIONS_SOURCE_ID);
-  }
+function createStationMarkerElement(station: EmergencyStation): HTMLButtonElement {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "emergency-station-marker group cursor-pointer";
+  el.style.border = "none";
+  el.style.background = "transparent";
+  el.style.padding = "0";
+  el.title = station.name;
+
+  el.innerHTML = `
+    <div class="relative flex flex-col items-center transition-transform group-hover:scale-110">
+      <div class="size-9 bg-card border border-border shadow-md grid place-items-center rounded-none">
+        <img src="${stationIconSrc(station.installation_type)}" class="size-7 object-contain" />
+      </div>
+      <span class="mt-1 px-1.5 py-0.5 bg-background/90 border border-border text-[8px] font-bold uppercase tracking-wide text-foreground max-w-[100px] truncate rounded-none">
+        ${station.name}
+      </span>
+    </div>
+  `;
+  return el;
 }
 
-export function emergencyStationLayerIds() {
-  return [STATIONS_CIRCLE_LAYER, STATIONS_LABEL_LAYER];
+export function syncEmergencyStationsOnMap(
+  map: mapboxgl.Map,
+  mapboxglInstance: typeof mapboxgl,
+  stations: EmergencyStation[],
+  markersById: Map<number, mapboxgl.Marker>,
+) {
+  const activeIds = new Set(stations.map((s) => s.id));
+
+  for (const [id, marker] of markersById.entries()) {
+    if (!activeIds.has(id)) {
+      marker.remove();
+      markersById.delete(id);
+    }
+  }
+
+  stations.forEach((station) => {
+    if (station.coordinates.length < 2 || station.coordinates[0] === 0 || station.coordinates[1] === 0) return;
+    const lngLat: [number, number] = [station.coordinates[0], station.coordinates[1]];
+
+    const existing = markersById.get(station.id);
+    if (existing) {
+      existing.setLngLat(lngLat);
+      return;
+    }
+
+    const el = createStationMarkerElement(station);
+    el.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      map.flyTo({
+        center: lngLat,
+        zoom: 15.5,
+        pitch: 50,
+        speed: 1.2,
+      });
+    });
+
+    const marker = new mapboxglInstance.Marker({ element: el, anchor: "center" })
+      .setLngLat(lngLat)
+      .addTo(map);
+
+    markersById.set(station.id, marker);
+  });
+}
+
+export function clearEmergencyStationsOnMap(markersById: Map<number, mapboxgl.Marker>) {
+  for (const marker of markersById.values()) {
+    marker.remove();
+  }
+  markersById.clear();
 }

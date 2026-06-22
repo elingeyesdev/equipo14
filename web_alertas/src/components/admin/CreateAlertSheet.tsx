@@ -157,23 +157,31 @@ export function CreateAlertSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-xl overflow-y-auto border-border"
+        className="w-full sm:max-w-xl overflow-y-auto border-border rounded-none bg-background"
       >
-        <SheetHeader className="mb-6 pr-8">
-          <SheetTitle className="font-display">Nueva alerta</SheetTitle>
-          <SheetDescription>
+        <SheetHeader className="mb-0 pr-8 pb-5 border-b border-border">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-none">
+              Registro
+            </span>
+          </div>
+          <SheetTitle className="font-display text-lg tracking-tight">Nueva alerta</SheetTitle>
+          <SheetDescription className="text-xs text-muted-foreground">
             Registra un incidente oficial. Selecciona el punto en el mapa y completa los datos.
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5 pb-8">
-          <div className="space-y-2">
-            <Label htmlFor="alert-type">Tipo de incidente</Label>
+        <form onSubmit={handleSubmit} className="space-y-0 pb-8">
+          {/* Tipo de incidente */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label htmlFor="alert-type" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Tipo de incidente
+            </Label>
             <Select value={typeId} onValueChange={setTypeId} disabled={loadingTypes}>
-              <SelectTrigger id="alert-type" className="rounded-xl">
+              <SelectTrigger id="alert-type" className="rounded-none border-border">
                 <SelectValue placeholder={loadingTypes ? "Cargando..." : "Seleccionar tipo"} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-none">
                 {reportTypes.map((t) => (
                   <SelectItem key={t.id} value={String(t.id)}>
                     {t.name}
@@ -183,8 +191,11 @@ export function CreateAlertSheet({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="alert-desc">Descripción</Label>
+          {/* Descripción */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label htmlFor="alert-desc" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Descripción
+            </Label>
             <Textarea
               id="alert-desc"
               placeholder="Detalla qué ocurrió, referencias visibles, gravedad..."
@@ -192,40 +203,50 @@ export function CreateAlertSheet({
               onChange={(e) => setDescription(e.target.value)}
               maxLength={250}
               rows={3}
-              className="rounded-xl resize-none"
+              className="rounded-none resize-none border-border"
             />
-            <p className="text-[10px] text-muted-foreground text-right">
+            <p className="text-[10px] text-muted-foreground text-right font-mono">
               {description.length}/250
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="alert-zone" className="flex items-center gap-1.5">
-              <MapPin className="size-3.5" />
-              Zona (se completa si cae dentro de una demarcada)
+          {/* Zona */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label htmlFor="alert-zone" className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <MapPin className="size-3" />
+              Zona
             </Label>
             <Input
               id="alert-zone"
               placeholder="Ej. Equipetrol, Centro, Plan 3000"
               value={zone}
               onChange={(e) => setZone(e.target.value)}
-              className="rounded-xl"
+              className="rounded-none border-border"
             />
+            <p className="text-[10px] text-muted-foreground">
+              Se completa automáticamente si la ubicación cae dentro de una zona demarcada.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label>Ubicación en el mapa</Label>
-            <LocationPickerMap
-              value={location}
-              onChange={handleLocationChange}
-              className="h-[240px]"
-              resizeKey={open}
-            />
+          {/* Ubicación en el mapa */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Ubicación en el mapa
+            </Label>
+            <div className="border border-border rounded-none overflow-hidden">
+              <LocationPickerMap
+                value={location}
+                onChange={handleLocationChange}
+                className="h-[240px]"
+                resizeKey={open}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="alert-image" className="flex items-center gap-1.5">
-              <ImagePlus className="size-3.5" />
+          {/* Evidencia fotográfica */}
+          <div className="px-0 py-4 border-b border-border space-y-2">
+            <Label htmlFor="alert-image" className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <ImagePlus className="size-3" />
               Evidencia fotográfica
             </Label>
             <Input
@@ -233,10 +254,10 @@ export function CreateAlertSheet({
               type="file"
               accept="image/*"
               onChange={handleImageChange}
-              className="rounded-xl cursor-pointer"
+              className="rounded-none cursor-pointer border-border"
             />
             {imagePreview && (
-              <div className="relative h-28 rounded-xl overflow-hidden border border-border">
+              <div className="relative h-28 rounded-none overflow-hidden border border-border">
                 <img
                   src={imagePreview}
                   alt="Vista previa"
@@ -246,20 +267,23 @@ export function CreateAlertSheet({
             )}
           </div>
 
-          <Button
-            type="submit"
-            disabled={isCreating}
-            className="w-full rounded-xl font-bold gap-2 cursor-pointer"
-          >
-            {isCreating ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Publicando alerta...
-              </>
-            ) : (
-              "Crear alerta"
-            )}
-          </Button>
+          {/* Submit */}
+          <div className="pt-5">
+            <Button
+              type="submit"
+              disabled={isCreating}
+              className="w-full rounded-none font-bold gap-2 cursor-pointer uppercase tracking-wider text-xs h-11"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Publicando alerta...
+                </>
+              ) : (
+                "Crear alerta"
+              )}
+            </Button>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

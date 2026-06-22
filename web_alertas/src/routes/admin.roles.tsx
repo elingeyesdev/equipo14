@@ -9,14 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DataTable } from "@/components/admin/DataTable";
-import { FilterButton } from "@/components/admin/FilterButton";
-import {
-  applySimpleListFilters,
-  countSimpleFilters,
-  DEFAULT_SIMPLE_FILTERS,
-  SimpleListFilters,
-  type SimpleListFiltersState,
-} from "@/components/admin/SimpleListFilters";
 import type { Role } from "@/domain/types";
 
 export const Route = createFileRoute("/admin/roles")({
@@ -26,13 +18,7 @@ export const Route = createFileRoute("/admin/roles")({
 function RolesPage() {
   const { roles = [], isLoading, createRole, isCreating } = useRoles();
   const [createOpen, setCreateOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState<SimpleListFiltersState>(DEFAULT_SIMPLE_FILTERS);
   const [newRoleName, setNewRoleName] = useState("");
-
-  const filteredRoles = applySimpleListFilters(roles, filters, (role, search) =>
-    role.name.toLowerCase().includes(search),
-  );
 
   const handleCreateRole = async (e: FormEvent) => {
     e.preventDefault();
@@ -75,7 +61,7 @@ function RolesPage() {
       accessorFn: (row) => row.name,
       enableSorting: false,
       cell: ({ row }) => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${roleBadge(row.original.name)}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider ${roleBadge(row.original.name)}`}>
           {row.original.name}
         </span>
       ),
@@ -97,8 +83,7 @@ function RolesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <FilterButton activeCount={countSimpleFilters(filters)} onClick={() => setFiltersOpen(true)} />
-          <Button onClick={() => setCreateOpen(true)} className="rounded-xl gap-2 font-bold cursor-pointer">
+          <Button onClick={() => setCreateOpen(true)} className="rounded-none gap-2 font-bold cursor-pointer">
             <PlusCircle className="size-4" />
             Nuevo rol
           </Button>
@@ -107,52 +92,57 @@ function RolesPage() {
 
       <DataTable
         columns={columns}
-        data={filteredRoles}
+        data={roles}
         isLoading={isLoading}
         emptyMessage="Ningún rol encontrado."
-        footerText={`${filteredRoles.length} roles en el sistema`}
+        footerText={`${roles.length} roles en el sistema`}
       />
 
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-display flex items-center gap-2">
-              <Shield className="size-5 text-primary" />
-              Nuevo rol
-            </SheetTitle>
-            <SheetDescription>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto border-border rounded-none bg-background">
+          <SheetHeader className="mb-0 pr-8 pb-5 border-b border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-none">
+                Seguridad
+              </span>
+            </div>
+            <SheetTitle className="font-display text-lg tracking-tight">Nuevo rol</SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
               Crea un nuevo rol para asignar a los usuarios del sistema y controlar sus permisos.
             </SheetDescription>
           </SheetHeader>
-          <form onSubmit={handleCreateRole} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="role-name">Nombre del rol</Label>
+          <form onSubmit={handleCreateRole} className="space-y-0 pb-8">
+            <div className="px-0 py-4 border-b border-border space-y-2">
+              <Label htmlFor="role-name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Nombre del rol
+              </Label>
               <Input
                 id="role-name"
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
                 required
                 placeholder="Ej. supervisor"
-                className="rounded-xl"
+                className="rounded-none border-border"
               />
             </div>
-            <Button type="submit" disabled={isCreating} className="w-full rounded-xl font-bold gap-2 cursor-pointer mt-6">
-              {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-              Crear rol
-            </Button>
+            <div className="pt-5">
+              <Button type="submit" disabled={isCreating} className="w-full rounded-none font-bold gap-2 cursor-pointer uppercase tracking-wider text-xs h-11">
+                {isCreating ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Creando rol...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="size-4" />
+                    Crear rol
+                  </>
+                )}
+              </Button>
+            </div>
           </form>
         </SheetContent>
       </Sheet>
-
-      <SimpleListFilters
-        open={filtersOpen}
-        onOpenChange={setFiltersOpen}
-        title="Filtros de roles"
-        description="Busca roles por nombre."
-        filters={filters}
-        onChange={setFilters}
-        resultCount={filteredRoles.length}
-      />
     </div>
   );
 }

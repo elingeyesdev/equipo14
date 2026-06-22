@@ -1,43 +1,44 @@
-import { useCallback, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { EmergencyStation } from "@/domain/types";
 import { clearEmergencyStationsOnMap, syncEmergencyStationsOnMap } from "@/lib/mapbox-emergency-station";
 import { bringReportMarkersToFront } from "@/lib/mapbox-reports";
+import { loadMapboxGl } from "@/lib/mapbox";
 
 export function useMapboxEmergencyStations(
-  mapRef: React.RefObject<mapboxgl.Map | null>,
+  map: any,
   stations: EmergencyStation[],
   enabled: boolean,
+  isMapReady: boolean,
 ) {
-  const syncAll = useCallback(() => {
-    const map = mapRef.current;
-    if (!map?.loaded?.()) return;
-
-    if (!enabled || stations.length === 0) {
-      clearEmergencyStationsOnMap(map);
-    } else {
-      syncEmergencyStationsOnMap(map, stations);
-    }
-
-    bringReportMarkersToFront(map);
-  }, [mapRef, enabled, stations]);
+  const markersByIdRef = useRef<Map<number, any>>(new Map());
 
   useEffect(() => {
-    syncAll();
-  }, [syncAll]);
+    if (!map || !isMapReady) return;
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    let active = true;
 
-    const onReady = () => syncAll();
-    if (map.loaded?.()) {
-      onReady();
-    } else {
-      map.once("load", onReady);
-    }
+    const sync = async () => {
+      if (!enabled || stations.length === 0) {
+        clearEmergencyStationsOnMap(markersByIdRef.current);
+      } else {
+        const mapboxgl = await loadMapboxGl();
+        if (!active) return;
+        syncEmergencyStationsOnMap(map, mapboxgl, stations, markersByIdRef.current);
+      }
+      bringReportMarkersToFront(map);
+    };
+
+    void sync();
 
     return () => {
-      map.off("load", onReady);
+      active = false;
     };
-  }, [mapRef, syncAll]);
+  }, [map, isMapReady, enabled, stations]);
+
+  // Clean up markers when map changes or component unmounts
+  useEffect(() => {
+    return () => {
+      clearEmergencyStationsOnMap(markersByIdRef.current);
+    };
+  }, [map]);
 }

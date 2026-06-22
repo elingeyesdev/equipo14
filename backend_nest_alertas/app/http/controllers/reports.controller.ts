@@ -91,6 +91,16 @@ export class ReportsController {
         return this.commentsService.findByReport(reportId)
     }
 
+    @Patch(':id/resolve')
+    resolveReport(@Param('id') id: number) {
+        return this.reportsService.resolveReport(Number(id));
+    }
+
+    @Patch(':id/reactivate')
+    reactivateReport(@Param('id') id: number) {
+        return this.reportsService.reactivateReport(Number(id));
+    }
+
     @Delete(':id')
     remove(@Param('id') id:string){
         return this.reportsService.remove(id)

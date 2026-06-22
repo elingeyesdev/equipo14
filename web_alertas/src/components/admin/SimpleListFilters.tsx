@@ -66,7 +66,7 @@ export function SimpleListFilters({
                 placeholder="Nombre, teléfono, texto..."
                 value={filters.search}
                 onChange={(e) => onChange({ ...filters, search: e.target.value })}
-                className="w-full h-10 pl-10 pr-3 rounded-xl bg-background border border-border text-sm focus:outline-none focus:border-primary"
+                className="w-full h-10 pl-10 pr-3 rounded-none bg-background border border-border text-sm focus:outline-none focus:border-primary"
               />
             </div>
           </label>
@@ -79,7 +79,7 @@ export function SimpleListFilters({
               <select
                 value={filters.role}
                 onChange={(e) => onChange({ ...filters, role: e.target.value })}
-                className="mt-1.5 w-full h-10 px-3 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer"
+                className="mt-1.5 w-full h-10 px-3 rounded-none bg-background border border-border text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer"
               >
                 <option value="Todos">Todos los roles</option>
                 <option value="usuario">Usuario normal</option>
@@ -93,7 +93,7 @@ export function SimpleListFilters({
             type="button"
             variant="outline"
             onClick={handleClear}
-            className="w-full rounded-xl gap-2 border-dashed cursor-pointer"
+            className="w-full rounded-none gap-2 border-dashed cursor-pointer"
           >
             <X className="size-4" />
             Limpiar filtros

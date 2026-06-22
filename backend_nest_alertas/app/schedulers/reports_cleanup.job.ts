@@ -3,6 +3,7 @@ import { Cron } from "@nestjs/schedule";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Report } from "app/models/report.entity";
 import { Repository } from 'typeorm';
+import { StateReport } from "app/enums/state-report.enum";
 
 @Injectable()
 export class ReportsCleanup {
@@ -28,13 +29,17 @@ export class ReportsCleanup {
         console.log("Se ejectuo del trabajo")
         const result = await this.reportsRepository
             .createQueryBuilder()
-            .softDelete()
+            .update(Report)
+            .set({
+                status: StateReport.Vencido,
+                deleted_at: () => 'NOW()'
+            })
             .where('expires_at < NOW()')
             .andWhere('deleted_at IS NULL')
             .execute();
         if (result.affected) {
             console.log(
-                `${result.affected} reportes expirados eliminados`
+                `${result.affected} reportes expirados marcados como vencidos y eliminados`
             );
         }
     }
