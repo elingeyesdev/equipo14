@@ -13,22 +13,38 @@ export class RedisIoAdapter extends IoAdapter {
     }
 
     async connectToRedis(): Promise<void> {
-        const configService = this.app.get(ConfigService);
-        const host = configService.get<string>('redis.host') || 'localhost';
-        const port = configService.get<number>('redis.port') || 6379;
-        const redisUrl = `redis://${host}:${port}`;
+        try {
+            const configService = this.app.get(ConfigService);
+            const host = configService.get<string>('redis.host') || 'localhost';
+            const port = configService.get<number>('redis.port') || 6379;
+            const redisUrl = `redis://${host}:${port}`;
 
-        const pubClient = createClient({ url: redisUrl });
-        const subClient = pubClient.duplicate();
+            const pubClient = createClient({ url: redisUrl });
+            pubClient.on('error', (err) => {
+                console.error('Error en el cliente Pub de Redis para IoAdapter:', err);
+            });
 
-        await Promise.all([pubClient.connect(), subClient.connect()]);
+            const subClient = pubClient.duplicate();
+            subClient.on('error', (err) => {
+                console.error('Error en el cliente Sub de Redis para IoAdapter:', err);
+            });
 
-        this.adapterConstructor = createAdapter(pubClient, subClient);
+            await Promise.all([pubClient.connect(), subClient.connect()]);
+
+            this.adapterConstructor = createAdapter(pubClient, subClient);
+            console.log('Conexión exitosa a Redis para IoAdapter.');
+        } catch (error) {
+            console.error('Fallo al conectar a Redis para IoAdapter, usando adaptador en memoria por defecto:', error);
+        }
     }
 
     override createIOServer(port: number, options?: ServerOptions): any {
         const server = super.createIOServer(port, options);
-        server.adapter(this.adapterConstructor);
+        if (this.adapterConstructor) {
+            server.adapter(this.adapterConstructor);
+        } else {
+            console.warn('Socket.IO está usando el adaptador en memoria por defecto (Redis está offline).');
+        }
         return server;
     }
 }

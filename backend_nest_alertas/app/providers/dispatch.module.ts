@@ -27,7 +27,24 @@ import { createClient } from 'redis';
                 const host = configService.get<string>('redis.host') || 'localhost';
                 const port = configService.get<number>('redis.port') || 6379;
                 const client = createClient({ url: `redis://${host}:${port}` });
-                await client.connect();
+
+                client.on('error', (err) => {
+                    console.error('Error en REDIS_CLIENT:', err);
+                });
+
+                const connectWithRetry = async () => {
+                    try {
+                        await client.connect();
+                        console.log('Conexion exitosa a Redis para REDIS_CLIENT.');
+                    } catch (err: any) {
+                        console.error(`Fallo al conectar a Redis para REDIS_CLIENT. Reintentando en 5 segundos... Error: ${err.message}`);
+                        setTimeout(connectWithRetry, 5000);
+                    }
+                };
+
+                // Conectar en segundo plano para evitar bloquear/crashear el arranque
+                connectWithRetry();
+
                 return client;
             },
             inject: [ConfigService],
