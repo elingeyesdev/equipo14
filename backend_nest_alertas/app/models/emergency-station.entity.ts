@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, DeleteDateColumn } from 'typeorm';
 import type { Point } from 'geojson';
 import { InstallationType } from 'app/enums/installation-type.enum';
 import { Dispatch } from './dispatch.entity';
@@ -26,4 +26,7 @@ export class EmergencyStation {
 
     @OneToMany(() => Dispatch, dispatch => dispatch.destination)
     dispatches: Dispatch[];
+
+    @DeleteDateColumn()
+    deleted_at: Date;
 }

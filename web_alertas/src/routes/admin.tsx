@@ -6,7 +6,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, useState, createContext, useContext } from "react";
-import { ShieldCheck, LogOut, Map, Users, Tag, Shield, FileText } from "lucide-react";
+import { ShieldCheck, LogOut, Map, Users, FileText, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -52,8 +52,7 @@ const navItems = [
   { to: "/admin/mapa", label: "Reportes en vivo", icon: Map },
   { to: "/admin/reportes", label: "Alertas", icon: FileText },
   { to: "/admin/usuarios", label: "Usuarios", icon: Users },
-  { to: "/admin/tipo_reporte", label: "Tipos de Alertas", icon: Tag },
-  { to: "/admin/roles", label: "Roles", icon: Shield },
+  { to: "/admin/estaciones", label: "Estaciones", icon: Building2 },
 ] as const;
 
 function AdminLayout() {

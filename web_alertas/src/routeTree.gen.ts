@@ -14,10 +14,9 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
-import { Route as AdminTipo_reporteRouteImport } from './routes/admin.tipo_reporte'
-import { Route as AdminRolesRouteImport } from './routes/admin.roles'
 import { Route as AdminReportesRouteImport } from './routes/admin.reportes'
 import { Route as AdminMapaRouteImport } from './routes/admin.mapa'
+import { Route as AdminEstacionesRouteImport } from './routes/admin.estaciones'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -44,16 +43,6 @@ const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
   path: '/usuarios',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminTipo_reporteRoute = AdminTipo_reporteRouteImport.update({
-  id: '/tipo_reporte',
-  path: '/tipo_reporte',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminRolesRoute = AdminRolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminReportesRoute = AdminReportesRouteImport.update({
   id: '/reportes',
   path: '/reportes',
@@ -64,25 +53,28 @@ const AdminMapaRoute = AdminMapaRouteImport.update({
   path: '/mapa',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminEstacionesRoute = AdminEstacionesRouteImport.update({
+  id: '/estaciones',
+  path: '/estaciones',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/estaciones': typeof AdminEstacionesRoute
   '/admin/mapa': typeof AdminMapaRoute
   '/admin/reportes': typeof AdminReportesRoute
-  '/admin/roles': typeof AdminRolesRoute
-  '/admin/tipo_reporte': typeof AdminTipo_reporteRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/estaciones': typeof AdminEstacionesRoute
   '/admin/mapa': typeof AdminMapaRoute
   '/admin/reportes': typeof AdminReportesRoute
-  '/admin/roles': typeof AdminRolesRoute
-  '/admin/tipo_reporte': typeof AdminTipo_reporteRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -91,10 +83,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/estaciones': typeof AdminEstacionesRoute
   '/admin/mapa': typeof AdminMapaRoute
   '/admin/reportes': typeof AdminReportesRoute
-  '/admin/roles': typeof AdminRolesRoute
-  '/admin/tipo_reporte': typeof AdminTipo_reporteRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -104,20 +95,18 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/admin/estaciones'
     | '/admin/mapa'
     | '/admin/reportes'
-    | '/admin/roles'
-    | '/admin/tipo_reporte'
     | '/admin/usuarios'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/admin/estaciones'
     | '/admin/mapa'
     | '/admin/reportes'
-    | '/admin/roles'
-    | '/admin/tipo_reporte'
     | '/admin/usuarios'
     | '/admin'
   id:
@@ -125,10 +114,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/admin/estaciones'
     | '/admin/mapa'
     | '/admin/reportes'
-    | '/admin/roles'
-    | '/admin/tipo_reporte'
     | '/admin/usuarios'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -176,20 +164,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsuariosRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/tipo_reporte': {
-      id: '/admin/tipo_reporte'
-      path: '/tipo_reporte'
-      fullPath: '/admin/tipo_reporte'
-      preLoaderRoute: typeof AdminTipo_reporteRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/roles': {
-      id: '/admin/roles'
-      path: '/roles'
-      fullPath: '/admin/roles'
-      preLoaderRoute: typeof AdminRolesRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/reportes': {
       id: '/admin/reportes'
       path: '/reportes'
@@ -204,23 +178,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMapaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/estaciones': {
+      id: '/admin/estaciones'
+      path: '/estaciones'
+      fullPath: '/admin/estaciones'
+      preLoaderRoute: typeof AdminEstacionesRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminEstacionesRoute: typeof AdminEstacionesRoute
   AdminMapaRoute: typeof AdminMapaRoute
   AdminReportesRoute: typeof AdminReportesRoute
-  AdminRolesRoute: typeof AdminRolesRoute
-  AdminTipo_reporteRoute: typeof AdminTipo_reporteRoute
   AdminUsuariosRoute: typeof AdminUsuariosRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminEstacionesRoute: AdminEstacionesRoute,
   AdminMapaRoute: AdminMapaRoute,
   AdminReportesRoute: AdminReportesRoute,
-  AdminRolesRoute: AdminRolesRoute,
-  AdminTipo_reporteRoute: AdminTipo_reporteRoute,
   AdminUsuariosRoute: AdminUsuariosRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
