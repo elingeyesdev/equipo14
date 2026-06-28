@@ -3,6 +3,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'app/models/user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class MailService {
@@ -70,5 +71,37 @@ export class MailService {
         }
 
         return { message: `Correo enviado exitosamente a ${email}` };
+    }
+
+    async resendCredentials(id: string): Promise<{ message: string }> {
+        const user = await this.userRepository.findOne({
+            where: { id },
+            relations: ['authority_profile'],
+        });
+
+        if (!user) {
+            throw new NotFoundException(`El usuario con ID ${id} no se encontró`);
+        }
+
+        if (!user.authority_profile || !user.authority_profile.gmail) {
+            throw new BadRequestException('El usuario no tiene un perfil de autoridad o un correo electrónico configurado.');
+        }
+
+        const email = user.authority_profile.gmail;
+
+        // Generar una contrasena temporal
+        const tempPassword = Math.random().toString(36).substring(2, 10);
+        const hashPassword = await bcrypt.hash(tempPassword, 12);
+
+        user.password = hashPassword;
+        await this.userRepository.save(user);
+
+        await this.sendUserCredentials(
+            email,
+            user.phone,
+            tempPassword,
+        );
+
+        return { message: `Credenciales reenviadas con éxito al correo ${email}` };
     }
 }

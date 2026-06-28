@@ -22,10 +22,11 @@ interface SendMailSheetProps {
 }
 
 export function SendMailSheet({ user, onOpenChange }: SendMailSheetProps) {
-  const { sendMail, isSendingMail } = useUsers({ enabled: false });
+  const { sendMail, isSendingMail, resendCredentials, isResendingCredentials } = useUsers({ enabled: false });
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [resendConfirmOpen, setResendConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -33,6 +34,10 @@ export function SendMailSheet({ user, onOpenChange }: SendMailSheetProps) {
       setContent("");
     }
   }, [user]);
+
+  const handleResendCredentialsClick = () => {
+    setResendConfirmOpen(true);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -117,10 +122,10 @@ export function SendMailSheet({ user, onOpenChange }: SendMailSheetProps) {
             </div>
 
             {/* Send Button */}
-            <div className="pt-5">
+            <div className="pt-5 space-y-4">
               <Button
                 type="submit"
-                disabled={isSendingMail}
+                disabled={isSendingMail || isResendingCredentials}
                 className="w-full rounded-none font-bold gap-2 cursor-pointer uppercase tracking-wider text-xs h-11"
               >
                 {isSendingMail ? (
@@ -135,6 +140,15 @@ export function SendMailSheet({ user, onOpenChange }: SendMailSheetProps) {
                   </>
                 )}
               </Button>
+
+              <button
+                type="button"
+                disabled={isSendingMail || isResendingCredentials}
+                onClick={handleResendCredentialsClick}
+                className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer underline disabled:opacity-50"
+              >
+                {isResendingCredentials ? "Reenviando credenciales..." : "Reenviar credenciales de acceso"}
+              </button>
             </div>
           </form>
         )}
@@ -163,6 +177,28 @@ export function SendMailSheet({ user, onOpenChange }: SendMailSheetProps) {
           title="¿Enviar este correo?"
           description="Esta acción enviará el correo con el asunto y contenido ingresados al destinatario."
           confirmText="Enviar"
+        />
+
+        <ActionConfirmDialog
+          open={resendConfirmOpen}
+          onOpenChange={setResendConfirmOpen}
+          onConfirm={async () => {
+            if (user) {
+              try {
+                const res = await resendCredentials(user.id);
+                toast.success(res.message || "Credenciales reenviadas con éxito.");
+                onOpenChange(false);
+              } catch (err: any) {
+                toast.error(err.message || "Error al reenviar credenciales");
+              } finally {
+                setResendConfirmOpen(false);
+              }
+            }
+          }}
+          isLoading={isResendingCredentials}
+          title="¿Reestablecer y reenviar credenciales?"
+          description="Esta acción generará una nueva contraseña temporal para el usuario y se la enviará por correo electrónico."
+          confirmText="Reenviar"
         />
       </SheetContent>
     </Sheet>

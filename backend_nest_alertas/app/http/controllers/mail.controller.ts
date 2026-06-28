@@ -17,4 +17,11 @@ export class MailController {
     ) {
         return this.mailService.sendMailToUser(id, body.subject, body.content);
     }
+
+    @Post(':id/resend-credentials')
+    async resendCredentials(
+        @Param('id') id: string,
+    ) {
+        return this.mailService.resendCredentials(id);
+    }
 }

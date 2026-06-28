@@ -37,6 +37,10 @@ export function useUsers(options: { enabled?: boolean } = {}) {
       usersRepository.sendMail(id, subject, content),
   });
 
+  const resendCredentialsMutation = useMutation<{ message: string }, Error, string>({
+    mutationFn: (id) => usersRepository.resendCredentials(id),
+  });
+
   const updateAuthorityProfileMutation = useMutation<
     any,
     Error,
@@ -64,6 +68,9 @@ export function useUsers(options: { enabled?: boolean } = {}) {
 
     sendMail: sendMailMutation.mutateAsync,
     isSendingMail: sendMailMutation.isPending,
+
+    resendCredentials: resendCredentialsMutation.mutateAsync,
+    isResendingCredentials: resendCredentialsMutation.isPending,
 
     updateAuthorityProfile: updateAuthorityProfileMutation.mutateAsync,
     isUpdatingAuthorityProfile: updateAuthorityProfileMutation.isPending,

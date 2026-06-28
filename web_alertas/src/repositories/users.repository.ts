@@ -43,6 +43,10 @@ export const usersRepository = {
     return httpClient.post<{ message: string }>(`/mail/${id}`, { subject, content });
   },
 
+  resendCredentials: async (id: string): Promise<{ message: string }> => {
+    return httpClient.post<{ message: string }>(`/mail/${id}/resend-credentials`);
+  },
+
   updateAuthorityProfile: async (userId: string, data: { ci?: string; gmail?: string; profile_type?: string }): Promise<any> => {
     return httpClient.patch<any>(`/authority-profile/${userId}`, data);
   }
