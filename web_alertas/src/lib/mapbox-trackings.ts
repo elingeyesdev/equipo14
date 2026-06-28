@@ -10,7 +10,12 @@ const TRACKING_ROUTES_LAYER_ID = "tracking-routes-line";
 export const TRACKING_INCIDENTS_SOURCE_ID = "tracking-incidents";
 const TRACKING_INCIDENTS_LAYER_ID = "tracking-incidents-pin";
 
-function vehicleIconSrc(type?: string): string {
+function vehicleIconSrc(profileType?: string, type?: string): string {
+  const p = profileType?.toLowerCase() ?? "";
+  if (p.includes("bombero")) return camionBomberosIcon;
+  if (p.includes("medic") || p.includes("paramedico") || p.includes("hospital")) return ambulanciaIcon;
+  if (p.includes("polic")) return cochePoliciaIcon;
+
   const t = type?.toLowerCase() ?? "";
   if (t.includes("incendio") || t.includes("bombero")) return camionBomberosIcon;
   if (t.includes("medic") || t.includes("salud") || t.includes("ambulancia") || t.includes("paramedico")) return ambulanciaIcon;
@@ -32,7 +37,7 @@ function createVehicleMarkerElement(tracking: LiveTracking, selected: boolean): 
     <div class="relative flex flex-col items-center transition-transform group-hover:scale-110">
       <div class="size-11 border-2 border-white shadow-lg grid place-items-center bg-card rounded-none"
            style="background:${bg}">
-        <img src="${vehicleIconSrc(tracking.type)}" class="size-9 object-contain" />
+        <img src="${vehicleIconSrc(tracking.profileType, tracking.type)}" class="size-9 object-contain" />
       </div>
       <span class="mt-1 px-2 py-0.5 bg-background/90 border border-border text-[9px] font-bold uppercase tracking-wide text-foreground max-w-[120px] truncate rounded-none">
         ${tracking.type || "En ruta"}

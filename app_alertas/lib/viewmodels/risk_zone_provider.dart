@@ -27,7 +27,7 @@ class RiskZoneProvider extends ChangeNotifier {
   double? get currentRiskIndex => _currentZone?.riskIndex;
 
   Future<void> loadPreference() async {
-    _enabled = await _prefs.loadEnabledPreference(defaultValue: true);
+    _enabled = true;
     _loaded = true;
     notifyListeners();
   }
@@ -85,6 +85,35 @@ class RiskZoneProvider extends ChangeNotifier {
     _lastZoneId = nextZone?.id;
     _currentZone = nextZone;
     notifyListeners();
+  }
+
+  void updateCurrentZoneFromBackground(double riskIndex, String? zoneName, String? zoneId) {
+    if (zoneId == null || riskIndex == 0.0) {
+      if (_currentZone != null) {
+        _currentZone = null;
+        notifyListeners();
+      }
+    } else {
+      final existingIndex = _zones.indexWhere((z) => z.id == zoneId);
+      final newZone = existingIndex != -1
+          ? _zones[existingIndex]
+          : RiskZone(
+              id: zoneId,
+              name: zoneName ?? 'Área de riesgo',
+              lng: 0.0,
+              lat: 0.0,
+              radiusKm: 0.1,
+              reportCount: 1,
+              accidentCount: 0,
+              riskScore: 0.0,
+              riskIndex: riskIndex,
+              color: riskIndexToColor(riskIndex),
+            );
+      if (_currentZone?.id != newZone.id || _currentZone?.riskIndex != newZone.riskIndex) {
+        _currentZone = newZone;
+        notifyListeners();
+      }
+    }
   }
 
   @override

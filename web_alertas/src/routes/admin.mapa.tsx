@@ -84,10 +84,46 @@ const getCategoryMarkerConfig = (typeName?: string) => {
       iconPaths: `<path d="M19 10h-5V5c0-.6-.4-1-1-1h-2c-.6 0-1 .4-1 1v5H5c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h5v5c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-5h5c.6 0 1-.4 1-1v-2c0-.6-.4-1-1-1z"/>`
     };
   }
+  if (name.includes("violencia") || name.includes("familiar")) {
+    return {
+      color: "#8B5CF6",
+      iconPaths: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`
+    };
+  }
+  if (name.includes("disturbio")) {
+    return {
+      color: "#D97706",
+      iconPaths: `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9.5" y1="9.5" x2="14.5" y2="14.5"/><line x1="14.5" y1="9.5" x2="9.5" y2="14.5"/>`
+    };
+  }
   return {
     color: "#AF6D58",
     iconPaths: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`
   };
+};
+const getReportCategory = (typeName?: string): "policia" | "bombero" | "medico" | "other" => {
+  const name = typeName?.toLowerCase() || "";
+  if (name.includes("incendio") || name.includes("fuego")) {
+    return "bombero";
+  }
+  if (name.includes("médica") || name.includes("salud") || name.includes("enfermo")) {
+    return "medico";
+  }
+  if (
+    name.includes("robo") ||
+    name.includes("hurto") ||
+    name.includes("asalto") ||
+    name.includes("violencia") ||
+    name.includes("familiar") ||
+    name.includes("disturbio") ||
+    name.includes("pelea") ||
+    name.includes("accidente") ||
+    name.includes("vial") ||
+    name.includes("choque")
+  ) {
+    return "policia";
+  }
+  return "other";
 };
 
 function MapaPage() {
@@ -107,7 +143,7 @@ function MapaPage() {
   const [alertsListOpen, setAlertsListOpen] = useState(false);
   const [map, setMap] = useState<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [stationFilter, setStationFilter] = useState<"todos" | "policia" | "bombero" | "hospital">("todos");
+  const [stationFilter, setStationFilter] = useState<"todos" | "policia" | "bombero" | "medico">("todos");
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -152,10 +188,19 @@ function MapaPage() {
  
   const filteredStations = useMemo(() => {
     if (stationFilter === "todos") return emergencyStations;
+    const targetType = stationFilter === "medico" ? "hospital" : stationFilter;
     return emergencyStations.filter(
-      (s) => s.installation_type?.toLowerCase() === stationFilter,
+      (s) => s.installation_type?.toLowerCase() === targetType,
     );
   }, [emergencyStations, stationFilter]);
+
+  const filteredReports = useMemo(() => {
+    if (stationFilter === "todos") return mapReports;
+    return mapReports.filter((report) => {
+      const category = getReportCategory(report.type?.name);
+      return category === stationFilter;
+    });
+  }, [mapReports, stationFilter]);
  
   // Force fresh data load on screen entry
   useEffect(() => {
@@ -164,11 +209,19 @@ function MapaPage() {
   }, [refetch, refetchStations]);
 
   // All layers always active as requested
-  useMapboxRiskZones(map, mapReports, true, isMapReady);
+  useMapboxRiskZones(map, filteredReports, true, isMapReady);
   useMapboxEmergencyStations(map, filteredStations, true, isMapReady);
 
   const { trackings = [] } = useLiveTrackings(true);
   const displayTrackings = useSnappedTrackings(trackings, true);
+
+  const filteredTrackings = useMemo(() => {
+    if (stationFilter === "todos") return displayTrackings;
+    const targetType = stationFilter === "medico" ? "paramedico" : stationFilter;
+    return displayTrackings.filter(
+      (t) => t.profileType?.toLowerCase() === targetType || t.type?.toLowerCase() === targetType,
+    );
+  }, [displayTrackings, stationFilter]);
 
   const handleSelectTracking = useCallback((id: string) => {
     setSelectedTrackingId((prev) => (prev === id ? null : id));
@@ -177,7 +230,7 @@ function MapaPage() {
 
   useMapboxTrackings(
     map,
-    displayTrackings,
+    filteredTrackings,
     true,
     trackingMarkersRef,
     selectedTrackingId,
@@ -331,7 +384,7 @@ function MapaPage() {
         markersRef.current.forEach((m) => m.remove());
         markersRef.current = [];
 
-        mapReports.forEach((report) => {
+        filteredReports.forEach((report) => {
           const pos = normalizeReportCoordinates(report.coordinates);
           if (!pos) return;
           const [lng, lat] = pos;
@@ -380,7 +433,7 @@ function MapaPage() {
           markersRef.current.push(marker);
         });
 
-        syncReportMarkersLayer(map, mapReports);
+        syncReportMarkersLayer(map, filteredReports);
         bringReportMarkersToFront(map);
       } catch (e) {
         console.error("Error drawing markers", e);
@@ -392,7 +445,7 @@ function MapaPage() {
     return () => {
       active = false;
     };
-  }, [map, isMapReady, mapReports]);
+  }, [map, isMapReady, filteredReports]);
 
   // Clean up markers and draft markers when map instance changes
   useEffect(() => {
@@ -506,15 +559,15 @@ function MapaPage() {
           Bomberos
         </button>
         <button
-          onClick={() => setStationFilter("hospital")}
+          onClick={() => setStationFilter("medico")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-none border text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-            stationFilter === "hospital"
+            stationFilter === "medico"
               ? "bg-emerald-600 text-white border-emerald-600"
               : "bg-transparent text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted"
           }`}
         >
           <HeartPulse className="size-3" />
-          Hospitales
+          Médico
         </button>
       </div>
 
@@ -606,9 +659,8 @@ function MapaPage() {
 
           <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground border-t border-border pt-3 mb-4 font-mono">
             <div>ZONA: {selectedReport.zone}</div>
-            <div>ID: #{selectedReport.id}</div>
-            <div>PESO: {selectedReport.weight} pts</div>
-            <div>FECHA: {new Date(selectedReport.created_at).toLocaleDateString()}</div>
+            <div>ID: {selectedReport.id}</div>
+            <div className="col-span-2">FECHA: {new Date(selectedReport.created_at).toLocaleDateString()}</div>
           </div>
 
           <div className="flex gap-2">
@@ -641,7 +693,7 @@ function MapaPage() {
       <div className="absolute top-4 left-4 flex flex-col gap-2 z-10 pointer-events-none">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-background/90 backdrop-blur border border-border/40 text-[10px] font-bold uppercase tracking-widest shadow-md">
           <Radio className="size-3 text-primary animate-pulse" />
-          Vista activa · {mapReports.length} en mapa
+          Vista activa · {filteredReports.length} en mapa
         </div>
         {pickOnMainMap && (
           <div className="px-3 py-1.5 rounded-none bg-primary/95 text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-md">
@@ -721,7 +773,7 @@ function MapaPage() {
                 Registro
               </span>
               <span className="text-[10px] font-mono text-muted-foreground">
-                {mapReports.length} incidentes
+                {filteredReports.length} incidentes
               </span>
             </div>
             <SheetTitle className="font-display text-lg tracking-tight">Alertas activas</SheetTitle>
@@ -731,12 +783,12 @@ function MapaPage() {
           </SheetHeader>
 
           <div className="divide-y divide-border">
-            {mapReports.length === 0 && (
+            {filteredReports.length === 0 && (
               <div className="px-5 py-10 text-center text-xs text-muted-foreground">
                 No hay incidentes registrados.
               </div>
             )}
-            {mapReports.map((report) => {
+            {filteredReports.map((report) => {
               const config = getCategoryMarkerConfig(report.type?.name);
               return (
                 <button
@@ -845,6 +897,7 @@ function MapaPage() {
           draftMarkerRef.current?.remove();
           draftMarkerRef.current = null;
           setPendingLocation(null);
+          setStationFilter("todos");
         }}
       />
     </div>

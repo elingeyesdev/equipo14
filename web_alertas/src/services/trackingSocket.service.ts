@@ -111,6 +111,7 @@ class TrackingSocketService {
           }))
         : [],
       status: data.status || "",
+      profileType: data.profileType || "",
     };
   }
 

@@ -14,6 +14,7 @@ export interface LiveTracking {
   description?: string;
   route: TrackingRoutePoint[];
   status?: string;
+  profileType?: string;
 }
 
 function toNumber(value: unknown): number | null {
@@ -53,5 +54,6 @@ export function parseLiveTracking(id: string, raw: Record<string, unknown>): Liv
     description: typeof raw.description === "string" ? raw.description : undefined,
     route,
     status: typeof raw.status === "string" ? raw.status : undefined,
+    profileType: typeof raw.profileType === "string" ? raw.profileType : undefined,
   };
 }

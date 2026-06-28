@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:app_alertas/services/location_service.dart';
 import 'package:app_alertas/services/tracking_service.dart';
@@ -33,6 +34,7 @@ class TrackingProvider extends ChangeNotifier {
 
   // Active tracking state
   bool _isFollowingRoute = false;
+  bool _isSharingLocationOnly = false;
   LatLng? _currentLocation;
   String? _locationError;
   List<LatLng> _routePoints = [];
@@ -56,9 +58,11 @@ class TrackingProvider extends ChangeNotifier {
   // Subscriptions & Timers
   StreamSubscription<PositionWithBearing>? _positionSubscription;
   Timer? _trackingTimer;
+  Timer? _locationSharingNotificationTimer;
 
   // Getters
   bool get isFollowingRoute => _isFollowingRoute;
+  bool get isSharingLocationOnly => _isSharingLocationOnly;
   LatLng? get currentLocation => _currentLocation;
   String? get locationError => _locationError;
   List<LatLng> get routePoints => List.unmodifiable(_routePoints);
@@ -77,7 +81,7 @@ class TrackingProvider extends ChangeNotifier {
   int? get dispatchId => _dispatchId;
   String? get profileType => _profileType;
 
-  static const double _arrivalThresholdMeters = 20.0;
+  static const double _arrivalThresholdMeters = 50.0;
 
   TrackingProvider();
 
@@ -104,17 +108,9 @@ class TrackingProvider extends ChangeNotifier {
         throw Exception('Token de Mapbox no configurado.');
       }
 
-      final String coordsString;
-      if (_nearestStationCoords != null) {
-        coordsString =
-            '${start.longitude},${start.latitude};'
-            '${waypoint.longitude},${waypoint.latitude};'
-            '${_nearestStationCoords!.longitude},${_nearestStationCoords!.latitude}';
-      } else {
-        coordsString =
-            '${start.longitude},${start.latitude};'
-            '${waypoint.longitude},${waypoint.latitude}';
-      }
+      final String coordsString =
+          '${start.longitude},${start.latitude};'
+          '${waypoint.longitude},${waypoint.latitude}';
 
       final url = Uri.parse(
         'https://api.mapbox.com/directions/v5/mapbox/driving/'
@@ -151,9 +147,7 @@ class TrackingProvider extends ChangeNotifier {
       debugPrint('Error fetching route in TrackingProvider: $e');
     } finally {
       if (_routePoints.isEmpty) {
-        _routePoints = _nearestStationCoords != null
-            ? [start, waypoint, _nearestStationCoords!]
-            : [start, waypoint];
+        _routePoints = [start, waypoint];
         success = true;
       }
       _isLoadingRoute = false;
@@ -222,6 +216,9 @@ class TrackingProvider extends ChangeNotifier {
   }) async {
     if (_isFollowingRoute) {
       await stopRouteTracking();
+    }
+    if (_isSharingLocationOnly) {
+      await stopLocationOnlySharing();
     }
 
     _incidentLatitude = lat;
@@ -300,6 +297,9 @@ class TrackingProvider extends ChangeNotifier {
     String? profileType,
   }) async {
     if (_isFollowingRoute) return;
+    if (_isSharingLocationOnly) {
+      await stopLocationOnlySharing();
+    }
 
     final keepExistingRoute = isSameIncident(latitude, longitude) && _routePoints.isNotEmpty;
 
@@ -427,14 +427,65 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> transitionToLocationSharing() async {
+    if (!_isFollowingRoute) return;
+
+    _isFollowingRoute = false;
+    _isSharingLocationOnly = true;
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
+    _trackingTimer?.cancel();
+    _trackingTimer = null;
+
+    if (_userId != null) {
+      await _publishLocationOnlyState(_userId!, status: 'active');
+      _startLocationSharingNotifications();
+
+      _trackingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        _updateLocationOnlyData();
+      });
+
+      try {
+        final stream = await _locationService.getPositionStream();
+        _positionSubscription = stream.listen(
+          (posWithBearing) {
+            final position = posWithBearing.latLng;
+            final currentBearing = posWithBearing.bearing;
+
+            _currentLocation = position;
+            _bearing = currentBearing;
+            _locationError = null;
+            notifyListeners();
+
+            if (_isSharingLocationOnly && _userId != null) {
+              _publishLocationOnlyState(_userId!, status: 'active');
+            }
+          },
+          onError: (error) {
+            _locationError = error.toString();
+            _isSharingLocationOnly = false;
+            notifyListeners();
+            stopLocationOnlySharing();
+          },
+        );
+      } catch (e) {
+        _locationError = e.toString();
+        _isSharingLocationOnly = false;
+        notifyListeners();
+        stopLocationOnlySharing();
+      }
+    }
+
+    notifyListeners();
+  }
+
   void _checkArrival(LatLng position) {
     if (_hasArrived) return;
 
-    // Destino final es la estación de emergencia. Si no está disponible, se asume el incidente.
-    final LatLng? finalDestination = _nearestStationCoords ??
-        ((_incidentLatitude != null && _incidentLongitude != null)
-            ? LatLng(_incidentLatitude!, _incidentLongitude!)
-            : null);
+    // Destino final es el incidente.
+    final LatLng? finalDestination = (_incidentLatitude != null && _incidentLongitude != null)
+        ? LatLng(_incidentLatitude!, _incidentLongitude!)
+        : null;
 
     if (finalDestination == null) return;
 
@@ -448,7 +499,8 @@ class TrackingProvider extends ChangeNotifier {
         unawaited(_updateDispatchState('completado'));
       }
 
-      stopRouteTracking();
+      // Cambiar modalidad a compartir ubicación únicamente
+      unawaited(transitionToLocationSharing());
     }
   }
 
@@ -457,8 +509,47 @@ class TrackingProvider extends ChangeNotifier {
     _publishTrackingState(_userId!, status: 'active');
   }
 
+  void _startLocationSharingNotifications() {
+    _locationSharingNotificationTimer?.cancel();
+    _showLocationSharingNotification();
+    _locationSharingNotificationTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      _showLocationSharingNotification();
+    });
+  }
+
+  void _stopLocationSharingNotifications() {
+    _locationSharingNotificationTimer?.cancel();
+    _locationSharingNotificationTimer = null;
+  }
+
+  void _showLocationSharingNotification() async {
+    final FlutterLocalNotificationsPlugin localNotificationsPlugin =
+        FlutterLocalNotificationsPlugin();
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    await localNotificationsPlugin.initialize(settings: initializationSettings);
+
+    await localNotificationsPlugin.show(
+      id: 9999,
+      title: 'Compartiendo ubicación',
+      body: 'Estás compartiendo tu ubicación en tiempo real con la central de emergencias.',
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'sharing_location_channel',
+          'Compartiendo Ubicación',
+          channelDescription: 'Notificación recurrente de compartición de ubicación',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+      ),
+    );
+  }
+
   Future<void> clearPreTracking() async {
-    if (_userId != null && !_isFollowingRoute) {
+    if (_userId != null && !_isFollowingRoute && !_isSharingLocationOnly) {
       await _trackingService.stopTracking(_userId!);
     }
     // Cancelar despacho si se planificó pero se limpia antes de iniciar
@@ -480,10 +571,156 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> clear() async {
+    _isFollowingRoute = false;
+    _isSharingLocationOnly = false;
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
+    _trackingTimer?.cancel();
+    _trackingTimer = null;
+    _stopLocationSharingNotifications();
+
+    if (_userId != null) {
+      try {
+        await _trackingService.stopTracking(_userId!);
+      } catch (_) {}
+    }
+
+    _currentLocation = null;
+    _locationError = null;
+    _routePoints = [];
+    _isLoadingRoute = false;
+    _lastRouteUpdate = null;
+    _bearing = 0.0;
+    _hasArrived = false;
+
+    _incidentLatitude = null;
+    _incidentLongitude = null;
+    _incidentDescription = null;
+    _incidentType = null;
+    _userId = null;
+    _reportId = null;
+    _nearestStationId = null;
+    _nearestStationCoords = null;
+    _dispatchId = null;
+    _profileType = null;
+
+    notifyListeners();
+  }
+
+  Future<void> startLocationOnlySharing({
+    required String userId,
+    String? profileType,
+  }) async {
+    if (_isFollowingRoute) {
+      await stopRouteTracking();
+    }
+    if (_isSharingLocationOnly) return;
+
+    _userId = userId;
+    _profileType = profileType;
+    _isSharingLocationOnly = true;
+    _hasArrived = false;
+    _incidentLatitude = null;
+    _incidentLongitude = null;
+    _routePoints = [];
+    notifyListeners();
+
+    try {
+      final initialLoc = await _locationService.getCurrentLocation();
+      _currentLocation = initialLoc;
+      _locationError = null;
+      notifyListeners();
+    } on LocationException catch (e) {
+      _locationError = e.message;
+    } catch (_) {
+      _locationError = 'No se pudo obtener tu ubicación. Activa el GPS.';
+    }
+
+    await _publishLocationOnlyState(userId, status: 'active');
+    _startLocationSharingNotifications();
+
+    // Periodically send coordinates to backend
+    _trackingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _updateLocationOnlyData();
+    });
+    _updateLocationOnlyData();
+
+    // Subscribe to position updates
+    try {
+      final stream = await _locationService.getPositionStream();
+      _positionSubscription = stream.listen(
+        (posWithBearing) {
+          final position = posWithBearing.latLng;
+          final currentBearing = posWithBearing.bearing;
+
+          _currentLocation = position;
+          _bearing = currentBearing;
+          _locationError = null;
+          notifyListeners();
+
+          if (_isSharingLocationOnly && _userId != null) {
+            _publishLocationOnlyState(_userId!, status: 'active');
+          }
+        },
+        onError: (error) {
+          _locationError = error.toString();
+          _isSharingLocationOnly = false;
+          notifyListeners();
+          stopLocationOnlySharing();
+        },
+      );
+    } catch (e) {
+      _locationError = e.toString();
+      _isSharingLocationOnly = false;
+      notifyListeners();
+      stopLocationOnlySharing();
+    }
+  }
+
+  Future<void> stopLocationOnlySharing() async {
+    if (!_isSharingLocationOnly) return;
+
+    _isSharingLocationOnly = false;
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
+    _trackingTimer?.cancel();
+    _trackingTimer = null;
+    _stopLocationSharingNotifications();
+
+    if (_userId != null) {
+      await _trackingService.stopTracking(_userId!);
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> _publishLocationOnlyState(String userId, {required String status}) async {
+    if (_currentLocation == null) {
+      return;
+    }
+
+    await _trackingService.startTracking(userId, {
+      'latitude': _currentLocation!.latitude,
+      'longitude': _currentLocation!.longitude,
+      'type': 'Ubicación',
+      'description': 'Compartiendo ubicación en tiempo real',
+      'route': const <Map<String, double>>[],
+      'status': status,
+      'profileType': _profileType,
+    });
+  }
+
+  void _updateLocationOnlyData() {
+    if (!_isSharingLocationOnly || _currentLocation == null || _userId == null) return;
+    _publishLocationOnlyState(_userId!, status: 'active');
+  }
+
   @override
   void dispose() {
     _positionSubscription?.cancel();
     _trackingTimer?.cancel();
+    _locationSharingNotificationTimer?.cancel();
     super.dispose();
   }
 }

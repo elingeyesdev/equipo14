@@ -154,10 +154,10 @@ function AdminSidebar({ session, onLogout }: { session: Session; onLogout: () =>
         <div className={`flex items-center px-2 py-2 min-w-0 ${collapsed ? "justify-center" : "justify-between"}`}>
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2.5 min-w-0 overflow-hidden">
-              <img src={avispateLogo} alt="Logo de Avispáte" className="size-9 object-contain shrink-0" />
+              <img src={avispateLogo} alt="Logo de Avispáme" className="size-9 object-contain shrink-0" />
               <div className="min-w-0 flex flex-col leading-tight animate-in fade-in slide-in-from-left-2 duration-300">
                 <span className="font-display font-bold text-base tracking-tight truncate">
-                  Avispáte
+                  Avispáme
                 </span>
                 <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
                   Admin

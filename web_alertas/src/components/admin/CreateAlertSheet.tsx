@@ -66,7 +66,50 @@ export function CreateAlertSheet({
       location.latitude,
       riskZones,
     );
-    if (matchingZone) setZone(matchingZone.name);
+    if (matchingZone) {
+      setZone(matchingZone.name);
+      return;
+    }
+
+    let active = true;
+    const fetchAddress = async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.latitude}&lon=${location.longitude}&zoom=18&addressdetails=1`,
+          {
+            headers: {
+              "User-Agent": "web_alertas/1.0 (web reverse geocoding)",
+            },
+          }
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!active || !data || !data.address) return;
+
+        const addr = data.address;
+        const road = addr.road || addr.pedestrian || addr.residential || addr.suburb || addr.neighbourhood;
+        const suburb = addr.neighbourhood || addr.suburb || addr.city_district;
+
+        let addressText = "";
+        if (road && suburb) {
+          addressText = `${road}, ${suburb}`;
+        } else {
+          addressText = road || suburb || data.display_name || "";
+        }
+
+        if (addressText) {
+          setZone(addressText);
+        }
+      } catch (error) {
+        console.error("Error in reverse geocoding:", error);
+      }
+    };
+
+    fetchAddress();
+
+    return () => {
+      active = false;
+    };
   }, [location, riskZones]);
 
   const handleLocationChange = (loc: MapLocation) => {

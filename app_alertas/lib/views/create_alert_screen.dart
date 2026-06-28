@@ -712,7 +712,7 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                                 },
                               ),
                             ),
-                            if (isExpanded)
+                            if (isExpanded) ...[
                               Container(
                                 height: 160,
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -722,6 +722,39 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                                 clipBehavior: Clip.hardEdge,
                                 child: _buildMiniMap(alert),
                               ),
+                              if (alert.images.isNotEmpty)
+                                Container(
+                                  height: 100,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: alert.images.length,
+                                    itemBuilder: (context, imgIndex) {
+                                      return Container(
+                                        width: 100,
+                                        margin: const EdgeInsets.only(right: 8),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.white.withValues(alpha: 0.1)
+                                                : Colors.black.withValues(alpha: 0.1),
+                                          ),
+                                        ),
+                                        clipBehavior: Clip.hardEdge,
+                                        child: Image.network(
+                                          alert.images[imgIndex],
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            color: Colors.white.withValues(alpha: 0.05),
+                                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
                           ],
                         );
                       },
@@ -1139,11 +1172,66 @@ class CreateAlertScreenState extends State<CreateAlertScreen> {
                           _position!.longitude,
                         ),
                         alertType: _selectedType?.name,
-                        onLocationChanged: (selected, isInside) {
+                        onLocationChanged: (selected, isInside) async {
                           setState(() {
                             _selectedAlertLocation = selected;
                             _alertLocationInsideRadius = isInside;
                           });
+
+                          try {
+                            final precise = await _reverseGeocodePrecise(
+                              selected.latitude,
+                              selected.longitude,
+                            );
+                            if (precise != null) {
+                              if (!mounted) return;
+                              setState(() {
+                                _locationTitle = precise.$1;
+                                _locationSubtitle = precise.$2;
+                              });
+                              return;
+                            }
+
+                            final placemarks = await placemarkFromCoordinates(
+                              selected.latitude,
+                              selected.longitude,
+                            );
+                            if (placemarks.isNotEmpty && mounted) {
+                              final place = _selectMostUsefulPlacemark(placemarks);
+                              final streetPart = [place.name, place.street, place.subLocality]
+                                  .where((v) => v != null && v.trim().isNotEmpty)
+                                  .map((v) => v!.trim())
+                                  .toSet()
+                                  .join(', ');
+                              final cityPart = [
+                                    place.locality,
+                                    place.subAdministrativeArea,
+                                    place.administrativeArea,
+                                    place.country,
+                                  ]
+                                  .where((v) => v != null && v.trim().isNotEmpty)
+                                  .map((v) => v!.trim())
+                                  .toSet()
+                                  .join(', ');
+
+                              setState(() {
+                                _locationTitle = streetPart.isNotEmpty
+                                    ? streetPart
+                                    : 'Ubicación seleccionada';
+                                _locationSubtitle = cityPart.isNotEmpty
+                                    ? cityPart
+                                    : '${selected.latitude.toStringAsFixed(5)}, ${selected.longitude.toStringAsFixed(5)}';
+                              });
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              setState(() {
+                                _locationTitle = 'Ubicación seleccionada';
+                                _locationSubtitle =
+                                    '${selected.latitude.toStringAsFixed(5)}, ${selected.longitude.toStringAsFixed(5)}';
+                              });
+                            }
+                          }
                         },
                       )
                     else if (_isLoadingLocation)

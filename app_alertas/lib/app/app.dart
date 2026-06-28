@@ -45,7 +45,16 @@ class _AppState extends State<App> {
   }
 
   void _onReceiveTaskData(dynamic data) {
-    if (data == 'navigate_to_map_route') {
+    if (data is Map && data['type'] == 'risk_zone_update') {
+      final context = App.navigatorKey.currentContext;
+      if (context != null) {
+        final provider = Provider.of<RiskZoneProvider>(context, listen: false);
+        final riskIndex = (data['riskIndex'] as num?)?.toDouble() ?? 0.0;
+        final zoneName = data['zoneName'] as String?;
+        final zoneId = data['zoneId'] as String?;
+        provider.updateCurrentZoneFromBackground(riskIndex, zoneName, zoneId);
+      }
+    } else if (data == 'navigate_to_map_route') {
       final context = App.navigatorKey.currentContext;
       if (context != null) {
         final trackingProvider = Provider.of<TrackingProvider>(context, listen: false);

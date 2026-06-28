@@ -81,4 +81,8 @@ class AlertRepository {
   Future<void> deleteReport(int reportId) async {
     await _service.deleteReport(reportId);
   }
+
+  Future<AlertModel> resolveReport(int reportId) async {
+    return await _service.resolveReport(reportId);
+  }
 }

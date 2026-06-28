@@ -65,13 +65,19 @@ class _AlertCardState extends State<AlertCard> {
     if (t.contains('INCENDIO')) return const Color(0xFFAA5F3C);
     if (t.contains('ACCIDENTE') || t.contains('VIAL')) return const Color(0xFF506E96);
     if (t.contains('MÉDICA') || t.contains('SALUD')) return const Color(0xFF3C8C6E);
-    return const Color(0xFF8B5CF6);
+    if (t.contains('VIOLENCIA') || t.contains('FAMILIAR')) return const Color(0xFF8B5CF6);
+    if (t.contains('DISTURBIO')) return const Color(0xFFD97706);
+    return const Color(0xFFAF6D58);
   }
 
   IconData _alertIcon(String type) {
     final t = type.toUpperCase();
-    if (t.contains('ROBO')) return Icons.local_police_rounded;
-    if (t.contains('HURTO')) return Icons.directions_run_rounded;
+    if (t.contains('ROBO') || t.contains('HURTO')) {
+      if (t.contains('MENOR') || t.contains('HURTO')) {
+        return Icons.directions_run_rounded;
+      }
+      return Icons.local_police_rounded;
+    }
     if (t.contains('INCENDIO')) return Icons.local_fire_department_rounded;
     if (t.contains('ACCIDENTE')) return Icons.car_crash_rounded;
     if (t.contains('VIAL') || t.contains('OBSTRUCCIÓN')) {
@@ -79,6 +85,12 @@ class _AlertCardState extends State<AlertCard> {
     }
     if (t.contains('MÉDICA') || t.contains('SALUD')) {
       return Icons.medical_services_rounded;
+    }
+    if (t.contains('VIOLENCIA') || t.contains('FAMILIAR')) {
+      return Icons.people_alt_rounded;
+    }
+    if (t.contains('DISTURBIO')) {
+      return Icons.groups_rounded;
     }
     return Icons.warning_amber_rounded;
   }

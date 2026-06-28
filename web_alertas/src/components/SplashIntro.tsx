@@ -70,13 +70,13 @@ export function SplashIntro() {
             style={{ animationDelay: "0.8s" }}
           />
           <div className="relative size-20 rounded-2xl bg-card grid place-items-center splash-logo shadow-2xl shadow-primary/25 splash-pulse border-none">
-            <img src={avispateLogo} alt="Logo de Avispáte" className="size-12 object-contain" />
+            <img src={avispateLogo} alt="Logo de Avispáme" className="size-12 object-contain" />
           </div>
         </div>
 
         <div className="flex flex-col items-center gap-3 splash-text">
           <span className="font-display font-bold text-4xl tracking-tight text-foreground splash-title">
-            {"AVISPÁTE".split("").map((c, i) => (
+            {"AVISPÁME".split("").map((c, i) => (
               <span
                 key={i}
                 className="inline-block splash-letter"

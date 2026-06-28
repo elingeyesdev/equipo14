@@ -13,6 +13,13 @@ class EmergencyServicesScreen extends StatelessWidget {
       color: Color(0xFF506E96),
     ),
     _EmergencyService(
+      icon: Icons.medical_services_rounded,
+      title: 'SEDES',
+      subtitle: 'Coordinación de ambulancias y traslados.',
+      phone: '168',
+      color: Color(0xFF3C8C6E),
+    ),
+    _EmergencyService(
       icon: Icons.local_fire_department_rounded,
       title: 'Bomberos',
       subtitle: 'Control y respuesta ante incendios',
@@ -149,8 +156,15 @@ class _EmergencyCard extends StatelessWidget {
 
   Future<void> _call() async {
     final uri = Uri(scheme: 'tel', path: service.phone);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        // Intentar lanzar directamente en caso de que canLaunchUrl diga falso (común en HyperOS/MIUI)
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      // Si falla, al menos no detiene la ejecución
     }
   }
 

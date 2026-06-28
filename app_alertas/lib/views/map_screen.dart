@@ -74,6 +74,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   // Animación de pulso para vehículos de tracking
   AnimationController? _pulseController;
   Animation<double>? _userCenterPulseAnimation;
+  String _selectedFilterType = 'Todos';
 
   void _onTrackingProviderUpdate() {
     if (!mounted) return;
@@ -97,7 +98,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       }
       if (trackingProvider.hasArrived && !_dialogShown) {
         _dialogShown = true;
-        _showArrivalDialog();
+        _showArrivalDialog(trackingProvider.reportId);
       }
     } else {
       _dialogShown = false;
@@ -110,7 +111,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     setState(() {
       _alerts = alertVM.alerts;
     });
-    context.read<RiskZoneProvider>().updateFromAlerts(alertVM.alerts);
+    final filtered = _selectedFilterType == 'Todos'
+        ? alertVM.alerts
+        : alertVM.alerts.where((a) => a.type.toLowerCase() == _selectedFilterType.toLowerCase()).toList();
+    context.read<RiskZoneProvider>().updateFromAlerts(filtered);
   }
 
   void _animateBearing(double newBearing) {
@@ -403,7 +407,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     }
   }
 
-  Future<void> _showArrivalDialog() async {
+  Future<void> _showArrivalDialog(int? reportId) async {
     if (!mounted) return;
     return showDialog<void>(
       context: context,
@@ -445,7 +449,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Ha llegado al punto de la emergencia.\nNavegación finalizada.',
+                  'Ha llegado al punto de la emergencia.\n¿Desea marcar este incidente como resuelto?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Color(0xFF94A3B8),
@@ -454,26 +458,65 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                   ),
                 ),
                 const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.greenAccent,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white54),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('NO'),
                       ),
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
-                      'CERRAR',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.greenAccent,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          if (reportId != null && reportId != 0) {
+                            try {
+                              await context.read<AlertViewModel>().resolveReport(reportId);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Incidente marcado como resuelto.'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error al resolver incidente: ${parseError(e)}'),
+                                    backgroundColor: const Color(0xFFB64D4C),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        child: const Text(
+                          'SÍ, RESOLVER',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -800,11 +843,98 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       
       if (!mounted) return;
       setState(() => _alerts = alertVM.alerts);
-      await context.read<RiskZoneProvider>().updateFromAlerts(alertVM.alerts);
+      
+      final filtered = _selectedFilterType == 'Todos'
+          ? alertVM.alerts
+          : alertVM.alerts.where((a) => a.type.toLowerCase() == _selectedFilterType.toLowerCase()).toList();
+      await context.read<RiskZoneProvider>().updateFromAlerts(filtered);
     } catch (e) {
       debugPrint('Error al cargar alertas: $e');
-    } finally {
     }
+  }
+
+  void _showFilterDialog() {
+    final types = [
+      'Todos',
+      'Accidente de tránsito',
+      'Robo agravado',
+      'Incendio',
+      'Emergencia médica',
+      'Violencia familiar',
+      'Robo menor',
+      'Disturbio',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Text(
+                  'Filtrar incidentes',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: types.length,
+                  itemBuilder: (context, index) {
+                    final type = types[index];
+                    final isSelected = _selectedFilterType == type;
+                    return ListTile(
+                      leading: Icon(
+                        type == 'Todos' ? Icons.all_inclusive_rounded : _iconByType(type),
+                        color: isSelected
+                            ? (type == 'Todos' ? const Color(0xFFAF6D58) : _colorByType(type))
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      title: Text(
+                        type,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(Icons.check_circle_rounded, color: Color(0xFF6D8566))
+                          : null,
+                      onTap: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _selectedFilterType = type;
+                        });
+                        final filtered = type == 'Todos'
+                            ? _alerts
+                            : _alerts.where((a) => a.type.toLowerCase() == type.toLowerCase()).toList();
+                        context.read<RiskZoneProvider>().updateFromAlerts(filtered);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   List<CircleMarker<Object>> _buildRiskZoneCircles(List<RiskZone> zones) {
@@ -1027,7 +1157,9 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
               ? Colors.grey.shade800
               : isFollowingRoute
                   ? const Color(0xFFAF3C32)
-                  : const Color(0xFFAF6D58),
+                  : isRouteTraced
+                      ? const Color(0xFF6D8566)
+                      : const Color(0xFFAF6D58),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(
@@ -1201,7 +1333,10 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
   }
 
   List<Marker> _buildAlertMarkers() {
-    return _alerts
+    final filtered = _selectedFilterType == 'Todos'
+        ? _alerts
+        : _alerts.where((a) => a.type.toLowerCase() == _selectedFilterType.toLowerCase()).toList();
+    return filtered
         .where((a) => a.coordinates.length >= 2)
         .map((alert) {
           final point = _toLatLng(alert.coordinates);
@@ -1298,8 +1433,12 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
 
   IconData _iconByType(String type) {
     final t = type.toLowerCase();
-    if (t.contains('robo')) return Icons.local_police_rounded;
-    if (t.contains('hurto')) return Icons.directions_run_rounded;
+    if (t.contains('robo') || t.contains('hurto')) {
+      if (t.contains('menor') || t.contains('hurto')) {
+        return Icons.directions_run_rounded;
+      }
+      return Icons.local_police_rounded;
+    }
     if (t.contains('incendio')) return Icons.local_fire_department_rounded;
     if (t.contains('accidente')) return Icons.car_crash_rounded;
     if (t.contains('vial') || t.contains('obstrucción')) {
@@ -1307,6 +1446,12 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     }
     if (t.contains('médica') || t.contains('salud')) {
       return Icons.medical_services_rounded;
+    }
+    if (t.contains('violencia') || t.contains('familiar')) {
+      return Icons.people_alt_rounded;
+    }
+    if (t.contains('disturbio')) {
+      return Icons.groups_rounded;
     }
     return Icons.warning_amber_rounded;
   }
@@ -1322,6 +1467,12 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
     }
     if (t.contains('médica') || t.contains('salud')) {
       return const Color(0xFF3C8C6E);
+    }
+    if (t.contains('violencia') || t.contains('familiar')) {
+      return const Color(0xFF8B5CF6); // Púrpura para violencia familiar
+    }
+    if (t.contains('disturbio')) {
+      return const Color(0xFFD97706); // Naranja/Ámbar para disturbios
     }
     return const Color(0xFFAF6D58);
   }
@@ -1361,9 +1512,7 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
                     Consumer<RiskZoneProvider>(
                       builder: (context, riskZones, _) {
                         return CircleLayer(
-                          circles: riskZones.enabled
-                              ? _buildRiskZoneCircles(riskZones.zones)
-                              : const <CircleMarker<Object>>[],
+                          circles: _buildRiskZoneCircles(riskZones.zones),
                         );
                       },
                     ),
@@ -1513,60 +1662,61 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
               ),
             ),
 
+          // Ticker de Zona de Riesgo (de lado a lado)
           Positioned(
-            top: MediaQuery.paddingOf(context).top + 16,
-            left: 12,
-            right: 12,
+            top: MediaQuery.paddingOf(context).top,
+            left: 0,
+            right: 0,
             child: Consumer<RiskZoneProvider>(
               builder: (context, riskZoneProvider, _) {
-                final showRiskZone = riskZoneProvider.loaded;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_isAuthority) ...[
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardTheme.color?.withValues(alpha: 0.92) ?? const Color(0xFF30302E).withValues(alpha: 0.92),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.shield_rounded,
-                                color: Color(0xFFAF6D58),
-                                size: 15,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Vista autoridad · ${_alerts.length} total',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    if (showRiskZone) ...[
-                      const RiskZoneOverlay(),
-                    ],
-                  ],
-                );
+                if (riskZoneProvider.loaded) {
+                  return const RiskZoneOverlay();
+                }
+                return const SizedBox.shrink();
               },
             ),
           ),
+
+          // Badge de Vista Autoridad
+          if (_isAuthority)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 46,
+              left: 12,
+              right: 12,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color?.withValues(alpha: 0.92) ?? const Color(0xFF30302E).withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFAF6D58).withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.shield_rounded,
+                        color: Color(0xFFAF6D58),
+                        size: 15,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Vista autoridad · ${_alerts.length} total',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
 
 
@@ -1575,6 +1725,16 @@ class MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixin
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (_isAuthority) ...[
+            FloatingActionButton(
+              heroTag: 'filter_alerts_btn',
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              onPressed: _showFilterDialog,
+              child: const Icon(Icons.filter_list_rounded),
+            ),
+            const SizedBox(height: 12),
+          ],
           FloatingActionButton(
             heroTag: 'center_location_btn',
             backgroundColor: Theme.of(context).colorScheme.surface,

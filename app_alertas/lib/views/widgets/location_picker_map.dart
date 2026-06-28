@@ -73,18 +73,26 @@ class _LocationPickerMapState extends State<LocationPickerMap> with TickerProvid
     if (t.contains('incendio')) return const Color(0xFFAA5F3C);
     if (t.contains('accidente') || t.contains('vial')) return const Color(0xFF506E96);
     if (t.contains('médica') || t.contains('salud')) return const Color(0xFF3C8C6E);
+    if (t.contains('violencia') || t.contains('familiar')) return const Color(0xFF8B5CF6);
+    if (t.contains('disturbio')) return const Color(0xFFD97706);
     return const Color(0xFFAF6D58);
   }
 
   IconData _iconByType(String? type) {
     if (type == null) return Icons.warning_rounded;
     final t = type.toLowerCase();
-    if (t.contains('robo')) return Icons.local_police_rounded;
-    if (t.contains('hurto')) return Icons.directions_run_rounded;
+    if (t.contains('robo') || t.contains('hurto')) {
+      if (t.contains('menor') || t.contains('hurto')) {
+        return Icons.directions_run_rounded;
+      }
+      return Icons.local_police_rounded;
+    }
     if (t.contains('incendio')) return Icons.local_fire_department_rounded;
     if (t.contains('accidente')) return Icons.car_crash_rounded;
     if (t.contains('vial') || t.contains('obstrucción')) return Icons.construction_rounded;
     if (t.contains('médica') || t.contains('salud')) return Icons.medical_services_rounded;
+    if (t.contains('violencia') || t.contains('familiar')) return Icons.people_alt_rounded;
+    if (t.contains('disturbio')) return Icons.groups_rounded;
     return Icons.warning_rounded;
   }
 

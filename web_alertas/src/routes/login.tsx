@@ -15,8 +15,8 @@ import avispateLogo from "@/assets/avispate.webp";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Acceso · Avispáte" },
-      { name: "description", content: "Acceso al panel de autoridades de Avispáte." },
+      { title: "Acceso · Avispáme" },
+      { name: "description", content: "Acceso al panel de autoridades de Avispáme." },
     ],
   }),
   component: LoginPage,
@@ -67,8 +67,8 @@ function LoginPage() {
           }}
         />
         <Link to="/" className="relative flex items-center gap-2.5">
-          <img src={avispateLogo} alt="Logo de Avispáte" className="size-9 object-contain" />
-          <span className="font-display font-bold text-xl tracking-tight">Avispáte</span>
+          <img src={avispateLogo} alt="Logo de Avispáme" className="size-9 object-contain" />
+          <span className="font-display font-bold text-xl tracking-tight">Avispáme</span>
         </Link>
         <div className="relative">
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-4">
@@ -92,8 +92,8 @@ function LoginPage() {
       <main className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md">
           <Link to="/" className="lg:hidden inline-flex items-center gap-2.5 mb-10">
-            <img src={avispateLogo} alt="Logo de Avispáte" className="size-9 object-contain" />
-            <span className="font-display font-bold text-xl tracking-tight">Avispáte</span>
+            <img src={avispateLogo} alt="Logo de Avispáme" className="size-9 object-contain" />
+            <span className="font-display font-bold text-xl tracking-tight">Avispáme</span>
           </Link>
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary mb-3">
             Iniciar sesión

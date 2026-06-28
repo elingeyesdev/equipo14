@@ -221,24 +221,9 @@ export class ReportsService {
             .andWhere(
                 `report.created_at >= NOW() - INTERVAL '200 minutes'`
             )
-            .andWhere(
-                `
-                NOT EXISTS (
-                    SELECT 1
-                    FROM image img
-                    WHERE img."reportId" = report.id
-                    AND img."uploadedById" = :userId
-                )
-                `,
-                {
-                    userId,
-                }
-            )
             .orderBy('report.created_at', 'DESC')
             .getMany();
 
-        console.log(usersCoincidence)
-        console.log(latitude, longitude)
         return ReportCoinicdenceResponse.FromReportListToResponse(usersCoincidence)
     }
 

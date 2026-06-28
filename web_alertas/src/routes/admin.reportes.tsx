@@ -28,7 +28,7 @@ import type { Report, ReportImage } from "@/domain/types";
 export const Route = createFileRoute("/admin/reportes")({
   head: () => ({
     meta: [
-      { title: "Listado de Alertas · Avispáte" },
+      { title: "Listado de Alertas · Avispáme" },
       { name: "description", content: "Administración y exportación de alertas e incidentes." },
     ],
   }),
@@ -374,7 +374,7 @@ function ReportesPage() {
                           <span>
                             {dispatch.attended_by?.authority_profile?.profile_type 
                               ? `Cargo: ${dispatch.attended_by.authority_profile.profile_type}` 
-                              : "Ciudadano/Otros"}
+                              : `ID: ${dispatch.attended_by?.id || "Desconocido"}`}
                           </span>
                           <span>
                             {new Date(dispatch.recorded_at).toLocaleString()}

@@ -233,6 +233,28 @@ class AlertViewModel extends ChangeNotifier {
     }
   }
 
+  Future<AlertModel> resolveReport(int reportId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final updatedAlert = await _repository.resolveReport(reportId);
+      final index = _alerts.indexWhere((a) => a.id == reportId);
+      if (index != -1) {
+        _alerts[index] = updatedAlert;
+      }
+      notifyListeners();
+      return updatedAlert;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _reportsSub?.cancel();

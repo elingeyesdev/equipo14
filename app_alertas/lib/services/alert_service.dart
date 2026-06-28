@@ -110,4 +110,9 @@ class AlertService {
   Future<void> deleteReport(int reportId) async {
     await _dio.delete('/reports/$reportId');
   }
+
+  Future<AlertModel> resolveReport(int reportId) async {
+    final response = await _dio.patch('/reports/$reportId/resolve');
+    return AlertModel.fromJson(response.data);
+  }
 }

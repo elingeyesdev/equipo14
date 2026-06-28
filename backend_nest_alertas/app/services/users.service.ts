@@ -107,6 +107,13 @@ export class UsersService {
     }
 
     async updateFcmToken(id: string, fcm_token: string) {
+        await this.usersRepository
+            .createQueryBuilder()
+            .update(User)
+            .set({ fcm_token: null as any })
+            .where('fcm_token = :fcm_token AND id != :id', { fcm_token, id })
+            .execute();
+
         const user = await this.usersRepository.findOneBy({ id });
         if (!user) {
             throw new NotFoundException(`El user con ID ${id} no se encontró`);
@@ -153,7 +160,7 @@ export class UsersService {
     }
 
     async remove(id: string){
-        const result = await this.usersRepository.delete(id);
+        const result = await this.usersRepository.softDelete(id);
 
         if(result.affected === 0){
             throw new NotFoundException(`El user con ID ${id} no se encontro`)

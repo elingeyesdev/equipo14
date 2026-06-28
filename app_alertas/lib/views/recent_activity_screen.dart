@@ -353,10 +353,9 @@ class RecentActivityScreenState extends State<RecentActivityScreen> {
                       backgroundColor: Theme.of(context).cardTheme.color,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : Colors.black.withValues(alpha: 0.05),
+                        side: const BorderSide(
+                          color: Colors.white30,
+                          width: 1.0,
                         ),
                       ),
                     ),
@@ -570,6 +569,52 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     _onlyNearby = widget.initialOnlyNearby;
   }
 
+  IconData _iconByType(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('robo') || t.contains('hurto')) {
+      if (t.contains('menor') || t.contains('hurto')) {
+        return Icons.directions_run_rounded;
+      }
+      return Icons.local_police_rounded;
+    }
+    if (t.contains('incendio')) return Icons.local_fire_department_rounded;
+    if (t.contains('accidente')) return Icons.car_crash_rounded;
+    if (t.contains('vial') || t.contains('obstrucción')) {
+      return Icons.construction_rounded;
+    }
+    if (t.contains('médica') || t.contains('salud')) {
+      return Icons.medical_services_rounded;
+    }
+    if (t.contains('violencia') || t.contains('familiar')) {
+      return Icons.people_alt_rounded;
+    }
+    if (t.contains('disturbio')) {
+      return Icons.groups_rounded;
+    }
+    return Icons.warning_amber_rounded;
+  }
+
+  Color _colorByType(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('robo') || t.contains('hurto')) {
+      return const Color(0xFFB64D4C);
+    }
+    if (t.contains('incendio')) return const Color(0xFFAA5F3C);
+    if (t.contains('accidente') || t.contains('vial')) {
+      return const Color(0xFF506E96);
+    }
+    if (t.contains('médica') || t.contains('salud')) {
+      return const Color(0xFF3C8C6E);
+    }
+    if (t.contains('violencia') || t.contains('familiar')) {
+      return const Color(0xFF8B5CF6);
+    }
+    if (t.contains('disturbio')) {
+      return const Color(0xFFD97706);
+    }
+    return const Color(0xFFAF6D58);
+  }
+
   @override
   Widget build(BuildContext context) {
     final Map<String, int> typeCounts = {};
@@ -642,6 +687,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   label: 'Solo reportes cercanos',
                   isSelected: _onlyNearby,
                   onTap: () => setState(() => _onlyNearby = !_onlyNearby),
+                  icon: Icons.near_me_rounded,
+                  iconColor: const Color(0xFFAF6D58),
                 ),
                 const SizedBox(height: 16),
                 Divider(height: 1, color: Theme.of(context).dividerColor),
@@ -660,12 +707,16 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   label: 'Todos',
                   isSelected: _selectedType == null,
                   onTap: () => setState(() => _selectedType = null),
+                  icon: Icons.all_inclusive_rounded,
+                  iconColor: const Color(0xFFAF6D58),
                 ),
                 ...sortedTypes.map(
                   (t) => _FilterRowItem(
                     label: t.key,
                     isSelected: _selectedType == t.key,
                     onTap: () => setState(() => _selectedType = t.key),
+                    icon: _iconByType(t.key),
+                    iconColor: _colorByType(t.key),
                   ),
                 ),
               ],
@@ -703,56 +754,43 @@ class _FilterRowItem extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final IconData? icon;
+  final Color? iconColor;
 
   const _FilterRowItem({
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.icon,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            // Check on the far left
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFFAF6D58)
-                      : Colors.grey.withValues(alpha: 0.5),
-                  width: 2,
-                ),
-                color: isSelected
-                    ? const Color(0xFFAF6D58)
-                    : Colors.transparent,
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, size: 14, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: icon != null
+          ? Icon(
+              icon,
+              color: isSelected
+                  ? (iconColor ?? const Color(0xFFAF6D58))
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            )
+          : null,
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected
+              ? Theme.of(context).colorScheme.onSurface
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+          fontSize: 14,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
+      trailing: isSelected
+          ? const Icon(Icons.check_circle_rounded, color: Color(0xFF6D8566))
+          : null,
+      onTap: onTap,
     );
   }
 }

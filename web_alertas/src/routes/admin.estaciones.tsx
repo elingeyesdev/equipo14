@@ -22,7 +22,7 @@ import type { EmergencyStation } from "@/domain/types";
 export const Route = createFileRoute("/admin/estaciones")({
   head: () => ({
     meta: [
-      { title: "Estaciones de Emergencia · Avispáte" },
+      { title: "Estaciones de Emergencia · Avispáme" },
       { name: "description", content: "Administración y creación de estaciones de policía, bomberos y hospitales." },
     ],
   }),

@@ -6,6 +6,7 @@ import 'package:app_alertas/views/emergency_services_screen.dart';
 import 'package:app_alertas/viewmodels/theme_viewmodel.dart';
 import 'package:app_alertas/views/permissions_screen.dart';
 import 'package:app_alertas/views/my_account_screen.dart';
+import 'package:app_alertas/viewmodels/tracking_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -148,8 +149,10 @@ class SettingsScreen extends StatelessWidget {
 
                           try {
                             final alertVM = context.read<AlertViewModel>();
+                            final trackingProvider = context.read<TrackingProvider>();
                             await auth.logout();
                             alertVM.clear();
+                            await trackingProvider.clear();
                           } catch (e) {
                             debugPrint('Error durring logout: $e');
                           } finally {

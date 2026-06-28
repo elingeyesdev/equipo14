@@ -18,13 +18,13 @@ export async function seedReportTypes(app: INestApplication): Promise<void> {
     if (count > 0) return; // Ya hay datos, no sobrescribir
 
     await repo.save([
-        { id: 1, name: 'Robo a mano armada', base_weight: 9 },
-        { id: 2, name: 'Incendio estructural', base_weight: 10 },
-        { id: 3, name: 'Accidente de tránsito', base_weight: 8 },
-        { id: 4, name: 'Hurto', base_weight: 4 },
-        { id: 5, name: 'Incendio forestal', base_weight: 8 },
-        { id: 6, name: 'Emergencia médica', base_weight: 9 },
-        { id: 7, name: 'Obstrucción de vía', base_weight: 3 },
+        { id: 1, name: 'Accidente de tránsito', base_weight: 9 }, // Altísima frecuencia y riesgo de vida (Motos/Choques)
+        { id: 2, name: 'Robo agravado', base_weight: 9 }, // Robo con violencia o armas (Prioridad policial alta)
+        { id: 3, name: 'Incendio', base_weight: 10 },            // Estructural o forestal (Riesgo total de propagación)
+        { id: 4, name: 'Emergencia médica', base_weight: 9 },    // Paros, traumas graves, código rojo de salud
+        { id: 5, name: 'Violencia familiar', base_weight: 8 },   // Caso crítico de alta frecuencia en el departamento
+        { id: 6, name: 'Robo menor', base_weight: 4 },    // Delito contra la propiedad sin violencia (Baja prioridad en vivo)
+        { id: 7, name: 'Disturbio', base_weight: 5 }, // Peleas callejeras, bloqueos menores o vandalismo
     ]);
 
     console.log('[Seed] Tipos de reporte insertados: robo (1), incendio (2), accidente (3)');
@@ -82,23 +82,23 @@ export async function seedSampleReports(app: INestApplication): Promise<void> {
             lat: -17.7833,
             zone: 'Centro',
             verified: true,
-            type: types.find((t) => t.id === 3) ?? types[0],
+            type: types.find((t) => t.id === 1) ?? types[0],
         },
         {
-            description: 'Robo a mano armada reportado por vecinos',
+            description: 'Robo agravado reportado por vecinos',
             lng: -63.195,
             lat: -17.79,
             zone: 'Equipetrol',
             verified: false,
-            type: types.find((t) => t.id === 1) ?? types[0],
+            type: types.find((t) => t.id === 2) ?? types[0],
         },
         {
-            description: 'Incendio estructural en bodega comercial',
+            description: 'Incendio en bodega comercial',
             lng: -63.17,
             lat: -17.775,
             zone: 'Plan 3000',
             verified: true,
-            type: types.find((t) => t.id === 2) ?? types[0],
+            type: types.find((t) => t.id === 3) ?? types[0],
         },
         {
             description: 'Emergencia médica — persona inconsciente',
@@ -106,15 +106,15 @@ export async function seedSampleReports(app: INestApplication): Promise<void> {
             lat: -17.768,
             zone: 'Urbari',
             verified: false,
-            type: types.find((t) => t.id === 6) ?? types[0],
+            type: types.find((t) => t.id === 4) ?? types[0],
         },
         {
-            description: 'Obstrucción de vía por árbol caído',
+            description: 'Violencia familiar en zona residencial',
             lng: -63.188,
             lat: -17.801,
             zone: 'La Guardia',
             verified: true,
-            type: types.find((t) => t.id === 7) ?? types[0],
+            type: types.find((t) => t.id === 5) ?? types[0],
         },
     ];
 

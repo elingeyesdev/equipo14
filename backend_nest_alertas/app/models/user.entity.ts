@@ -1,5 +1,5 @@
 import { Report } from "./report.entity";
-import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, DeleteDateColumn } from "typeorm";
 import type { Point } from 'geojson';
 import { Role } from "./role.entity";
 import { Image } from "./image.entity";
@@ -55,4 +55,7 @@ export class User {
 
     @OneToMany(() => Dispatch, dispatch => dispatch.attended_by)
     dispatches: Dispatch[];
+
+    @DeleteDateColumn()
+    deleted_at: Date;
 }

@@ -166,6 +166,12 @@ class RiskZoneTaskHandler extends TaskHandler {
         await FlutterForegroundTask.updateService(
           notificationText: 'Unidad en ruta · ${corridor.label}',
         );
+        FlutterForegroundTask.sendDataToMain({
+          'type': 'risk_zone_update',
+          'riskIndex': 0.0,
+          'zoneName': null,
+          'zoneId': null,
+        });
       } else if (insideZoneIds.isNotEmpty) {
         final top = zones
             .where((z) => insideZoneIds.contains(z.id))
@@ -174,10 +180,22 @@ class RiskZoneTaskHandler extends TaskHandler {
           notificationText:
               '${riskLevelLabel(top.riskIndex)} · ${top.name} · ${(top.riskIndex * 100).round()}%',
         );
+        FlutterForegroundTask.sendDataToMain({
+          'type': 'risk_zone_update',
+          'riskIndex': top.riskIndex,
+          'zoneName': top.name,
+          'zoneId': top.id,
+        });
       } else {
         await FlutterForegroundTask.updateService(
           notificationText: 'Monitoreando ubicación',
         );
+        FlutterForegroundTask.sendDataToMain({
+          'type': 'risk_zone_update',
+          'riskIndex': 0.0,
+          'zoneName': null,
+          'zoneId': null,
+        });
       }
     } catch (e) {
       debugPrint('RiskZoneTaskHandler location error: $e');
